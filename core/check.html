@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="kk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Есеп жолы · check</title>
+<style>body{font-family:system-ui,sans-serif;max-width:720px;margin:20px auto;padding:0 14px;color:#1B2733}h1{font-size:1.3rem}.ok{color:#2E9E5B}.bad{color:#CF4B3E}table{border-collapse:collapse;width:100%;font-size:.9rem}td,th{border:1px solid #ddd;padding:5px 8px;text-align:left}code{background:#eef;padding:1px 4px;border-radius:4px}button{padding:8px 14px;border:0;border-radius:8px;background:#0E7C9B;color:#fff;font-weight:700;cursor:pointer}</style>
+</head><body>
+<h1>Тексеру беті · Self-check for a route</h1>
+<p>Open your route, log in with the test student, answer 3–5 questions, then reload this page. It reads what the route sent through <code>Core</code> (stub or real).</p>
+<div id="out"></div>
+<p><button onclick="if(window.Core&&Core._reset){Core._reset();location.reload()}">Тазалау · Clear stub data</button></p>
+<script src="core-stub.js"></script>
+<script>
+(function(){
+  const out=document.getElementById('out'); const lines=[];
+  const ok=(t)=>lines.push('<p class="ok">✓ '+t+'</p>'), bad=(t)=>lines.push('<p class="bad">✗ '+t+'</p>');
+  if(!window.Core){ bad('Core not loaded — is core-stub.js next to this file?'); out.innerHTML=lines.join(''); return; }
+  ok('Core loaded ('+Core.version+')');
+  const ev=Core._events?Core._events():[]; const ans=ev.filter(e=>e.ev==='answer');
+  if(!ans.length){ bad('No answers recorded yet. Answer some questions in your route first.'); }
+  else {
+    ok(ans.length+' answers recorded, routes: '+[...new Set(ans.map(a=>a.route))].join(', '));
+    const req=['stage','lvl','ok','mode','ms','stem','ans','given','type'];
+    const missing=req.filter(k=>ans.some(a=>a[k]===undefined));
+    if(missing.length) bad('Some answers are missing fields: <code>'+missing.join('</code>, <code>')+'</code>'); else ok('All required fields present');
+    const badStage=ans.filter(a=>!/^[A-Z]{2}-\d{2}$/.test(String(a.stage))); if(badStage.length) bad(badStage.length+' answers have a stage id not like FR-03: '+[...new Set(badStage.map(a=>a.stage))].slice(0,5).join(', ')); else ok('Stage ids well-formed');
+    const badLvl=ans.filter(a=>![1,2,3].includes(+a.lvl)); if(badLvl.length) bad(badLvl.length+' answers have lvl outside 1..3'); else ok('CPA levels 1..3');
+    const noStem=ans.filter(a=>!a.stem); if(noStem.length) bad(noStem.length+' answers without stem text (teacher cannot see the question)'); else ok('Question text saved');
+    const states=Object.keys(JSON.parse(localStorage.getItem('esep_stub_v1')||'{}').states||{}); if(states.length) ok('Core.save used for: '+states.join(', ')); else bad('Core.save never called — progress would not persist');
+    lines.push('<h3>Last 10 answers</h3><table><tr><th>t</th><th>stage</th><th>lvl</th><th>ok</th><th>hints</th><th>type</th><th>stem</th></tr>'+ans.slice(-10).reverse().map(a=>`<tr><td>${new Date(a.t).toLocaleTimeString()}</td><td>${a.stage}</td><td>${a.lvl}</td><td>${a.ok?'✓':'✗'}</td><td>${a.hints??''}</td><td>${a.type??''}</td><td>${(a.stem||'').slice(0,80)}</td></tr>`).join('')+'</table>');
+  }
+  const alerts=['alert','confirm','prompt'].filter(f=>window[f]&&window[f].toString().includes('[native code]')===false);
+  out.innerHTML=lines.join('');
+})();
+</script>
+</body></html>
