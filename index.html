@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Есеп жолы</title>
+<link rel="stylesheet" href="core/ui.css">
+</head>
+<body>
+<div id="app" class="app"></div>
+<script src="core/core.js"></script>
+<script>
+/* Portal: one login, then a tile per route with the student's progress. */
+(async function(){
+  const app=document.getElementById('app'); const esc=Core.esc;
+  const {student,state}=await Core.login();
+  function progress(code){
+    const s=state[code]; if(!s||!s.stages) return null;
+    const ids=Object.keys(s.stages); const passed=ids.filter(k=>s.stages[k].status==='passed').length; const cur=ids.find(k=>s.stages[k].status==='current');
+    return {passed,total:ids.length,cur,level:cur?s.stages[cur].level:null,diag:!!s.diag};
+  }
+  let html=Core.topbar()+`<div class="card"><h1>Сәлем, ${esc(student.name.split(' ')[0])}!</h1><p>Бағытты таңда. Әр бағытта алдымен қысқа диагностика, содан кейін жаттығу және кезең тестері болады.</p></div><div class="tiles">`;
+  Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
+    const p=progress(code); const live=status==='live';
+    html+=`<a class="tile ${live?'':'soon'}" href="${live?url:'#'}"><span class="chip ${live?'':'muted'}">${code}</span> <small>${esc(grades)}-сынып</small><b>${esc(name)}</b>
+      ${live?(p?`<small>${p.diag?`${p.passed}/${p.total} кезең өтілді · қазір ${p.cur||'—'}${p.level?' · деңгей '+p.level:''}`:'диагностика әлі өтпеген'}</small>`:'<small>бастау →</small>'):'<small>жақында</small>'}</a>`;
+  });
+  html+=`</div><div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
+  app.innerHTML=html;
+})();
+</script>
+</body>
+</html>
