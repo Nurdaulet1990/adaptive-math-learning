@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Есеп жолы · Мәтінді есептер</title>
+<link rel="stylesheet" href="../core/ui.css">
+</head>
+<body>
+<div id="app" class="app"></div>
+<!-- platform -->
+<script src="../core/core.js"></script>
+<script src="../core/figs.js"></script>
+<!-- route WP (see MAP.md) -->
+<script src="stages.js"></script>
+<script src="bank.js"></script>
+<script src="generate.js"></script>
+<script src="state.js"></script>
+<script src="screens.js"></script>
+<script src="practice.js"></script>
+<script src="diag_test.js"></script>
+<script>
+(async function(){ initState(await Core.start('WP')); showHome(); })();
+</script>
+</body>
+</html>
