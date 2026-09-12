@@ -9,7 +9,7 @@
     SB_KEY:'sb_publishable_K489qSbIMCL7yXYrQwrDnQ_4LxZ1nkH',
     TEACHER_PIN:'1234',
     ROUTES:[ // code, Kazakh name, url (folder relative to repo root, or full url while a route is still hosted elsewhere), status, grades
-      ['WP','Мәтінді есептер','https://nurdaulet1990.github.io/-/','live','1–5'],
+      ['WP','Мәтінді есептер','wp/','live','1–5'],
       ['FR','Бөлшектер','fr/','soon','3–5'],
       ['PV','Орын мәні','pv/','soon','1–4'],
     ],
