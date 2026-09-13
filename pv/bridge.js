@@ -47,6 +47,9 @@ const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placeme
 host.style.display='block';
 Core.start('PV').then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const bar=document.createElement('div'); bar.style.cssText='position:fixed;right:10px;top:8px;z-index:999;font:700 12px Nunito,system-ui,sans-serif;background:#fff;border:1px solid #DCE0E4;border-radius:999px;padding:5px 10px;color:#1B2733;box-shadow:0 2px 6px rgba(0,0,0,.08)';
-  bar.innerHTML=`${Core.esc(Core.student.name)} · <a href="../" style="color:#0E7C9B;text-decoration:none">барлық бағыттар</a> · <a href="#" id="pvout" style="color:#5E6B7A;text-decoration:none">шығу</a>`; document.body.appendChild(bar); document.getElementById('pvout').onclick=e=>{ e.preventDefault(); Core.logout(); };
+  const L=Core.lang(); const link=(c,t)=>L===c?`<b style="color:#0E7C9B">${t}</b>`:`<a href="#" data-l="${c}" style="color:#5E6B7A;text-decoration:none">${t}</a>`;
+  bar.innerHTML=`${Core.esc(Core.student.name)} · ${link('kk','ҚАЗ')} · ${link('ru','РУС')} · <a href="../" style="color:#0E7C9B;text-decoration:none">барлық бағыттар</a> · <a href="#" id="pvout" style="color:#5E6B7A;text-decoration:none">шығу</a>`;
+  document.body.appendChild(bar); document.getElementById('pvout').onclick=e=>{ e.preventDefault(); Core.logout(); };
+  bar.querySelectorAll('[data-l]').forEach(a=>a.onclick=e=>{ e.preventDefault(); Core.setLang(a.dataset.l); });
   state.module=null; state.level=null; renderSidebar(); renderMain(); });
 })();
