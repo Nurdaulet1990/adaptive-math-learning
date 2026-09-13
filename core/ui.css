@@ -118,12 +118,15 @@ input.big:focus{border-color:var(--rc);outline:0}
 .choice.no{border-color:var(--bad);background:var(--bad-soft);color:var(--bad);box-shadow:0 4px 0 var(--bad-d)}
 .choice:disabled{cursor:default}
 .choice:disabled:active{transform:none}
-/* bottom action bar: exactly one primary button */
-.qbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);border-top:2px solid var(--line);
+/* small label row inside cards (home, teaching card) */
+.qbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-size:.85rem;color:var(--muted)}
+.qbar b{color:var(--ink)}
+/* bottom action bar of a question: exactly one primary button */
+.actbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--bg);border-top:2px solid var(--line);
   padding:12px 14px calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px;align-items:center;
   max-width:560px;margin:0 auto}
-.qbar .btn{flex:1}
-.qbar .btn.plain{flex:none}
+.actbar .btn{flex:1}
+.actbar .btn.plain{flex:none}
 /* feedback sheet — replaces the bar once the answer is in */
 #fb:not(:empty){position:fixed;left:0;right:0;bottom:0;z-index:50;max-width:560px;margin:0 auto;
   background:var(--card);border-top:2px solid var(--line);padding:14px 14px calc(14px + env(safe-area-inset-bottom));
@@ -185,8 +188,8 @@ table.t3 th{background:var(--accent-soft);color:var(--accent);font-size:.85rem}
 .stn.locked .dot{background:var(--fig);color:var(--muted);box-shadow:0 6px 0 var(--line)}
 .stn .stars{position:absolute;left:50%;transform:translateX(-50%);top:38px;font-size:.78rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-shadow:0 1px 2px rgba(255,255,255,.6)}
 .stn.cur .stars{top:46px}
-.stn .fox{position:absolute;left:50%;top:-84px;transform:translateX(-50%);font-size:30px;line-height:1;animation:bob 2.6s ease-in-out infinite;pointer-events:none}
-@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-5px)}}
+.stn .fox{position:absolute;left:34px;top:-6px;font-size:28px;line-height:1;animation:bob 2.6s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(10,25,40,.35))}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 /* bubble: only one is open at a time */
 .stn .bub{position:absolute;left:50%;bottom:52px;transform:translateX(-50%) scale(.9);transform-origin:bottom center;
   width:max-content;max-width:min(78vw,250px);background:var(--card);border-radius:16px;padding:12px 14px;
@@ -215,7 +218,6 @@ table.t3 th{background:var(--accent-soft);color:var(--accent);font-size:.85rem}
 .teach{border-left:6px solid var(--gold);background:var(--gold-soft)}
 .kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.92rem}
 .kv span:nth-child(even){font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
-.qbar.inline{position:static;border:0;padding:0;background:none;max-width:none;margin:12px 0 0}
 textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);padding:8px}
 /* stage list (teacher page / fallbacks) */
 .stage{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--line)}

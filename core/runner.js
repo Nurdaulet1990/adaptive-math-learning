@@ -42,12 +42,13 @@ function showHome(){
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
     html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div></div>`;
-    const IC=routeIcons();
-    html+=Core.map({color:CFG.color||'var(--accent)', avatar:Core.avatar(), label:CFG.title,
+    const IC=routeIcons(); const rc=CFG.route.toLowerCase();
+    html+=Core.map({color:CFG.color||`var(--${rc})`, colorDark:CFG.colorDark||`var(--${rc}-d)`,
+      avatar:Core.avatar(), label:CFG.title, go:'Жаттығу',
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
-        return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
-          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id}${gr?' · '+gr+'-сынып':''}`}; })})
-      +`<p class="maphint">Станцияны басып, сол жерден жаттығуға болады.</p>`;
+        return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],unit:gr?`${gr}-сынып`:'',
+          sub:s.status==='current'?`Деңгей ${s.level}/3 · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
+      +`<p class="maphint">Станцияны басып көр.</p>`;
     html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" data-pr="${cur}">Жаттығу</button><button class="btn gold" data-test="${cur}">Кезең тесті (10 есеп)</button></div>
@@ -61,39 +62,58 @@ function showHome(){
   if(Core.mapBind) Core.mapBind(id=>startPractice(id));
 }
 
-/* ── question view ── */
+/* ── question view ──
+   One screen, one job: ✕ + progress on top, the question in the middle, ONE primary button at the bottom.
+   A choice is first selected, then checked — so a mis-tap costs nothing. */
 function renderQuestion(q,o){
   const fig=figHTML(q.fig); let input='';
   if(q.kind==='choice'){ input=`<div class="choices${q.choices.length===3?' three':''}">${q.choices.map((c,i)=>`<button class="choice" data-v="${esc(c)}">${q.choiceHTML?q.choiceHTML[i]:esc(c)}</button>`).join('')}</div>`; }
-  else if(q.kind==='input'){ input=`<div class="row"><input class="big" id="ans" inputmode="decimal" placeholder="Жауап" autocomplete="off"><button class="btn" id="ansBtn">Тексеру</button></div>`; }
+  else if(q.kind==='input'){ input=`<input class="big" id="ans" inputmode="decimal" placeholder="Жауап" autocomplete="off">`; }
   else input=`<div id="custom"></div>`;
   const ladder=o.ladder&&!o.noHints;
-  app().innerHTML=topbar()+`<div class="card"><div class="qbar"><span>${esc(o.title)}</span><span class="chip muted">${esc(o.sub||'')}</span></div>
+  const prog=Math.max(0,Math.min(1,o.prog||0));
+  app().innerHTML=`<div class="quiz">
+   <div class="qtop"><button class="qx" id="homeBtn" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||o.sub||'')}</span></div>
    <div class="stem">${stemHTML(q.stem,false)}</div>${q.exprHTML?`<div class="expr">${q.exprHTML}</div>`:''}${fig?`<div class="fig">${fig}</div>`:''}${input}
-   <div id="hints"></div><div id="fb"></div>
-   <div class="row" style="margin-top:12px">${ladder?`<button class="btn ghost" id="hintBtn">Кеңес 1/5</button><button class="btn plain" id="dkBtn">Білмеймін</button>`:''}${o.onSkip?`<button class="btn plain" id="skipBtn">Білмеймін</button>`:''}<button class="btn plain" id="homeBtn">Басты бет</button></div></div>`;
-  window._Q={q,o,done:false};
-  app().querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ if(!window._Q.done) finishAnswer(b.dataset.v,b); });
-  const ai=$('ans'); if(ai){ ai.onkeydown=e=>{ if(e.key==='Enter') answerInput(); }; $('ansBtn').onclick=answerInput; setTimeout(()=>ai.focus(),50); }
-  if(q.kind==='custom'&&q.mount) q.mount($('custom'),v=>{ if(!window._Q.done) finishAnswer(v,null); });
-  const hb=$('hintBtn'); if(hb) hb.onclick=nextHint; const dk=$('dkBtn'); if(dk) dk.onclick=dontKnow; const sk=$('skipBtn'); if(sk) sk.onclick=()=>{ if(window._Q.done) return; window._Q.done=true; o.onSkip(); }; $('homeBtn').onclick=showHome;
+   <div id="hints"></div></div>
+   <div class="actbar" id="qbar">${ladder?`<button class="btn plain" id="hintBtn">Кеңес 1/5</button>`:''}${o.onSkip?`<button class="btn plain" id="skipBtn">Білмеймін</button>`:''}<button class="btn" id="ansBtn" disabled>Тексеру</button></div>
+   <div id="fb"></div>`;
+  window._Q={q,o,done:false,sel:null,selBtn:null};
+  app().querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ if(window._Q.done) return;
+    app().querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); b.classList.add('pick');
+    window._Q.sel=b.dataset.v; window._Q.selBtn=b; $('ansBtn').disabled=false; });
+  const ai=$('ans'); if(ai){ ai.oninput=()=>{ $('ansBtn').disabled=!ai.value.trim(); };
+    ai.onkeydown=e=>{ if(e.key==='Enter') answerInput(); }; setTimeout(()=>ai.focus(),50); }
+  const ab=$('ansBtn'); if(ab) ab.onclick=answerInput;
+  if(q.kind==='custom'){ ab.style.display='none'; if(q.mount) q.mount($('custom'),v=>{ if(!window._Q.done) finishAnswer(v,null); }); }
+  const hb=$('hintBtn'); if(hb) hb.onclick=nextHint;
+  const sk=$('skipBtn'); if(sk) sk.onclick=()=>{ if(window._Q.done) return; window._Q.done=true; o.onSkip(); };
+  $('homeBtn').onclick=showHome;
+  if(ladder){ const bar=$('qbar'); bar.insertAdjacentHTML('afterbegin',`<button class="btn plain" id="dkBtn">Білмеймін</button>`); $('dkBtn').onclick=dontKnow; }
 }
-function answerInput(){ const v=$('ans').value.trim(); if(!v||window._Q.done) return; finishAnswer(v,null); }
+function answerInput(){ if(window._Q.done) return;
+  const ai=$('ans'); const v=ai?ai.value.trim():window._Q.sel; if(!v) return;
+  finishAnswer(v,window._Q.selBtn); }
 function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; document.querySelectorAll('#custom button,#custom input').forEach(b=>b.disabled=true); }
 function finishAnswer(v,btn){
   const {q,o}=window._Q; const ok=Core.isCorrect(q,v);
   if(o.mode==='practice' && !ok && !PR.retried && PR.step<5){ PR.retried=true; log({ev:'attempt',ok:false,id:q.id,stage:PR.stId});
-    if(btn){ btn.disabled=true; btn.classList.add('no'); } const ai0=$('ans'); if(ai0){ ai0.value=''; ai0.style.borderColor='var(--bad)'; ai0.focus(); }
-    $('fb').innerHTML=`<div class="fb no">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`; return; }
+    Core.sound('no');
+    if(btn){ btn.disabled=true; btn.classList.add('no'); btn.classList.remove('pick'); }
+    window._Q.sel=null; window._Q.selBtn=null; const ab0=$('ansBtn'); if(ab0) ab0.disabled=true;
+    const ai0=$('ans'); if(ai0){ ai0.value=''; ai0.style.borderColor='var(--bad)'; ai0.focus(); }
+    $('hints').insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
+  const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
   document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(Core.isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
-  const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } const ab=$('ansBtn'); if(ab) ab.disabled=true; disableInputs();
+  const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } disableInputs();
+  const qb=$('qbar'); if(qb) qb.style.display='none';
   const ansShow=q.ansHTML||esc(q.ans);
   Core.sound(ok?'ok':'no');
   $('fb').innerHTML=`<div class="fb ${ok?'ok':'no'}">${ok?'Дұрыс! ✓':'Қате. Дұрыс жауабы: '+ansShow}${o.mode==='practice'&&q.expl?`<span class="expl">${esc(q.expl)}</span>`:''}</div>`;
   o.onAnswer(ok);
-  if(o.mode==='practice'){ const st=R.stages[PR.stId]; const hb=$('hintBtn'); if(hb) hb.disabled=true; const dk=$('dkBtn'); if(dk) dk.style.display='none';
-    $('fb').insertAdjacentHTML('beforeend',`<div style="height:10px"></div><div class="row"><button class="btn" id="nextBtn">${PR.twin&&!ok?'Ұқсас есеп':'Келесі есеп'}</button>${st.testUnlocked?`<button class="btn gold" id="testBtn">Кезең тесті</button>`:''}</div>`);
+  if(o.mode==='practice'){ const st=R.stages[PR.stId];
+    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn ${ok?'good':''}" id="nextBtn">${PR.twin&&!ok?'Ұқсас есеп':'Жалғастыру'}</button>${st.testUnlocked?`<button class="btn gold" id="testBtn">Тест</button>`:''}</div>`);
     $('nextBtn').onclick=afterAnswerNav; const tb=$('testBtn'); if(tb) tb.onclick=()=>startTest(PR.stId); }
 }
 
@@ -116,7 +136,8 @@ function nextPractice(){
   const st=R.stages[PR.stId]; const q=makeItem(PR.stId,st.level);
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><button class="btn wide" id="homeBtn">Артқа</button></div>`; $('homeBtn').onclick=showHome; return; }
   PR.q=q; PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=PR.twin; PR.twin=false;
-  renderQuestion(q,{mode:'practice',title:`${PR.stId} · деңгей ${st.level}/3 · қатарынан ${st.streak}/3 ✓`,sub:PR.isTwin?'ұқсас есеп':(st.level===3?`тестке дейін ${Math.min(st.l3streak,3)}/3`:stageName(PR.stId)),onAnswer:onPracticeAnswer,ladder:true});
+  renderQuestion(q,{mode:'practice',title:stageName(PR.stId),meta:`🔥 ${st.streak}/3`,prog:st.streak/3,
+    sub:PR.isTwin?'ұқсас есеп':stageName(PR.stId),onAnswer:onPracticeAnswer,ladder:true});
 }
 function onPracticeAnswer(ok){
   const st=R.stages[PR.stId]; const q=PR.q; const counted=ok&&PR.hints<3;
@@ -151,8 +172,9 @@ function nextHint(){
     if(!steps.length){ add(`<div class="hint"><small>4-қадам</small>${esc(q.expl||'')}</div>`); }
     else { PR.stepsArr=steps; PR.stepIdx=0; add(`<div class="hint" id="guide"><small>4-қадам · Қадамдап есепте</small><div id="guideSteps"></div></div>`); renderGuideStep(); } }
   else if(PR.step===5){ add(`<div class="hint" style="background:var(--good-soft)"><small>5-қадам · Толық шешуі</small><span class="expl" style="display:block;white-space:pre-line">${esc(q.expl||('Жауабы: '+q.ans))}</span></div>`);
-    window._Q.done=true; disableInputs(); $('fb').innerHTML=`<div class="fb no">Шешуін көрдің. Енді осындай есепті өзің шығарасың.</div>`; o.onAnswer(false);
-    $('fb').insertAdjacentHTML('beforeend',`<div style="height:10px"></div><div class="row"><button class="btn" id="nextBtn">Ұқсас есеп</button></div>`); $('nextBtn').onclick=afterAnswerNav; }
+    window._Q.done=true; disableInputs(); const qb=$('qbar'); if(qb) qb.style.display='none';
+    $('fb').innerHTML=`<div class="fb no">Шешуін көрдің. Енді осындай есепті өзің шығарасың.</div>`; o.onAnswer(false);
+    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn" id="nextBtn">Ұқсас есеп</button></div>`); $('nextBtn').onclick=afterAnswerNav; }
   const hb=$('hintBtn'); if(hb){ hb.textContent=PR.step>=5?'Кеңес 5/5':`Кеңес ${PR.step+1}/5`; hb.disabled=PR.step>=5; }
   const dk=$('dkBtn'); if(dk) dk.style.display='none';
 }
@@ -179,7 +201,7 @@ function nextDiag(){
   if(DG.per[st].asked>=2){ if(DG.per[st].ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } return nextDiag(); }
   const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; return nextDiag(); }
   DG.n++; const t0=Date.now();
-  renderQuestion(q,{mode:'diag',title:`Диагностика · ${DG.n}-есеп`,sub:st,noHints:true,
+  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12,sub:st,noHints:true,
     onAnswer:ok=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:q.type,...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
     onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:q.type,stem:String(q.stem).slice(0,200),ans:String(q.ans)}); nextDiag(); }});
 }
@@ -198,7 +220,7 @@ function startTest(stId){
 }
 function nextTest(){
   if(TS.i>=TS.qs.length) return finishTest(); const q=TS.qs[TS.i]; TS.t0=Date.now();
-  renderQuestion(q,{mode:'test',title:`Кезең тесті · ${TS.i+1}/${TS.qs.length}`,sub:TS.stId,noHints:true,onAnswer:ok=>{ if(ok) TS.ok++; log({ev:'answer',mode:'test',stage:TS.stId,lvl:3,ok,ms:Date.now()-TS.t0,id:q.id,type:q.type,...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
+  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:ok=>{ if(ok) TS.ok++; log({ev:'answer',mode:'test',stage:TS.stId,lvl:3,ok,ms:Date.now()-TS.t0,id:q.id,type:q.type,...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
 }
 function finishTest(){
   const st=R.stages[TS.stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need;
