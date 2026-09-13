@@ -46,7 +46,8 @@ function showHome(){
     html+=Core.map({color:CFG.color||'var(--accent)', avatar:Core.avatar(), label:CFG.title,
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
-          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id}${gr?' · '+gr+'-сынып':''}`}; })});
+          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id}${gr?' · '+gr+'-сынып':''}`}; })})
+      +`<p class="maphint">Станцияны басып, сол жерден жаттығуға болады.</p>`;
     html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" data-pr="${cur}">Жаттығу</button><button class="btn gold" data-test="${cur}">Кезең тесті (10 есеп)</button></div>
@@ -57,7 +58,7 @@ function showHome(){
   const bd=$('b_diag'); if(bd) bd.onclick=startDiag;
   app().querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>startPractice(b.dataset.pr));
   app().querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>startTest(b.dataset.test));
-  const mb=document.querySelector('.mapbox'); if(mb) mb.onclick=e=>{ const g=e.target.closest('g[id="mp-cur"]'); if(g) startPractice(cur); };
+  if(Core.mapBind) Core.mapBind(id=>startPractice(id));
 }
 
 /* ── question view ── */
