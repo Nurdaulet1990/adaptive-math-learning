@@ -33,6 +33,25 @@
     else if(!m){ const el=document.createElement('meta'); el.name='google'; el.content='notranslate'; head.appendChild(el); }
   }catch(e){} })();
   function setLang(l){ ls.set(LANG_KEY,l); if(l==='ru') ls.set('esep_ruhint',1); location.reload(); }
+
+  /* ── avatar (the animal that walks the road) and sound ── */
+  const AVATARS=['🦊','🐻','🐣','🐬','🦉','🐯','🐢','🦋'];
+  let pickAva=null;
+  const avatar=()=>(STATE&&STATE._ava)||ls.get('esep_ava')||'🦊';
+  function setAvatar(e){ ls.set('esep_ava',e); if(STATE){ STATE._ava=e; dirty=true; schedule(); } }
+  let muted=ls.get('esep_mute')!==0;                 // silent by default: 20 pupils in one classroom
+  const isMuted=()=>muted;
+  function toggleMute(){ muted=!muted; ls.set('esep_mute',muted?1:0); document.querySelectorAll('[data-mute]').forEach(b=>b.textContent=muted?'🔇':'🔊'); if(!muted) sound('ok'); }
+  let actx=null;
+  function sound(kind){ if(muted) return; try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)(); if(actx.state==='suspended') actx.resume();
+    const t=actx.currentTime, notes=kind==='ok'?[[660,0],[880,.09]]:kind==='up'?[[523,0],[659,.09],[880,.18]]:[[220,0]];
+    notes.forEach(([f,dt])=>{ const o=actx.createOscillator(), g=actx.createGain();
+      o.type=kind==='no'?'triangle':'sine'; o.frequency.setValueAtTime(f,t+dt);
+      if(kind==='no') o.frequency.exponentialRampToValueAtTime(120,t+dt+.22);
+      g.gain.setValueAtTime(0,t+dt); g.gain.linearRampToValueAtTime(.16,t+dt+.02); g.gain.exponentialRampToValueAtTime(.001,t+dt+.3);
+      o.connect(g); g.connect(actx.destination); o.start(t+dt); o.stop(t+dt+.32); });
+  }catch(e){} }
   function langLinks(){ const L=lang();
     return `<span class="langsw">${L==='kk'?'<b>ҚАЗ</b>':'<a href="#" onclick="Core.setLang(\'kk\');return false">ҚАЗ</a>'} · ${L==='ru'?'<b>РУС</b>':'<a href="#" onclick="Core.setLang(\'ru\');return false">РУС</a>'}</span>`; }
   /* one-time note (in Russian) telling the pupil to switch the page with the browser's own translate button */
@@ -94,6 +113,8 @@
       <div class="card"><h1>Сәлем!</h1><p>Атыңды және 4 таңбалы PIN кодыңды жаз. Бірінші рет кірсең — PIN-ді өзің ойлап тап және есте сақта.</p>
       <input class="big" id="c_nm" placeholder="Аты-жөні (мысалы: Айгүл С.)" autocomplete="off">
       <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><input class="big" id="c_kl" placeholder="Сынып (3А)" autocomplete="off" style="flex:1"></div>
+      <div style="height:12px"></div><p class="note" style="margin:0 0 6px">Жолда сені кім ертіп жүреді?</p>
+      <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}">${a}</button>`).join('')}</div>
       <div style="height:10px"></div><button class="btn wide" id="c_go">Кіру</button><p class="note" id="c_msg" style="margin-top:8px"></p>
       ${Object.keys(known).length?`<p class="note" style="margin-top:10px">Бұл құрылғыда бұрын кірген:</p><div class="row" id="c_known">${Object.values(known).map(k=>`<button class="btn ghost" data-id="${esc(k.id)}">${esc(k.name)}</button>`).join('')}</div>`:''}
       </div>`;
@@ -112,6 +133,7 @@
         }catch(e){ console.error(e); $('c_go').disabled=false; msg('Қосылу мүмкін болмады. Интернетті тексер де, қайта бас.'); }
       }
       function finish(row){ session={id:row.id,name:row.name,klass:row.klass||''}; ls.set(SESSION_KEY,session); const kn=ls.get('esep_known_v1')||{}; kn[row.id]={id:row.id,name:row.name}; ls.set('esep_known_v1',kn); resolve(row); }
+      $('c_ava').onclick=e=>{ const b=e.target.closest('button[data-a]'); if(!b) return; pickAva=b.dataset.a; ls.set('esep_ava',pickAva); $('c_ava').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
       $('c_go').onclick=go; $('c_pin').onkeydown=e=>{ if(e.key==='Enter') go(); }; $('c_kl').onkeydown=e=>{ if(e.key==='Enter') go(); };
       const kb=$('c_known'); if(kb) kb.onclick=async e=>{ const b=e.target.closest('button'); if(!b) return; try{ const rows=await sb(`students?select=id,name,pin,klass,state,time_ms&id=eq.${b.dataset.id}`); if(rows.length) finish(rows[0]); else msg('Бұл оқушы базада жоқ.'); }catch(err){ msg('Қосылу мүмкін болмады.'); } };
       setTimeout(()=>{ const i=$('c_nm'); if(i) i.focus(); },50);
@@ -131,6 +153,7 @@
       STATE=(row&&row.state)||cache.state||{}; if(row) cache.time=row.time_ms||0;
       // migration: legacy WP state stored at top level (first trial version)
       if(!STATE.WP&&STATE.stages){ STATE.WP={diag:STATE.diag,stages:STATE.stages,nAns:STATE.nAns,nOk:STATE.nOk,nHint:STATE.nHint}; }
+      if(pickAva||!STATE._ava){ STATE._ava=pickAva||avatar(); pickAva=null; dirty=true; schedule(); }
       cache.state=STATE; ls.set(CACHE_KEY,cache);
       return {student:session,state:STATE};
     },
@@ -156,8 +179,8 @@
     /** Portal/teacher helpers (not for routes) */
     _sb:sb, _session:()=>session, _allState:()=>STATE,
     async _loadStateOnly(){ if(!session) return null; const rows=await sb(`students?select=state,time_ms&id=eq.${session.id}`); return rows[0]||null; },
-    lang, setLang,
-    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()}${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div></div>`; },
+    lang, setLang, avatar, setAvatar, AVATARS, sound, isMuted, toggleMute,
+    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<span class="avachip">${avatar()}</span>`:''}</div>`; },
   };
   window.Core=Core;
 })();
