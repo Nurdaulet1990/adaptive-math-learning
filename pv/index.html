@@ -1,0 +1,2693 @@
+<title>Орын мәні</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root {
+  --bg: #F5F2EC;
+  --surface: #FFFFFF;
+  --surface-alt: #EDE9E0;
+  --text: #2C3040;
+  --text-dim: #6B7084;
+  --primary: #2968A8;
+  --primary-light: #E8F0FA;
+  --accent: #E4943A;
+  --accent-light: #FDF3E6;
+  --success: #2F8A5B;
+  --success-light: #E6F5ED;
+  --error: #D04040;
+  --error-light: #FCEAEA;
+  --block-ones: #4CC9D8;
+  --block-tens: #3BA3C4;
+  --block-hundreds: #2A7DA0;
+  --block-thousands: #1A5A7C;
+  --border: #D8D4CC;
+  --shadow: rgba(44,48,64,0.08);
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1A1E2A;
+    --surface: #242838;
+    --surface-alt: #2E3348;
+    --text: #E4E2DE;
+    --text-dim: #8E91A4;
+    --primary: #5A9FE0;
+    --primary-light: #1E2E42;
+    --accent: #E4A050;
+    --accent-light: #3A2E1E;
+    --success: #4AAE76;
+    --success-light: #1E3328;
+    --error: #E06060;
+    --error-light: #3A1E1E;
+    --block-ones: #5CD4E2;
+    --block-tens: #4AB8D4;
+    --block-hundreds: #389CB6;
+    --block-thousands: #287A98;
+    --border: #3A3E50;
+    --shadow: rgba(0,0,0,0.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1A1E2A;
+  --surface: #242838;
+  --surface-alt: #2E3348;
+  --text: #E4E2DE;
+  --text-dim: #8E91A4;
+  --primary: #5A9FE0;
+  --primary-light: #1E2E42;
+  --accent: #E4A050;
+  --accent-light: #3A2E1E;
+  --success: #4AAE76;
+  --success-light: #1E3328;
+  --error: #E06060;
+  --error-light: #3A1E1E;
+  --block-ones: #5CD4E2;
+  --block-tens: #4AB8D4;
+  --block-hundreds: #389CB6;
+  --block-thousands: #287A98;
+  --border: #3A3E50;
+  --shadow: rgba(0,0,0,0.25);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+h1,h2,h3,h4 { font-family: 'Fredoka', sans-serif; text-wrap: balance; }
+
+/* ── Layout ── */
+.app { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 260px; min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.main { flex:1; display:flex; flex-direction:column; overflow-y:auto; }
+
+/* ── Sidebar ── */
+.logo { padding: 24px 20px 16px; display:flex; align-items:center; gap:12px; }
+.logo-icon {
+  width:44px; height:44px; border-radius:12px;
+  background: linear-gradient(135deg, var(--primary), var(--block-ones));
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; color:#fff; font-family:'Fredoka';font-weight:700;
+}
+.logo h1 { font-size:18px; font-weight:700; color:var(--text); line-height:1.2; }
+.logo small { font-size:11px; color:var(--text-dim); font-weight:400; display:block; }
+
+.nav-section { padding:8px 12px; }
+.nav-label {
+  font-size:10px; font-weight:700; text-transform:uppercase;
+  letter-spacing:1.2px; color:var(--text-dim); padding:8px 8px 4px;
+}
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:8px; cursor:pointer;
+  font-size:14px; font-weight:600; color:var(--text-dim);
+  transition: all 0.15s;
+  border:none; background:none; width:100%; text-align:left;
+}
+.nav-item:hover { background:var(--surface-alt); color:var(--text); }
+.nav-item.active { background:var(--primary-light); color:var(--primary); }
+.nav-item .icon { font-size:18px; width:24px; text-align:center; }
+.nav-item .badge {
+  margin-left:auto; font-size:11px; font-family:'Space Mono',monospace;
+  background:var(--surface-alt); padding:2px 7px; border-radius:10px;
+}
+.nav-item.active .badge { background:var(--primary); color:#fff; }
+
+.nav-levels { padding:0 12px 0 44px; }
+.level-btn {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 10px; border-radius:6px; cursor:pointer;
+  font-size:13px; color:var(--text-dim); width:100%;
+  border:none; background:none; text-align:left;
+  transition:all 0.15s;
+}
+.level-btn:hover { background:var(--surface-alt); }
+.level-btn.active { color:var(--primary); font-weight:700; }
+.level-btn.completed .dot { background:var(--success); }
+.level-btn .dot {
+  width:8px;height:8px;border-radius:50%;
+  background:var(--border); flex-shrink:0;
+}
+.level-btn.active .dot { background:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+.level-btn.locked { opacity:0.4; cursor:not-allowed; }
+.level-btn.locked:hover { background:transparent; }
+.level-btn.locked .dot { background:var(--border); }
+.nav-item.locked { opacity:0.5; cursor:not-allowed; }
+.nav-item.locked:hover { background:transparent; }
+
+/* ── Adaptive welcome ── */
+.welcome-choices { display:flex; gap:16px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
+.welcome-card {
+  background:var(--surface); border:2px solid var(--border); border-radius:16px;
+  padding:28px 24px; width:220px; cursor:pointer; text-align:center;
+  transition: all 0.2s;
+}
+.welcome-card:hover { border-color:var(--primary); transform:translateY(-2px); box-shadow:0 4px 16px var(--shadow); }
+.welcome-card .wc-icon { font-size:40px; margin-bottom:12px; }
+.welcome-card h3 { font-size:16px; font-weight:700; color:var(--text); margin-bottom:6px; }
+.welcome-card p { font-size:13px; color:var(--text-dim); line-height:1.4; }
+
+/* ── Diagnostic progress ── */
+.diag-progress {
+  background:var(--surface-alt); border-radius:8px; padding:12px 16px;
+  margin-bottom:16px; font-size:13px; color:var(--text-dim);
+  font-family:'Space Mono',monospace;
+}
+.diag-bar { height:6px; background:var(--border); border-radius:3px; margin-top:8px; }
+.diag-fill { height:100%; background:var(--primary); border-radius:3px; transition:width 0.3s; }
+
+/* ── Placement test ── */
+.pt-question-area {
+  background:var(--surface); border-radius:var(--radius); padding:32px;
+  box-shadow:0 1px 3px var(--shadow); border:1px solid var(--border);
+  text-align:center;
+}
+.pt-q { font-family:'Fredoka'; font-size:28px; font-weight:600; color:var(--text); margin-bottom:8px; }
+.pt-sub { font-size:13px; color:var(--text-dim); margin-bottom:20px; }
+.pt-num { font-family:'Space Mono',monospace; font-size:14px; color:var(--text-dim); margin-bottom:12px; }
+
+/* ── Ability map ── */
+.ability-map { max-width:480px; margin:0 auto; }
+.am-stage {
+  display:flex; align-items:center; gap:12px; margin-bottom:14px;
+}
+.am-icon { font-size:22px; width:32px; text-align:center; }
+.am-info { flex:1; }
+.am-name { font-family:'Fredoka'; font-size:14px; font-weight:600; color:var(--text); }
+.am-bar { height:10px; background:var(--border); border-radius:5px; margin-top:4px; overflow:hidden; }
+.am-fill { height:100%; border-radius:5px; transition:width 0.6s ease; }
+.am-fill.mastered { background:var(--success); }
+.am-fill.current { background:var(--primary); }
+.am-fill.locked { background:var(--border); }
+.am-badge {
+  font-size:11px; font-weight:700; padding:2px 8px; border-radius:8px;
+  white-space:nowrap;
+}
+.am-badge.done { background:var(--success-light); color:var(--success); }
+.am-badge.active { background:var(--primary-light); color:var(--primary); }
+.am-badge.grey { background:var(--surface-alt); color:var(--text-dim); }
+
+/* ── Comprehension (Түсіну) ── */
+.comp-badge { font-family:'Fredoka'; font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px; background:#f3e8ff; color:#7c3aed; }
+
+/* ── Mastery badge ── */
+.mastery-badge {
+  display:inline-block; font-size:11px; font-weight:600; padding:2px 8px;
+  border-radius:10px; margin-left:8px;
+}
+.mastery-badge.pass { background:var(--success-light); color:var(--success); }
+.mastery-badge.fail { background:var(--error-light); color:var(--error); }
+
+/* ── Progress bar in sidebar ── */
+.progress-section { padding:16px 20px; margin-top:auto; border-top:1px solid var(--border); }
+.progress-label { font-size:11px; color:var(--text-dim); margin-bottom:6px; font-weight:600; }
+.progress-bar { height:6px; background:var(--surface-alt); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--block-ones)); border-radius:3px; transition:width 0.4s; }
+.stars-display { font-size:13px; color:var(--accent); margin-top:8px; font-family:'Fredoka'; }
+
+/* ── Header ── */
+.header {
+  padding:20px 32px;
+  display:flex; align-items:center; gap:16px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+}
+.header h2 { font-size:20px; font-weight:700; }
+.header .level-tag {
+  font-size:12px; font-weight:700; font-family:'Space Mono',monospace;
+  background:var(--primary-light); color:var(--primary);
+  padding:4px 10px; border-radius:6px;
+}
+.header .hint-btn {
+  margin-left:auto; border:1px solid var(--border); background:var(--surface);
+  padding:8px 14px; border-radius:8px; cursor:pointer; font-size:13px;
+  color:var(--text-dim); font-family:'Nunito'; font-weight:600;
+  transition:all 0.15s;
+}
+.header .hint-btn:hover { border-color:var(--primary); color:var(--primary); }
+
+/* ── Workspace ── */
+.workspace { flex:1; padding:32px; display:flex; flex-direction:column; gap:24px; }
+
+/* ── Question prompt ── */
+.prompt-card {
+  background:var(--surface); border-radius:var(--radius);
+  padding:24px 28px;
+  box-shadow:0 1px 3px var(--shadow);
+  border:1px solid var(--border);
+}
+.prompt-card .question {
+  font-size:18px; font-family:'Fredoka'; font-weight:600; line-height:1.5;
+}
+.prompt-card .sub { font-size:14px; color:var(--text-dim); margin-top:4px; }
+
+/* ── Block area ── */
+.block-display {
+  background:var(--surface); border-radius:var(--radius);
+  padding:28px; min-height:200px;
+  box-shadow:0 1px 3px var(--shadow);
+  border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; gap:40px;
+  flex-wrap:wrap;
+}
+.block-group { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.block-group-label {
+  font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:1px; color:var(--text-dim);
+}
+.blocks-container { display:flex; gap:6px; align-items:flex-end; flex-wrap:wrap; justify-content:center; }
+
+/* ── SVG blocks ── */
+.block-thousand { width:60px; height:60px; }
+.block-hundred { width:50px; height:50px; }
+.block-ten { width:14px; height:50px; }
+.block-one { width:14px; height:14px; }
+
+/* ── Place value chart ── */
+.pv-chart {
+  display:flex; border-radius:var(--radius); overflow:hidden;
+  border:2px solid var(--border);
+  background:var(--surface);
+  box-shadow:0 1px 3px var(--shadow);
+}
+.pv-col {
+  flex:1; display:flex; flex-direction:column; text-align:center;
+  border-right:1px solid var(--border);
+}
+.pv-col:last-child { border-right:none; }
+.pv-col-header {
+  padding:10px 16px;
+  font-family:'Fredoka'; font-weight:700; font-size:14px;
+  color:#fff;
+}
+.pv-col-header.th { background:var(--block-thousands); }
+.pv-col-header.h { background:var(--block-hundreds); }
+.pv-col-header.t { background:var(--block-tens); }
+.pv-col-header.o { background:var(--block-ones); }
+.pv-col-body {
+  padding:16px; flex:1; display:flex; align-items:center; justify-content:center;
+  font-family:'Space Mono',monospace; font-size:32px; font-weight:700;
+  min-height:70px;
+}
+.pv-col-body input {
+  width:50px; text-align:center; font-size:28px;
+  font-family:'Space Mono',monospace; font-weight:700;
+  border:none; border-bottom:3px solid var(--border);
+  background:transparent; color:var(--text);
+  outline:none; padding:4px;
+}
+.pv-col-body input:focus { border-bottom-color:var(--primary); }
+
+/* ── Dual-group & ten-frame (horizontal ops) ── */
+.horiz-vis { display:flex; align-items:center; justify-content:center; gap:12px; flex-wrap:wrap; }
+.horiz-vis .op-symbol {
+  font-family:'Fredoka'; font-size:28px; font-weight:700; color:var(--text);
+  min-width:28px; text-align:center;
+}
+.ten-frame-area { display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap; justify-content:center; }
+.tf-label {
+  font-family:'Nunito'; font-size:12px; font-weight:700; color:var(--text-dim);
+  text-align:center; margin-top:6px;
+}
+.horiz-hint {
+  font-family:'Nunito'; font-size:13px; color:var(--text-dim);
+  text-align:center; margin-top:4px; font-style:italic;
+}
+
+/* ── Answer area ── */
+.answer-area {
+  display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.equation-row {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-family:'Fredoka',sans-serif; font-size:32px; font-weight:700;
+  color:var(--text); margin-bottom:12px;
+}
+.equation-row .eq-input {
+  font-size:28px; font-family:'Space Mono',monospace; font-weight:700;
+  border:2.5px solid var(--primary); border-radius:var(--radius);
+  padding:6px 4px; width:72px; text-align:center;
+  background:var(--surface); color:var(--text);
+  transition:border-color .2s;
+}
+.equation-row .eq-input:focus { border-color:var(--accent); outline:none; box-shadow:0 0 0 3px rgba(99,102,241,.15); }
+.equation-row .eq-input.correct { border-color:var(--success); background:var(--success-light); }
+.equation-row .eq-input.wrong { border-color:var(--error); background:var(--error-light); }
+.answer-input {
+  font-size:24px; font-family:'Space Mono',monospace; font-weight:700;
+  border:2px solid var(--border); border-radius:var(--radius);
+  padding:12px 20px; width:140px; text-align:center;
+  background:var(--surface); color:var(--text); outline:none;
+  transition: border-color 0.2s;
+}
+.answer-input:focus { border-color:var(--primary); }
+.answer-input.correct { border-color:var(--success); background:var(--success-light); }
+.answer-input.wrong { border-color:var(--error); background:var(--error-light); }
+
+.check-btn {
+  padding:12px 28px; border-radius:var(--radius);
+  background:var(--primary); color:#fff;
+  font-family:'Fredoka'; font-size:16px; font-weight:600;
+  border:none; cursor:pointer; transition:all 0.15s;
+}
+.check-btn:hover { filter:brightness(1.1); }
+.check-btn:disabled { opacity:0.5; cursor:default; }
+
+.next-btn {
+  padding:12px 28px; border-radius:var(--radius);
+  background:var(--success); color:#fff;
+  font-family:'Fredoka'; font-size:16px; font-weight:600;
+  border:none; cursor:pointer; transition:all 0.15s;
+}
+.next-btn:hover { filter:brightness(1.1); }
+
+/* ── Compare buttons ── */
+.compare-btns { display:flex; gap:12px; }
+.cmp-btn {
+  width:64px; height:64px; border-radius:12px;
+  border:2px solid var(--border); background:var(--surface);
+  font-family:'Space Mono',monospace; font-size:28px; font-weight:700;
+  color:var(--text); cursor:pointer; transition:all 0.15s;
+  display:flex; align-items:center; justify-content:center;
+}
+.cmp-btn:hover { border-color:var(--primary); background:var(--primary-light); }
+.cmp-btn.selected { border-color:var(--primary); background:var(--primary-light); color:var(--primary); }
+.cmp-btn.correct { border-color:var(--success); background:var(--success-light); color:var(--success); }
+.cmp-btn.wrong { border-color:var(--error); background:var(--error-light); color:var(--error); }
+
+/* ── Interactive block builder ── */
+.builder-area {
+  display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start;
+}
+.builder-column {
+  flex:1; min-width:120px;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.builder-label {
+  font-family:'Fredoka'; font-weight:700; font-size:13px;
+  text-transform:uppercase; letter-spacing:0.5px;
+  padding:6px 14px; border-radius:6px; color:#fff;
+}
+.builder-label.th-l { background:var(--block-thousands); }
+.builder-label.h-l { background:var(--block-hundreds); }
+.builder-label.t-l { background:var(--block-tens); }
+.builder-label.o-l { background:var(--block-ones); }
+
+.builder-blocks {
+  min-height:80px; padding:12px;
+  display:flex; flex-wrap:wrap; gap:4px; justify-content:center;
+  align-items:flex-end;
+  background:var(--surface-alt); border-radius:8px;
+  width:100%;
+}
+.builder-controls { display:flex; gap:6px; }
+.builder-btn {
+  width:36px; height:36px; border-radius:8px;
+  border:1px solid var(--border); background:var(--surface);
+  font-size:20px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--text); transition:all 0.12s;
+}
+.builder-btn:hover { border-color:var(--primary); background:var(--primary-light); }
+.builder-count {
+  font-family:'Space Mono',monospace; font-size:22px; font-weight:700;
+  min-width:30px; text-align:center;
+}
+
+/* ── Expanded form ── */
+.expanded-form {
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  font-family:'Space Mono',monospace; font-size:22px; font-weight:700;
+}
+.expanded-form .plus { color:var(--text-dim); }
+.expanded-form .eq { color:var(--text-dim); }
+.exp-input {
+  width:80px; text-align:center; font-size:20px;
+  font-family:'Space Mono',monospace; font-weight:700;
+  border:2px solid var(--border); border-radius:8px;
+  padding:8px; background:var(--surface); color:var(--text);
+  outline:none;
+}
+.exp-input:focus { border-color:var(--primary); }
+.exp-input.correct { border-color:var(--success); background:var(--success-light); }
+.exp-input.wrong { border-color:var(--error); background:var(--error-light); }
+
+/* ── Feedback ── */
+.feedback {
+  padding:14px 20px; border-radius:var(--radius);
+  font-family:'Fredoka'; font-size:16px; font-weight:600;
+  display:none; align-items:center; gap:10px;
+}
+.feedback.show { display:flex; }
+.feedback.correct { background:var(--success-light); color:var(--success); }
+.feedback.wrong { background:var(--error-light); color:var(--error); }
+
+/* ── Vertical addition/subtraction ── */
+.vert-calc {
+  display:inline-flex; flex-direction:column; align-items:flex-end;
+  font-family:'Space Mono',monospace; font-size:32px; font-weight:700;
+  background:var(--surface); padding:24px 32px;
+  border-radius:var(--radius); border:1px solid var(--border);
+  box-shadow:0 1px 3px var(--shadow);
+}
+.vert-row { display:flex; align-items:center; gap:4px; }
+.vert-op { color:var(--primary); margin-right:12px; }
+.vert-line { width:100%; height:3px; background:var(--text); margin:8px 0; border-radius:2px; }
+.vert-digit {
+  width:42px; text-align:center; display:inline-block;
+}
+.vert-input {
+  width:42px; height:48px; text-align:center;
+  font-family:'Space Mono',monospace; font-size:28px; font-weight:700;
+  border:none; border-bottom:3px solid var(--border);
+  background:transparent; color:var(--text); outline:none;
+}
+.vert-input:focus { border-bottom-color:var(--primary); }
+.vert-input.correct { border-bottom-color:var(--success); color:var(--success); }
+.vert-input.wrong { border-bottom-color:var(--error); color:var(--error); }
+.vert-input.locked {
+  opacity:0.35; pointer-events:none;
+  border-bottom-style:dotted;
+}
+.vert-input.current {
+  border-bottom-color:var(--accent); border-bottom-width:4px;
+}
+.fill-order-hint {
+  font-size:12px; color:var(--accent); font-family:'Fredoka';
+  font-weight:600; text-align:right; margin-top:4px;
+  display:flex; align-items:center; gap:4px; justify-content:flex-end;
+}
+.fill-order-hint .arrow { font-size:16px; }
+.carry-row { font-size:16px; color:var(--accent); min-height:24px; }
+
+/* ── Hint system (visual) ── */
+.hint-btn-inline {
+  border:1px solid var(--accent); background:var(--accent-light);
+  padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px;
+  color:var(--accent); font-family:'Fredoka'; font-weight:600;
+  transition:all 0.15s; display:inline-flex; align-items:center; gap:5px;
+}
+.hint-btn-inline:hover { background:var(--accent); color:#fff; }
+
+.vis-hint {
+  background:var(--surface); border:2px solid var(--accent);
+  border-radius:var(--radius); overflow:hidden; margin-top:6px;
+}
+.vis-hint-header {
+  background:var(--accent); color:#fff; padding:6px 14px;
+  font-family:'Fredoka'; font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.vis-hint-header .step-dots { display:flex; gap:5px; }
+.vis-hint-header .step-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:rgba(255,255,255,0.35);
+}
+.vis-hint-header .step-dot.active { background:#fff; }
+.vis-hint-header .step-dot.done { background:rgba(255,255,255,0.7); }
+
+.vis-hint-body {
+  padding:10px 14px; display:flex; flex-direction:column;
+  align-items:center; gap:8px;
+}
+.vis-hint-calc {
+  display:inline-flex; flex-direction:column; align-items:flex-end;
+  font-family:'Space Mono',monospace; font-size:20px; font-weight:700;
+  background:var(--surface-alt); padding:8px 14px; border-radius:8px;
+}
+.vis-hint-calc .h-row { display:flex; align-items:center; gap:2px; }
+.vis-hint-calc .h-digit {
+  width:28px; text-align:center; display:inline-block;
+  padding:1px 0; border-radius:4px; transition:all 0.3s;
+}
+.vis-hint-calc .h-digit.lit {
+  background:var(--accent-light); color:var(--accent);
+  box-shadow:0 0 0 2px var(--accent);
+}
+.vis-hint-calc .h-digit.dim { opacity:0.3; }
+.vis-hint-calc .h-digit.result-fill {
+  background:var(--success-light); color:var(--success);
+  box-shadow:0 0 0 2px var(--success);
+}
+.vis-hint-calc .h-op { color:var(--primary); margin-right:6px; font-size:18px; }
+.vis-hint-calc .h-line { width:100%; height:2px; background:var(--text); margin:4px 0; border-radius:2px; }
+.vis-hint-calc .h-carry {
+  font-size:12px; color:var(--accent); min-height:16px;
+}
+
+.vis-hint-blocks {
+  width:100%;
+  display:flex; flex-direction:column; gap:6px;
+  align-items:center;
+}
+.vis-block-row {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  justify-content:center;
+}
+.vis-block-label {
+  font-family:'Fredoka'; font-size:12px; font-weight:600;
+  color:var(--text-dim); min-width:40px; text-align:right;
+}
+.vis-block-group {
+  display:flex; gap:3px; align-items:flex-end; flex-wrap:wrap;
+  padding:4px 8px; background:var(--surface-alt); border-radius:6px;
+  min-height:28px; transition:all 0.3s;
+}
+.vis-block-group.highlight {
+  background:var(--accent-light); box-shadow:0 0 0 2px var(--accent);
+}
+.vis-block-group.success {
+  background:var(--success-light); box-shadow:0 0 0 2px var(--success);
+}
+.vis-block-group.strike { opacity:0.3; }
+.vis-arrow { font-size:16px; color:var(--accent); font-weight:700; }
+.vis-equals { font-family:'Space Mono',monospace; font-size:16px; font-weight:700; color:var(--text-dim); }
+
+.vis-hint-text {
+  padding:8px 14px; border-top:1px solid var(--border);
+  font-family:'Fredoka'; font-size:13px; font-weight:600;
+  color:var(--text); display:flex; align-items:center; gap:6px;
+  flex-wrap:wrap; justify-content:center; text-align:center;
+}
+.vis-hint-text .emphasis {
+  color:var(--primary); font-family:'Space Mono',monospace;
+  background:var(--primary-light); padding:1px 6px; border-radius:4px;
+  font-size:13px;
+}
+
+.vis-hint-nav {
+  padding:6px 14px; border-top:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.vis-nav-btn {
+  padding:6px 14px; border-radius:8px; cursor:pointer;
+  font-family:'Fredoka'; font-size:13px; font-weight:600;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--text); transition:all 0.15s;
+}
+.vis-nav-btn:hover { border-color:var(--primary); color:var(--primary); }
+.vis-nav-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+.vis-nav-btn.primary:hover { filter:brightness(1.1); }
+.vis-nav-btn:disabled { opacity:0.3; cursor:default; }
+
+@keyframes regroup-flash {
+  0%{transform:scale(1)} 50%{transform:scale(1.08);box-shadow:0 0 8px var(--accent)} 100%{transform:scale(1)}
+}
+.regroup-anim { animation:regroup-flash 0.4s ease-out; }
+
+/* ── Ops layout: calc + pv chart side by side ── */
+.ops-layout {
+  display:flex; gap:28px; align-items:flex-start;
+  flex-wrap:wrap; justify-content:center;
+}
+.ops-pv-chart {
+  display:flex; align-items:flex-start;
+}
+.pv-table {
+  border-collapse:separate; border-spacing:0;
+  font-family:'Fredoka';
+}
+.pv-table thead th {
+  font-size:14px; font-weight:700; color:var(--primary);
+  padding:6px 16px; text-align:center;
+  border-bottom:3px solid var(--primary);
+}
+.pv-table .pv-cell {
+  padding:10px 14px; text-align:center;
+  border:1px solid var(--border); vertical-align:middle;
+  min-width:100px; min-height:80px; background:var(--surface-alt);
+}
+.pv-table .pv-op-row {
+  text-align:center; font-size:20px; font-weight:700;
+  color:var(--primary); padding:4px 0; border:none;
+  font-family:'Space Mono',monospace;
+}
+.pv-row-a .pv-cell { background:rgba(99,102,241,0.06); }
+.pv-row-b .pv-cell { background:rgba(245,158,11,0.06); }
+
+/* ── Welcome ── */
+.welcome {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  text-align:center; padding:40px;
+}
+.welcome h2 { font-size:28px; margin-bottom:12px; }
+.welcome p { font-size:16px; color:var(--text-dim); max-width:400px; line-height:1.6; }
+.welcome .start-btn {
+  margin-top:24px; padding:14px 36px;
+  background:var(--primary); color:#fff;
+  font-family:'Fredoka'; font-size:18px; font-weight:600;
+  border:none; border-radius:var(--radius); cursor:pointer;
+}
+.welcome .start-btn:hover { filter:brightness(1.1); }
+
+/* ── Responsive ── */
+@media (max-width:768px) {
+  .sidebar { display:none; }
+  .app { flex-direction:column; }
+  .workspace { padding:16px; }
+  .block-display { gap:20px; padding:16px; }
+}
+
+/* ── Animations ── */
+@keyframes pop { 0%{transform:scale(0.8);opacity:0} 100%{transform:scale(1);opacity:1} }
+.pop-in { animation: pop 0.25s ease-out; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+.shake { animation: shake 0.3s ease-out; }
+@keyframes star-pop { 0%{transform:scale(0) rotate(-30deg)} 60%{transform:scale(1.3) rotate(10deg)} 100%{transform:scale(1) rotate(0)} }
+.star-anim { animation: star-pop 0.4s ease-out; display:inline-block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pop-in, .shake, .star-anim { animation: none; }
+}
+</style>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main" id="main"></div>
+</div>
+
+<script src="../core/core.js"></script>
+<script>
+const MODULES = [
+  {
+    id:'d1', name:'10 ішінде', nameRu:'В пределах 10', icon:'1️⃣',
+    levels:[
+      {id:'c1', name:'Санау (1–9)', desc:'Count ones blocks'},
+      {id:'a1', name:'Қосу', desc:'Add within 10'},
+      {id:'s1', name:'Азайту', desc:'Subtract within 10'},
+      {id:'u1', name:'Түсіну', desc:'Comprehension check'}
+    ]
+  },
+  {
+    id:'d2', name:'20 ішінде', nameRu:'В пределах 20', icon:'2️⃣',
+    levels:[
+      {id:'c20', name:'Санау (11–20)', desc:'Count blocks 11-20'},
+      {id:'pv20', name:'Орын мәні', desc:'Place value within 20'},
+      {id:'a20n', name:'Қосу, ауыссыз', desc:'Add within 20 no carry'},
+      {id:'a2', name:'Қосу, ауысумен', desc:'Add within 20 with carry'},
+      {id:'s20n', name:'Азайту, алусыз', desc:'Sub within 20 no borrow'},
+      {id:'s20b', name:'Азайту, алумен', desc:'Sub within 20 with borrow'},
+      {id:'u2', name:'Түсіну', desc:'Comprehension check'}
+    ]
+  },
+  {
+    id:'d3', name:'100 ішінде', nameRu:'В пределах 100', icon:'💯',
+    levels:[
+      {id:'ct10', name:'Ондықтармен санау', desc:'Count by tens'},
+      {id:'c2', name:'Санау (10–99)', desc:'Count tens and ones'},
+      {id:'p1', name:'Орын мәні', desc:'Place value chart 2-digit'},
+      {id:'m1', name:'Салыстыру', desc:'Compare 2-digit numbers'},
+      {id:'a3', name:'Қосу, ауыссыз', desc:'2-digit no carry'},
+      {id:'a4', name:'Қосу, бірлік ауысу', desc:'2-digit ones carry'},
+      {id:'a5', name:'Қосу, ондық ауысу', desc:'2-digit tens carry'},
+      {id:'a6', name:'Қосу, екі ауысу', desc:'2-digit double carry'},
+      {id:'s2', name:'Азайту, алусыз', desc:'2-digit no borrow'},
+      {id:'s3', name:'Азайту, бірлік алу', desc:'2-digit ones borrow'},
+      {id:'u3', name:'Түсіну', desc:'Comprehension check'}
+    ]
+  },
+  {
+    id:'d4', name:'1000 ішінде', nameRu:'В пределах 1000', icon:'🔢',
+    levels:[
+      {id:'c3', name:'Санау (100–999)', desc:'Count hundreds tens ones'},
+      {id:'p2', name:'Орын мәні (3 таңба)', desc:'3-digit place value chart'},
+      {id:'p3', name:'Жіктелген түр', desc:'Expanded form'},
+      {id:'m2', name:'Салыстыру', desc:'Compare 3-digit numbers'},
+      {id:'a7', name:'Қосу, ауыссыз', desc:'3-digit no carry'},
+      {id:'a8', name:'Қосу, бірлік ауысу', desc:'3-digit ones carry'},
+      {id:'a9', name:'Қосу, ондық ауысу', desc:'3-digit tens carry'},
+      {id:'a10', name:'Қосу, көп ауысу', desc:'3-digit multiple carries'},
+      {id:'s4', name:'Азайту, алусыз', desc:'3-digit no borrow'},
+      {id:'s5', name:'Азайту, бірлік алу', desc:'3-digit ones borrow'},
+      {id:'s6', name:'Азайту, ондық алу', desc:'3-digit tens borrow'},
+      {id:'s7', name:'Азайту, көп алу', desc:'3-digit multiple borrows'},
+      {id:'u4', name:'Түсіну', desc:'Comprehension check'}
+    ]
+  },
+  {
+    id:'d5', name:'10000 ішінде', nameRu:'В пределах 10000', icon:'🏆',
+    levels:[
+      {id:'c4', name:'Санау (1000–9999)', desc:'Count thousands too'},
+      {id:'pv4d', name:'Орын мәні (4 таңба)', desc:'4-digit place value chart'},
+      {id:'p4', name:'Құрастыр', desc:'Build number with blocks'},
+      {id:'m3', name:'Салыстыру', desc:'Compare 4-digit numbers'},
+      {id:'a4d1', name:'Қосу, ауыссыз', desc:'4-digit no carry'},
+      {id:'a4d2', name:'Қосу, бірлік ауысу', desc:'4-digit ones carry'},
+      {id:'a4d3', name:'Қосу, ондық ауысу', desc:'4-digit tens carry'},
+      {id:'a4d4', name:'Қосу, көп ауысу', desc:'4-digit multiple carries'},
+      {id:'s4d1', name:'Азайту, алусыз', desc:'4-digit no borrow'},
+      {id:'s4d2', name:'Азайту, бірлік алу', desc:'4-digit ones borrow'},
+      {id:'s4d3', name:'Азайту, ондық алу', desc:'4-digit tens borrow'},
+      {id:'s4d4', name:'Азайту, көп алу', desc:'4-digit multiple borrows'},
+      {id:'u5', name:'Түсіну', desc:'Comprehension check'}
+    ]
+  }
+];
+
+// ── Global level ordering for adaptive progression ──
+const LEVEL_ORDER = [];
+for(const m of MODULES) {
+  for(const l of m.levels) {
+    LEVEL_ORDER.push({ moduleId: m.id, levelId: l.id });
+  }
+}
+
+function getLevelGlobalIndex(levelId) {
+  return LEVEL_ORDER.findIndex(x => x.levelId === levelId);
+}
+
+function isLevelUnlocked(levelId) {
+  const idx = getLevelGlobalIndex(levelId);
+  return idx <= state.unlockedUpTo;
+}
+
+// Level-type dispatch sets
+// ── Module dispatch sets ──
+const HORIZ_OPS = new Set(['a1','s1','a2','a20n','s20n','s20b']);
+const COUNT_LVL = new Set(['c1','c2','c3','c4','c20','ct10']);
+const PLACE_LVL = new Set(['p1','p2','p3','p4','pv20','pv4d']);
+const CMP_LVL   = new Set(['m1','m2','m3']);
+const COMP_LVL  = new Set(['u1','u2','u3','u4','u5']);
+
+// ── Module dispatch table (order matters: first match wins) ──
+// To add a new module: 1) define its Set above, 2) add entry here, 3) write its generate function below
+const QUESTION_DISPATCH = [
+  { name: 'counting',      levels: COUNT_LVL, generate: (ws) => genCount(ws) },
+  { name: 'placeValue',    levels: PLACE_LVL, generate: (ws) => genPlace(ws) },
+  { name: 'compare',       levels: CMP_LVL,   generate: (ws) => genCompare(ws) },
+  { name: 'horizOps',      levels: HORIZ_OPS, generate: (ws) => genHorizOps(ws) },
+  { name: 'comprehension', levels: COMP_LVL,  generate: (ws) => genComprehension(ws) },
+  // default fallback: genOps (vertical operations with hints)
+];
+
+// Helpers for 4-digit carry/borrow counting
+function countCarries(a,b){let carry=0,n=0;for(let i=0;i<4;i++){const s=Math.floor(a/10**i)%10+Math.floor(b/10**i)%10+carry;if(s>=10){carry=1;n++}else{carry=0}}return n;}
+function countBorrows(a,b){let borrow=0,n=0;for(let i=0;i<4;i++){const d=Math.floor(a/10**i)%10-borrow-Math.floor(b/10**i)%10;if(d<0){borrow=1;n++}else{borrow=0}}return n;}
+
+let state = {
+  module: null,
+  level: null,
+  score: 0,
+  total: 0,
+  completed: JSON.parse(localStorage.getItem('pv_completed')||'{}'),
+  stars: parseInt(localStorage.getItem('pv_stars')||'0'),
+  unlockedUpTo: 0,
+  started: false,
+  questionNum: 0,
+  questionsPerLevel: 10,
+  diagnostic: false,
+  diagStep: 0,
+  diagResults: [],
+  diagLevels: [],
+  placement: null // {active, currentIdx, consecutiveWrong, history[], maxReached}
+};
+
+function saveProgress() {
+  try {
+    localStorage.setItem('pv_completed', JSON.stringify(state.completed));
+    localStorage.setItem('pv_stars', state.stars);
+    localStorage.setItem('pv_unlocked', state.unlockedUpTo);
+    localStorage.setItem('pv_started', state.started);
+  } catch(e){}
+}
+
+function totalLevels() { return MODULES.reduce((s,m)=>s+m.levels.length,0); }
+function completedCount() { return Object.keys(state.completed).length; }
+
+// ── SVG block generators ──
+// Block geometry — proportional: One=cube, Ten=10 cubes stacked, Hundred=10 tens side-by-side
+const BU=14, BG=2, BS=BU+BG; // unit cube size, gap within rod, step
+const TEN_H = 10*BS-BG;       // ten rod height = 158
+const TEN_W = BU;              // ten rod width = 14
+const ROD_GAP = 4;             // gap between rods in a hundred
+const H_W = 10*(TEN_W+ROD_GAP)-ROD_GAP; // hundred width = 10*18-4 = 176
+const H_H = TEN_H;             // hundred height = 158
+
+function svgOne(x=0,y=0) {
+  return `<rect x="${x}" y="${y}" width="${BU}" height="${BU}" rx="2" fill="var(--block-ones)" stroke="var(--block-tens)" stroke-width="0.6"/>`;
+}
+function svgTen(x=0,y=0) {
+  let s='';
+  for(let i=0;i<10;i++) s+=`<rect x="${x}" y="${y+i*BS}" width="${BU}" height="${BU}" rx="1.5" fill="var(--block-tens)" stroke="var(--block-hundreds)" stroke-width="0.4"/>`;
+  return s;
+}
+function svgHundred(x=0,y=0) {
+  // 10 ten-rods side by side
+  let s='';
+  for(let c=0;c<10;c++) {
+    const rx = x + c*(TEN_W+ROD_GAP);
+    for(let r=0;r<10;r++) {
+      s+=`<rect x="${rx}" y="${y+r*BS}" width="${BU}" height="${BU}" rx="1" fill="var(--block-hundreds)" stroke="var(--block-thousands)" stroke-width="0.3"/>`;
+    }
+  }
+  return s;
+}
+function svgThousand(x=0,y=0) {
+  // Large cube outline with grid overlay
+  const sz = H_H; // same height as hundred
+  let s=`<rect x="${x}" y="${y}" width="${sz}" height="${sz}" rx="4" fill="var(--block-thousands)" stroke="var(--text-dim)" stroke-width="0.7"/>`;
+  const cellSz = (sz-2)/10;
+  for(let r=0;r<10;r++) for(let c=0;c<10;c++)
+    s+=`<rect x="${x+1+c*cellSz}" y="${y+1+r*cellSz}" width="${cellSz-1}" height="${cellSz-1}" rx="0.5" fill="var(--block-hundreds)" opacity="0.4"/>`;
+  return s;
+}
+
+function renderBlocksSVG(th,h,t,o) {
+  const gap=24;
+  const groups=[];
+  const thSz = H_H; // thousand is a square same size as hundred height
+  if(th>0) {
+    const w=th*(thSz+8)-8; groups.push({type:'th',count:th,w});
+  }
+  if(h>0) {
+    const w=h*(H_W+10)-10; groups.push({type:'h',count:h,w});
+  }
+  if(t>0) {
+    const w=t*(TEN_W+8)-8; groups.push({type:'t',count:t,w});
+  }
+  if(o>0) {
+    const cols=Math.min(o,5); const rows=Math.ceil(o/5);
+    const w=cols*(BU+4)-4; groups.push({type:'o',count:o,w,cols,rows});
+  }
+  const totalW=groups.reduce((s,g)=>s+g.w,0)+(groups.length-1)*gap;
+  const svgH=TEN_H+10; // enough for tallest element (ten/hundred rods)
+  let svg=`<svg viewBox="0 0 ${Math.max(totalW,60)} ${svgH}" width="${Math.max(totalW,60)}" height="${svgH}" style="max-width:100%">`;
+  let cx=0;
+  for(const g of groups) {
+    const yOff = svgH - 5; // align all blocks to bottom
+    if(g.type==='th') {
+      for(let i=0;i<g.count;i++) { svg+=svgThousand(cx+i*(thSz+8), yOff-thSz); }
+    } else if(g.type==='h') {
+      for(let i=0;i<g.count;i++) { svg+=svgHundred(cx+i*(H_W+10), yOff-H_H); }
+    } else if(g.type==='t') {
+      for(let i=0;i<g.count;i++) { svg+=svgTen(cx+i*(TEN_W+8), yOff-TEN_H); }
+    } else if(g.type==='o') {
+      for(let i=0;i<g.count;i++) {
+        const col=i%5, row=Math.floor(i/5);
+        svg+=svgOne(cx+col*(BU+4), yOff-BU-(row*(BU+4)));
+      }
+    }
+    cx+=g.w+gap;
+  }
+  svg+=`</svg>`;
+  return svg;
+}
+
+// ── Sidebar ──
+function renderSidebar() {
+  const sb=document.getElementById('sidebar');
+  let html=`
+    <div class="logo">
+      <div class="logo-icon">ОМ</div>
+      <h1>Орын мәні<small>Adaptive · G1–G4</small></h1>
+    </div>`;
+  // Check if any level in a module is unlocked
+  function isModuleAccessible(m) {
+    return m.levels.some(l => isLevelUnlocked(l.id));
+  }
+  for(const m of MODULES) {
+    const modCompleted = m.levels.filter(l=>state.completed[l.id]).length;
+    const modUnlocked = m.levels.filter(l=>isLevelUnlocked(l.id)).length;
+    const isActive = state.module===m.id;
+    const modLocked = !isModuleAccessible(m);
+    html+=`<div class="nav-section">
+      <button class="nav-item ${isActive?'active':''} ${modLocked?'locked':''}" onclick="${modLocked?'':'selectModule(\''+m.id+'\')'}">
+        <span class="icon">${modLocked?'🔒':m.icon}</span>${m.name}
+        <span class="badge">${modCompleted}/${m.levels.length}</span>
+      </button>`;
+    if(isActive && !modLocked) {
+      html+=`<div class="nav-levels">`;
+      for(const l of m.levels) {
+        const lActive = state.level===l.id;
+        const lDone = state.completed[l.id];
+        const lLocked = !isLevelUnlocked(l.id);
+        html+=`<button class="level-btn ${lActive?'active':''} ${lDone?'completed':''} ${lLocked?'locked':''}" onclick="${lLocked?'':'selectLevel(\''+m.id+'\',\''+l.id+'\')'}">
+          <span class="dot">${lLocked?'🔒':''}</span>${l.name}
+        </button>`;
+      }
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  }
+  // Current level indicator
+  const curIdx = state.unlockedUpTo;
+  const curEntry = LEVEL_ORDER[Math.min(curIdx, LEVEL_ORDER.length-1)];
+  const curMod = MODULES.find(m=>m.id===curEntry.moduleId);
+  const curLvl = curMod.levels.find(l=>l.id===curEntry.levelId);
+  html+=`<div class="progress-section">
+    <div class="progress-label">Жалпы прогресс</div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${(completedCount()/totalLevels()*100).toFixed(0)}%"></div></div>
+    <div class="stars-display">★ ${state.stars} жұлдыз</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-top:6px">Ашылған: ${Math.min(state.unlockedUpTo+1, LEVEL_ORDER.length)} / ${LEVEL_ORDER.length} деңгей</div>
+  </div>`;
+  sb.innerHTML=html;
+}
+
+function selectModule(id) {
+  state.module=id;
+  state.level=null;
+  renderSidebar();
+  renderMain();
+}
+
+function selectLevel(modId, lvlId) {
+  if(!isLevelUnlocked(lvlId)) return; // prevent selecting locked levels
+  state.module=modId;
+  state.level=lvlId;
+  state.questionNum=0;
+  state.score=0;
+  state.total=0;
+  state.questionsPerLevel = COMP_LVL.has(lvlId) ? 5 : 10;
+  state.placement = null;
+  renderSidebar();
+  renderMain();
+}
+
+// ── Random helpers ──
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+
+// ── Main render ──
+function renderMain() {
+  const main=document.getElementById('main');
+  if(!state.level) {
+    if(!state.started) {
+      // First-time welcome: choose Start or Diagnostic
+      main.innerHTML=`<div class="welcome">
+        <div style="font-size:64px;margin-bottom:16px">🧱</div>
+        <h2>Орын мәні зертханасы</h2>
+        <p>Base-ten блоктарымен адаптивті оқыту жүйесі</p>
+        <div class="welcome-choices">
+          <div class="welcome-card" onclick="startFromBeginning()">
+            <div class="wc-icon">🚀</div>
+            <h3>Бастау</h3>
+            <p>Бірінші деңгейден бастаңыз. Әр деңгейді меңгеріп, келесіге өтіңіз.</p>
+          </div>
+          <div class="welcome-card" onclick="startDiagnostic()">
+            <div class="wc-icon">🎯</div>
+            <h3>Диагностика</h3>
+            <p>Қысқа тест арқылы деңгейіңізді анықтаңыз. Білетін тақырыптарды өтіп кетіңіз.</p>
+          </div>
+        </div>
+      </div>`;
+    } else {
+      // Already started: show current level info
+      const curIdx = Math.min(state.unlockedUpTo, LEVEL_ORDER.length-1);
+      const curEntry = LEVEL_ORDER[curIdx];
+      const curMod = MODULES.find(m=>m.id===curEntry.moduleId);
+      const curLvl = curMod.levels.find(l=>l.id===curEntry.levelId);
+      const allDone = completedCount() >= totalLevels();
+      main.innerHTML=`<div class="welcome">
+        <div style="font-size:64px;margin-bottom:16px">${allDone?'🏆':'📚'}</div>
+        <h2>${allDone?'Барлық деңгей аяқталды!':'Жалғастырыңыз!'}</h2>
+        ${allDone?`<p>Сіз барлық ${totalLevels()} деңгейді сәтті аяқтадыңыз!</p>`:`
+        <p>Келесі деңгей: <strong>${curMod.icon} ${curMod.name} — ${curLvl.name}</strong></p>
+        <button class="check-btn" style="margin-top:16px;font-size:16px;padding:12px 32px" onclick="selectLevel('${curEntry.moduleId}','${curEntry.levelId}')">Жалғастыру →</button>
+        `}
+        <button class="check-btn" style="margin-top:12px;font-size:13px;padding:8px 20px;background:var(--surface-alt);color:var(--text-dim)" onclick="resetProgress()">Қайта бастау</button>
+      </div>`;
+    }
+    return;
+  }
+  const mod=MODULES.find(m=>m.id===state.module);
+  const lvl=mod.levels.find(l=>l.id===state.level);
+  main.innerHTML=`
+    <div class="header">
+      <h2>${mod.icon} ${mod.name}</h2>
+      <span class="level-tag">${lvl.name}</span>
+      <span style="font-size:13px;color:var(--text-dim);font-family:'Space Mono',monospace">${state.questionNum+1}/${state.questionsPerLevel}</span>
+    </div>
+    <div class="workspace" id="workspace"></div>`;
+  generateQuestion();
+}
+
+function generateQuestion() {
+  const ws=document.getElementById('workspace');
+  if(state.questionNum>=state.questionsPerLevel) {
+    showLevelComplete(ws);
+    return;
+  }
+  const lv=state.level;
+  const entry = QUESTION_DISPATCH.find(d => d.levels.has(lv));
+  if(entry) entry.generate(ws);
+  else genOps(ws); // default: vertical ops with hints
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: COUNTING  —  levels: c1, c2, c3, c4, c20, ct10    ║
+// ║  Dispatch set: COUNT_LVL                                    ║
+// ║  Functions: genCount                                        ║
+// ║  Check: checkAnswer (shared)                                ║
+// ╚═══════════════════════════════════════════════════════════════╝
+function genCount(ws) {
+  let th=0,h=0,t=0,o=0,answer;
+  if(state.level==='c1') { o=rand(1,9); answer=o; }
+  else if(state.level==='c20') { answer=rand(11,20); t=Math.floor(answer/10); o=answer%10; }
+  else if(state.level==='ct10') { t=rand(1,9); answer=t*10; }
+  else if(state.level==='c2') { t=rand(1,9); o=rand(0,9); answer=t*10+o; }
+  else if(state.level==='c3') { h=rand(1,9); t=rand(0,9); o=rand(0,9); answer=h*100+t*10+o; }
+  else { th=rand(1,3); h=rand(0,9); t=rand(0,9); o=rand(0,9); answer=th*1000+h*100+t*10+o; }
+
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">Блоктарды санаңыз. Бұл қандай сан?</div>
+      <div class="sub">Count the blocks. What number is this?</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(th,h,t,o)}</div>
+    <div class="answer-area">
+      <input type="number" class="answer-input" id="ans" placeholder="?" autofocus>
+      <button class="check-btn" onclick="checkAnswer(${answer})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('ans').addEventListener('keydown',e=>{if(e.key==='Enter')checkAnswer(answer);});
+  document.getElementById('ans').focus();
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: PLACE VALUE  —  levels: p1, p2, p3, p4, pv20, pv4d║
+// ║  Dispatch set: PLACE_LVL                                   ║
+// ║  Functions: genPlace, genPlaceChart2/3/4, genPV20,          ║
+// ║             genExpanded, genBuild                           ║
+// ║  Check: checkPV2/3/4, checkExpanded, checkBuild, checkAnswer║
+// ╚═══════════════════════════════════════════════════════════════╝
+function genPlace(ws) {
+  if(state.level==='pv20') genPV20(ws);
+  else if(state.level==='p1') genPlaceChart2(ws);
+  else if(state.level==='p2') genPlaceChart3(ws);
+  else if(state.level==='p3') genExpanded(ws);
+  else if(state.level==='pv4d') genPlaceChart4(ws);
+  else genBuild(ws);
+}
+
+function genPlaceChart2(ws) {
+  const t=rand(1,9), o=rand(0,9), num=t*10+o;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын кестеге жазыңыз</div>
+      <div class="sub">Write ${num} in the place value chart</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(0,0,t,o)}</div>
+    <div class="pv-chart" style="max-width:320px">
+      <div class="pv-col"><div class="pv-col-header t">Ондықтар</div><div class="pv-col-body"><input type="number" id="pt" maxlength="1"></div></div>
+      <div class="pv-col"><div class="pv-col-header o">Бірліктер</div><div class="pv-col-body"><input type="number" id="po" maxlength="1"></div></div>
+    </div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkPV2(${t},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('pt').focus();
+}
+
+function genPV20(ws) {
+  const num=rand(11,19), t=1, o=num-10;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын кестеге жазыңыз</div>
+      <div class="sub">${num} = ? ондық + ? бірлік</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(0,0,t,o)}</div>
+    <div class="pv-chart" style="max-width:320px">
+      <div class="pv-col"><div class="pv-col-header t">Ондықтар</div><div class="pv-col-body"><input type="number" id="pt" maxlength="1"></div></div>
+      <div class="pv-col"><div class="pv-col-header o">Бірліктер</div><div class="pv-col-body"><input type="number" id="po" maxlength="1"></div></div>
+    </div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkPV2(${t},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('pt').focus();
+}
+
+function genPlaceChart3(ws) {
+  const h=rand(1,9),t=rand(0,9),o=rand(0,9),num=h*100+t*10+o;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын кестеге жазыңыз</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(0,h,t,o)}</div>
+    <div class="pv-chart" style="max-width:420px">
+      <div class="pv-col"><div class="pv-col-header h">Жүздіктер</div><div class="pv-col-body"><input type="number" id="ph"></div></div>
+      <div class="pv-col"><div class="pv-col-header t">Ондықтар</div><div class="pv-col-body"><input type="number" id="pt"></div></div>
+      <div class="pv-col"><div class="pv-col-header o">Бірліктер</div><div class="pv-col-body"><input type="number" id="po"></div></div>
+    </div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkPV3(${h},${t},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('ph').focus();
+}
+
+function genExpanded(ws) {
+  const h=rand(1,9),t=rand(0,9),o=rand(0,9),num=h*100+t*10+o;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын жіктелген түрде жазыңыз</div>
+      <div class="sub">Write ${num} in expanded form</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(0,h,t,o)}</div>
+    <div class="expanded-form">
+      <input type="number" class="exp-input" id="eh" placeholder="?">
+      <span class="plus">+</span>
+      <input type="number" class="exp-input" id="et" placeholder="?">
+      <span class="plus">+</span>
+      <input type="number" class="exp-input" id="eo" placeholder="?">
+      <span class="eq">=</span>
+      <span style="font-size:28px">${num}</span>
+    </div>
+    <div class="answer-area" style="margin-top:12px">
+      <button class="check-btn" onclick="checkExpanded(${h*100},${t*10},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('eh').focus();
+}
+
+function genPlaceChart4(ws) {
+  const th=rand(1,9),h=rand(0,9),t=rand(0,9),o=rand(0,9);
+  const num=th*1000+h*100+t*10+o;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын кестеге жазыңыз</div>
+    </div>
+    <div class="block-display pop-in">${renderBlocksSVG(th,h,t,o)}</div>
+    <div class="pv-chart" style="max-width:540px">
+      <div class="pv-col"><div class="pv-col-header th">Мыңдықтар</div><div class="pv-col-body"><input type="number" id="pth"></div></div>
+      <div class="pv-col"><div class="pv-col-header h">Жүздіктер</div><div class="pv-col-body"><input type="number" id="ph"></div></div>
+      <div class="pv-col"><div class="pv-col-header t">Ондықтар</div><div class="pv-col-body"><input type="number" id="pt"></div></div>
+      <div class="pv-col"><div class="pv-col-header o">Бірліктер</div><div class="pv-col-body"><input type="number" id="po"></div></div>
+    </div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkPV4(${th},${h},${t},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('pth').focus();
+}
+
+function genBuild(ws) {
+  let th=0,h=0,t=0,o=0;
+  const difficulty=rand(1,3);
+  if(difficulty===1) { t=rand(1,5); o=rand(1,5); }
+  else if(difficulty===2) { h=rand(1,4); t=rand(0,5); o=rand(0,5); }
+  else { th=rand(1,2); h=rand(0,3); t=rand(0,4); o=rand(0,5); }
+  const num=th*1000+h*100+t*10+o;
+
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${num} санын блоктардан құрастырыңыз</div>
+      <div class="sub">Build ${num} using blocks — use + and − buttons</div>
+    </div>
+    <div class="builder-area" id="builder">
+      ${th>0||num>=1000?`<div class="builder-column">
+        <div class="builder-label th-l">Мыңдық</div>
+        <div class="builder-blocks" id="bb-th"></div>
+        <div class="builder-controls">
+          <button class="builder-btn" onclick="adjBlock('th',-1)">−</button>
+          <span class="builder-count" id="bc-th">0</span>
+          <button class="builder-btn" onclick="adjBlock('th',1)">+</button>
+        </div>
+      </div>`:''}
+      ${h>0||num>=100?`<div class="builder-column">
+        <div class="builder-label h-l">Жүздік</div>
+        <div class="builder-blocks" id="bb-h"></div>
+        <div class="builder-controls">
+          <button class="builder-btn" onclick="adjBlock('h',-1)">−</button>
+          <span class="builder-count" id="bc-h">0</span>
+          <button class="builder-btn" onclick="adjBlock('h',1)">+</button>
+        </div>
+      </div>`:''}
+      <div class="builder-column">
+        <div class="builder-label t-l">Ондық</div>
+        <div class="builder-blocks" id="bb-t"></div>
+        <div class="builder-controls">
+          <button class="builder-btn" onclick="adjBlock('t',-1)">−</button>
+          <span class="builder-count" id="bc-t">0</span>
+          <button class="builder-btn" onclick="adjBlock('t',1)">+</button>
+        </div>
+      </div>
+      <div class="builder-column">
+        <div class="builder-label o-l">Бірлік</div>
+        <div class="builder-blocks" id="bb-o"></div>
+        <div class="builder-controls">
+          <button class="builder-btn" onclick="adjBlock('o',-1)">−</button>
+          <span class="builder-count" id="bc-o">0</span>
+          <button class="builder-btn" onclick="adjBlock('o',1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkBuild(${th},${h},${t},${o})">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+  window._buildCounts={th:0,h:0,t:0,o:0};
+}
+
+window.adjBlock = function(place,delta) {
+  const c=window._buildCounts;
+  c[place]=Math.max(0,Math.min(9,c[place]+delta));
+  const el=document.getElementById('bc-'+place);
+  if(el) el.textContent=c[place];
+  // render blocks
+  const bb=document.getElementById('bb-'+place);
+  if(!bb) return;
+  let svg='';
+  if(place==='th') {
+    const thSz=H_H; const thGap=thSz+8;
+    const w=Math.max(c.th*thGap,20);
+    svg=`<svg viewBox="0 0 ${w} ${thSz+4}" width="${w}" height="${thSz+4}">`;
+    for(let i=0;i<c.th;i++) svg+=svgThousand(i*thGap,2);
+    svg+=`</svg>`;
+  } else if(place==='h') {
+    const hGap=H_W+10;
+    const w=Math.max(c.h*hGap,20);
+    svg=`<svg viewBox="0 0 ${w} ${H_H+4}" width="${w}" height="${H_H+4}">`;
+    for(let i=0;i<c.h;i++) svg+=svgHundred(i*hGap,2);
+    svg+=`</svg>`;
+  } else if(place==='t') {
+    const tGap=TEN_W+8;
+    const w=Math.max(c.t*tGap,20);
+    svg=`<svg viewBox="0 0 ${w} ${TEN_H+4}" width="${w}" height="${TEN_H+4}">`;
+    for(let i=0;i<c.t;i++) svg+=svgTen(i*tGap,2);
+    svg+=`</svg>`;
+  } else {
+    const cubeGap=BU+4;
+    const cols=Math.min(c.o,5),rows=Math.max(1,Math.ceil(c.o/5));
+    const w=Math.max(cols*cubeGap,20),h_=rows*cubeGap;
+    svg=`<svg viewBox="0 0 ${w} ${h_}" width="${w}" height="${h_}">`;
+    for(let i=0;i<c.o;i++){const col=i%5,row=Math.floor(i/5); svg+=svgOne(col*cubeGap,row*cubeGap);}
+    svg+=`</svg>`;
+  }
+  bb.innerHTML=svg;
+};
+
+window.checkBuild = function(th,h,t,o) {
+  const c=window._buildCounts;
+  const ok=c.th===th&&c.h===h&&c.t===t&&c.o===o;
+  showFeedback(ok, ok?null:`Дұрыс жауап: ${th>0?th+' мыңдық, ':''}${h>0?h+' жүздік, ':''}${t} ондық, ${o} бірлік`);
+};
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: HORIZ OPS  —  levels: a1, s1, a2, a20n, s20n, s20b║
+// ║  Dispatch set: HORIZ_OPS                                    ║
+// ║  Functions: genHorizOps, renderDualCubes, renderDualWithTens,║
+// ║             renderTenFrame                                  ║
+// ║  Check: checkAnswer (shared)                                ║
+// ╚═══════════════════════════════════════════════════════════════╝
+
+// Dual-group SVG: colored cubes for both operands (within-10)
+function renderDualCubes(a, b, op) {
+  // Large cubes for young learners (within-10)
+  const SZ=32, gap=6, step=SZ+gap, padY=6, symW=40, rx=5;
+  if(op==='+') {
+    const total=a+b;
+    const wA=a*step, wB=b*step, wT=total*step;
+    const totalW=wA+symW+wB+symW+wT;
+    const h=SZ+padY*2;
+    let svg=`<svg viewBox="0 0 ${totalW} ${h}" width="${totalW}" height="${h}" style="max-width:100%">`;
+    let cx=0;
+    for(let i=0;i<a;i++) svg+=`<rect x="${cx+i*step}" y="${padY}" width="${SZ}" height="${SZ}" rx="${rx}" fill="var(--primary)" opacity="0.9"/>`;
+    cx+=wA;
+    svg+=`<text x="${cx+symW/2}" y="${h/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="700" font-family="Fredoka" fill="var(--text-dim)">+</text>`;
+    cx+=symW;
+    for(let i=0;i<b;i++) svg+=`<rect x="${cx+i*step}" y="${padY}" width="${SZ}" height="${SZ}" rx="${rx}" fill="var(--accent)" opacity="0.9"/>`;
+    cx+=wB;
+    svg+=`<text x="${cx+symW/2}" y="${h/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="24" font-weight="700" font-family="Fredoka" fill="var(--text-dim)">=</text>`;
+    cx+=symW;
+    for(let i=0;i<total;i++){
+      const col=i<a?'var(--primary)':'var(--accent)';
+      svg+=`<rect x="${cx+i*step}" y="${padY}" width="${SZ}" height="${SZ}" rx="${rx}" fill="${col}" opacity="0.9"/>`;
+    }
+    svg+='</svg>';
+    return svg;
+  } else {
+    // Subtraction: show a cubes, last b crossed out
+    const wAll=a*step;
+    const h=SZ+padY*2;
+    let svg=`<svg viewBox="0 0 ${wAll} ${h}" width="${wAll}" height="${h}" style="max-width:100%">`;
+    for(let i=0;i<a;i++){
+      const crossed=i>=a-b;
+      svg+=`<rect x="${i*step}" y="${padY}" width="${SZ}" height="${SZ}" rx="${rx}" fill="${crossed?'var(--accent)':'var(--primary)'}" opacity="${crossed?'0.4':'0.9'}"/>`;
+      if(crossed){
+        const cx=i*step, cy=padY;
+        svg+=`<line x1="${cx+3}" y1="${cy+3}" x2="${cx+SZ-3}" y2="${cy+SZ-3}" stroke="var(--error)" stroke-width="3" stroke-linecap="round"/>`;
+        svg+=`<line x1="${cx+SZ-3}" y1="${cy+3}" x2="${cx+3}" y2="${cy+SZ-3}" stroke="var(--error)" stroke-width="3" stroke-linecap="round"/>`;
+      }
+    }
+    svg+='</svg>';
+    return svg;
+  }
+}
+
+// Dual-group SVG with tens rods (within-20, no carry/borrow)
+function renderDualWithTens(a, b, op) {
+  const aT=Math.floor(a/10), aO=a%10;
+  const padY=4, rodGap=8, cubeStep=BU+4, symW=32;
+  // Helper: draw a tens rod at position
+  const drawRod=(x,y,color)=>{let s='';for(let r=0;r<10;r++) s+=`<rect x="${x}" y="${y+r*BS}" width="${BU}" height="${BU}" rx="1.5" fill="${color}" opacity="0.8" stroke="${color}" stroke-width="0.3"/>`;return s;};
+  const h=TEN_H+padY*2;
+
+  if(op==='+') {
+    // Addition: [rod+ones blue] + [ones orange] = [rod + all ones]
+    const total=a+b, tT=Math.floor(total/10), tO=total%10;
+    // Group A
+    const wATens=aT*(TEN_W+rodGap); const wAOnes=aO*cubeStep;
+    const gapA=aT>0&&aO>0?10:0;
+    // Group B
+    const wB=b*cubeStep;
+    // Result
+    const wRT=tT*(TEN_W+rodGap); const wRO=tO*cubeStep;
+    const gapR=tT>0&&tO>0?10:0;
+    const totalW=(wATens+gapA+wAOnes)+symW+wB+symW+(wRT+gapR+wRO);
+    let svg=`<svg viewBox="0 0 ${totalW} ${h}" width="${Math.min(totalW,420)}" height="${Math.min(h,170)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
+    let cx=0;
+    // A: rod + ones
+    for(let i=0;i<aT;i++) svg+=drawRod(cx+i*(TEN_W+rodGap),padY,'var(--primary)');
+    cx+=wATens+gapA;
+    for(let i=0;i<aO;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="var(--primary)" opacity="0.85"/>`;
+    cx+=wAOnes;
+    // +
+    svg+=`<text x="${cx+symW/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="18" font-weight="700" font-family="Fredoka" fill="var(--text)">+</text>`;
+    cx+=symW;
+    // B: ones orange
+    for(let i=0;i<b;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="var(--accent)" opacity="0.85"/>`;
+    cx+=wB;
+    // =
+    svg+=`<text x="${cx+symW/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="18" font-weight="700" font-family="Fredoka" fill="var(--text)">=</text>`;
+    cx+=symW;
+    // Result: rod + all ones
+    for(let i=0;i<tT;i++) svg+=drawRod(cx+i*(TEN_W+rodGap),padY,'var(--primary)');
+    cx+=wRT+gapR;
+    for(let i=0;i<tO;i++){
+      const col=i<aO?'var(--primary)':'var(--accent)';
+      svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="${col}" opacity="0.85"/>`;
+    }
+    svg+='</svg>';
+    return svg;
+  } else {
+    // Subtraction: show rod + all ones, last b ones crossed out
+    const wTens=aT*(TEN_W+rodGap);
+    const wOnes=aO*cubeStep;
+    const gapA=aT>0&&aO>0?10:0;
+    const totalW=wTens+gapA+wOnes;
+    let svg=`<svg viewBox="0 0 ${Math.max(totalW,40)} ${h}" width="${Math.min(Math.max(totalW,40),360)}" height="${Math.min(h,170)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
+    let cx=0;
+    for(let i=0;i<aT;i++) svg+=drawRod(cx+i*(TEN_W+rodGap),padY,'var(--primary)');
+    cx+=wTens+gapA;
+    for(let i=0;i<aO;i++){
+      const crossed=i>=aO-b;
+      svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="${crossed?'var(--accent)':'var(--primary)'}" opacity="${crossed?'0.5':'0.85'}"/>`;
+      if(crossed){
+        const bx=cx+i*cubeStep, by=h-padY-BU;
+        svg+=`<line x1="${bx+2}" y1="${by+2}" x2="${bx+BU-2}" y2="${by+BU-2}" stroke="var(--error)" stroke-width="2.5" stroke-linecap="round"/>`;
+        svg+=`<line x1="${bx+BU-2}" y1="${by+2}" x2="${bx+2}" y2="${by+BU-2}" stroke="var(--error)" stroke-width="2.5" stroke-linecap="round"/>`;
+      }
+    }
+    svg+='</svg>';
+    return svg;
+  }
+}
+
+// Ten-frame SVG: 2×5 grid for make-10 / break-10 strategy (within-20 carry/borrow)
+function renderTenFrame(a, b, op) {
+  const cell=30, pad=3, dot=10, frameW=5*(cell+pad)-pad, frameH=2*(cell+pad)-pad;
+  const drawFrame=(x0,y0)=>{
+    let s=`<rect x="${x0}" y="${y0}" width="${frameW}" height="${frameH}" rx="4" fill="none" stroke="var(--border)" stroke-width="1.5"/>`;
+    for(let r=0;r<2;r++) for(let c=0;c<5;c++){
+      const cx=x0+c*(cell+pad)+cell/2, cy=y0+r*(cell+pad)+cell/2;
+      s+=`<rect x="${cx-cell/2}" y="${cy-cell/2}" width="${cell}" height="${cell}" rx="2" fill="var(--surface-alt)" stroke="var(--border)" stroke-width="0.5"/>`;
+    }
+    return s;
+  };
+  const drawDot=(x0,y0,idx,color)=>{
+    const c=idx%5, r=Math.floor(idx/5);
+    const cx=x0+c*(cell+pad)+cell/2, cy=y0+r*(cell+pad)+cell/2;
+    return `<circle cx="${cx}" cy="${cy}" r="${dot}" fill="${color}" opacity="0.9"/>`;
+  };
+  const drawX=(x0,y0,idx)=>{
+    const c=idx%5, r=Math.floor(idx/5);
+    const cx=x0+c*(cell+pad)+cell/2, cy=y0+r*(cell+pad)+cell/2;
+    return `<line x1="${cx-7}" y1="${cy-7}" x2="${cx+7}" y2="${cy+7}" stroke="var(--error)" stroke-width="2.5" stroke-linecap="round"/>`+
+           `<line x1="${cx+7}" y1="${cy-7}" x2="${cx-7}" y2="${cy+7}" stroke="var(--error)" stroke-width="2.5" stroke-linecap="round"/>`;
+  };
+
+  if(op==='+') {
+    // Make-10: show a blue dots + b orange dots → result in ten-frames
+    // Row 1: original groups [a blue] + [b orange]  (simple cubes)
+    // Row 2: regrouped into ten-frames showing the make-10 result
+    const fill10=10-a, overflow=b-fill10, total=a+b;
+    const cubeStep=BU+4, symW=28;
+    const row1W=a*cubeStep+symW+b*cubeStep+symW+total*cubeStep;
+    const gap=16, labelH=18;
+    const totalW=frameW+(overflow>0?gap+frameW:0);
+    const totalH=BU+12+frameH+labelH+6;
+    const svgW=Math.max(row1W,totalW);
+    let svg=`<svg viewBox="0 0 ${svgW} ${totalH}" width="${Math.min(svgW,440)}" height="${Math.min(totalH,120)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
+    // Row 1: cubes [a blue] + [b orange] = [total]
+    const r1y=0, r1cx=(svgW-row1W)/2;
+    let cx=r1cx;
+    for(let i=0;i<a;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="var(--primary)" opacity="0.85"/>`;
+    cx+=a*cubeStep;
+    svg+=`<text x="${cx+symW/2}" y="${r1y+BU/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" font-family="Fredoka" fill="var(--text)">+</text>`;
+    cx+=symW;
+    for(let i=0;i<b;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="var(--accent)" opacity="0.85"/>`;
+    cx+=b*cubeStep;
+    svg+=`<text x="${cx+symW/2}" y="${r1y+BU/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" font-family="Fredoka" fill="var(--text)">=</text>`;
+    cx+=symW;
+    for(let i=0;i<total;i++){
+      const col=i<a?'var(--primary)':'var(--accent)';
+      svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="${col}" opacity="0.85"/>`;
+    }
+    // Row 2: ten-frames showing the regrouping
+    const r2y=BU+12;
+    const tfx=(svgW-totalW)/2;
+    svg+=drawFrame(tfx,r2y);
+    for(let i=0;i<a;i++) svg+=drawDot(tfx,r2y,i,'var(--primary)');
+    for(let i=0;i<fill10;i++) svg+=drawDot(tfx,r2y,a+i,'var(--accent)');
+    if(overflow>0){
+      const x2=tfx+frameW+gap;
+      svg+=drawFrame(x2,r2y);
+      for(let i=0;i<overflow;i++) svg+=drawDot(x2,r2y,i,'var(--accent)');
+    }
+    svg+=`<text x="${tfx+frameW/2}" y="${r2y+frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">10</text>`;
+    if(overflow>0)
+      svg+=`<text x="${tfx+frameW+gap+frameW/2}" y="${r2y+frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">${overflow}</text>`;
+    svg+='</svg>';
+    const hint=`${a} + ${fill10} = 10, 10 + ${overflow} = ${total}`;
+    return `<div class="ten-frame-area">${svg}</div><div class="horiz-hint">${hint}</div>`;
+  } else {
+    // Break-10: show a as ten-frame(s), cross out b dots
+    const aOnes=a%10;
+    const fromOnes=aOnes;
+    const fromTen=b-fromOnes;
+    const gap=16, labelH=18;
+    const totalW=frameW+gap+(aOnes>0?frameW:0);
+    const totalH=frameH+labelH+8;
+    let svg=`<svg viewBox="0 0 ${Math.max(totalW,frameW)} ${totalH}" width="${Math.min(Math.max(totalW,frameW),340)}" height="${Math.min(totalH,100)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
+    // Frame 1 (the ten)
+    svg+=drawFrame(0,0);
+    for(let i=0;i<10;i++) svg+=drawDot(0,0,i,'var(--primary)');
+    // Cross out fromTen from the ten (from the end)
+    for(let i=0;i<fromTen;i++) svg+=drawX(0,0,9-i);
+    // Frame 2 (the ones)
+    if(aOnes>0){
+      const x2=frameW+gap;
+      svg+=drawFrame(x2,0);
+      for(let i=0;i<aOnes;i++) svg+=drawDot(x2,0,i,'var(--primary)');
+      // Cross out all ones
+      for(let i=0;i<aOnes;i++) svg+=drawX(x2,0,i);
+    }
+    svg+=`<text x="${frameW/2}" y="${frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">10 − ${fromTen} = ${10-fromTen}</text>`;
+    svg+='</svg>';
+    const hint=aOnes>0?`${a}: ${aOnes} алу, 10-нан ${fromTen} алу → ${a-b}`:`10 − ${b} = ${a-b}`;
+    return `<div class="ten-frame-area">${svg}</div><div class="horiz-hint">${hint}</div>`;
+  }
+}
+
+function genHorizOps(ws) {
+  let a,b,op;
+  const lv=state.level;
+  if(lv==='a1') {
+    do{a=rand(1,8);b=rand(1,8);}while(a+b>9);
+    op='+';
+  } else if(lv==='s1') {
+    a=rand(2,9); b=rand(1,a);
+    op='−';
+  } else if(lv==='a2') {
+    do{a=rand(2,9);b=rand(2,9);}while(a+b<=9);
+    op='+';
+  } else if(lv==='a20n') {
+    do{a=rand(10,18);b=rand(1,9);}while(a%10+b>=10||a+b>20);
+    op='+';
+  } else if(lv==='s20n') {
+    do{a=rand(11,19);}while(a%10===0);
+    b=rand(1,a%10);
+    op='−';
+  } else if(lv==='s20b') {
+    do{a=rand(11,18);b=rand(a%10+1,9);}while(a-b<1);
+    op='−';
+  }
+  const answer=op==='+'?a+b:a-b;
+  // Choose visualization by level type
+  let visHTML;
+  if(lv==='a1'||lv==='s1') {
+    visHTML=`<div class="horiz-vis pop-in" style="display:flex;justify-content:center;overflow-x:auto;padding:12px 0">${renderDualCubes(a,b,op)}</div>`;
+  } else if(lv==='a2'||lv==='s20b') {
+    visHTML=`<div class="block-display pop-in">${renderTenFrame(a,b,op)}</div>`;
+  } else {
+    visHTML=`<div class="block-display pop-in"><div class="horiz-vis">${renderDualWithTens(a,b,op)}</div></div>`;
+  }
+  // Equation with inline input at the "?" position, visual directly below
+  ws.innerHTML=`
+    <div class="equation-row">
+      <span>${a}</span>
+      <span>${op}</span>
+      <span>${b}</span>
+      <span>=</span>
+      <input type="number" class="eq-input" id="ans" placeholder="?" autofocus>
+      <button class="check-btn" style="font-size:18px;padding:8px 20px" onclick="checkAnswer(${answer})">Тексеру</button>
+    </div>
+    ${visHTML}
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('ans').addEventListener('keydown',e=>{if(e.key==='Enter')checkAnswer(answer);});
+  document.getElementById('ans').focus();
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: COMPARE  —  levels: m1, m2, m3                    ║
+// ║  Dispatch set: CMP_LVL                                     ║
+// ║  Functions: genCompare, digits                              ║
+// ║  Check: pickCmp                                             ║
+// ╚═══════════════════════════════════════════════════════════════╝
+function genCompare(ws) {
+  let a,b,maxN;
+  if(state.level==='m1') maxN=99;
+  else if(state.level==='m2') maxN=999;
+  else maxN=9999;
+  const minN = maxN>=1000?100:maxN>=100?10:1;
+  do { a=rand(minN,maxN); b=rand(minN,maxN); } while(a===b);
+  const correct = a>b?'>':'<';
+
+  const dA=digits(a,maxN>=1000?4:maxN>=100?3:2);
+  const dB=digits(b,maxN>=1000?4:maxN>=100?3:2);
+
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">Қай таңба қойылады: &gt; немесе &lt; ?</div>
+      <div class="sub">Which sign goes in the circle: &gt; or &lt; ?</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:24px;justify-content:center;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div class="block-display pop-in" style="min-height:100px;padding:16px">${renderBlocksSVG(dA[0],dA[1],dA[2],dA[3])}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;margin-top:8px">${a}</div>
+      </div>
+      <div class="compare-btns" id="cmpBtns">
+        <button class="cmp-btn" onclick="pickCmp('>','${correct}')">&gt;</button>
+        <button class="cmp-btn" onclick="pickCmp('<','${correct}')">&lt;</button>
+      </div>
+      <div style="text-align:center">
+        <div class="block-display pop-in" style="min-height:100px;padding:16px">${renderBlocksSVG(dB[0],dB[1],dB[2],dB[3])}</div>
+        <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;margin-top:8px">${b}</div>
+      </div>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+}
+
+function digits(n,places) {
+  const th=Math.floor(n/1000), h=Math.floor((n%1000)/100), t=Math.floor((n%100)/10), o=n%10;
+  return [th,h,t,o];
+}
+
+window.pickCmp = function(picked,correct) {
+  const btns=document.querySelectorAll('.cmp-btn');
+  btns.forEach(b=>{
+    b.disabled=true;
+    if(b.textContent.trim()===correct) b.classList.add('correct');
+    if(b.textContent.trim()===picked && picked!==correct) b.classList.add('wrong');
+  });
+  showFeedback(picked===correct);
+};
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: COMPREHENSION (Түсіну)  —  levels: u1-u5          ║
+// ║  Dispatch set: COMP_LVL                                    ║
+// ║  Same question types as parent stage, no visuals            ║
+// ║  Functions: genComprehension (reuses genPlacementQ)         ║
+// ║  Check: checkAnswer (shared)                                ║
+// ╚═══════════════════════════════════════════════════════════════╝
+function genComprehension(ws) {
+  const mod = MODULES.find(m => m.levels.some(l => l.id === state.level));
+  const stageLevels = mod.levels.filter(l => !COMP_LVL.has(l.id));
+  const pick = stageLevels[rand(0, stageLevels.length - 1)];
+  const qData = genPlacementQ(pick.id);
+  const answer = qData.answer;
+  // Split "3 + 5 = ?" into equation parts for inline input
+  const parts = qData.q.split('= ?');
+  const isInlineQ = parts.length === 2;
+  ws.innerHTML=`
+    ${isInlineQ ? `
+      <div class="equation-row">
+        <span>${parts[0].trim()}</span>
+        <span>=</span>
+        <input type="number" class="eq-input" id="ans" placeholder="?" autofocus>
+        <button class="check-btn" style="font-size:18px;padding:8px 20px" onclick="checkAnswer(${answer})">Тексеру</button>
+      </div>
+    ` : `
+      <div class="prompt-card">
+        <div class="question">${qData.q}</div>
+      </div>
+      <div class="answer-area">
+        <input type="number" class="answer-input" id="ans" placeholder="?" autofocus>
+        <button class="check-btn" onclick="checkAnswer(${answer})">Тексеру</button>
+      </div>
+    `}
+    ${qData.sub?`<div style="text-align:center;font-size:13px;color:var(--text-dim);margin:4px 0">${qData.sub}</div>`:''}
+    <div style="text-align:center;margin-top:4px"><span class="comp-badge">Түсіну</span></div>
+    <div class="feedback" id="fb"></div>`;
+  document.getElementById('ans').addEventListener('keydown',e=>{if(e.key==='Enter')checkAnswer(answer);});
+  document.getElementById('ans').focus();
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  MODULE: VERTICAL OPS  —  levels: a3-a10, s2-s7,           ║
+// ║          a4d1-a4d4, s4d1-s4d4 (2/3/4-digit ±)              ║
+// ║  Dispatch: default fallback (no dispatch set)               ║
+// ║  Functions: genOps, buildVisualSteps, renderVisualHint,     ║
+// ║             showVisualHint, renderPVCell, miniBlocks*        ║
+// ║  Check: checkOps, showOpsHintBefore, hintNav                ║
+// ╚═══════════════════════════════════════════════════════════════╝
+let currentOps = {}; // store current problem for hints
+
+// ── Visual hint builder ──
+// Generic visual hint builder for 1/2/3-digit operations
+function buildVisualSteps(a,b,op) {
+  const answer = op==='+'? a+b : a-b;
+  const nd = Math.max(String(a).length, String(b).length, String(answer).length);
+  const colNames=['Бірлік','Ондық','Жүздік','Мыңдық'];
+  const steps=[];
+
+  // Extract digits: d[0]=ones, d[1]=tens, d[2]=hundreds, d[3]=thousands
+  const digs = n => [n%10, Math.floor(n/10)%10, Math.floor(n/100)%10, Math.floor(n/1000)%10];
+  const ad=digs(a), bd=digs(b);
+
+  if(op==='+') {
+    let carry=new Array(4).fill(0);
+    let result=[];
+    // Pre-compute column results
+    for(let c=0;c<nd;c++) {
+      const sum=ad[c]+bd[c]+carry[c];
+      carry[c+1]=sum>=10?1:0;
+      result[c]=sum%10;
+    }
+    // For each column, right to left
+    for(let c=0;c<nd;c++) {
+      const sum=ad[c]+bd[c]+carry[c];
+      const cn=colNames[c]||`${c+1}-разряд`;
+      // Step: compute this column
+      const carryStr = carry[c]?` + ${carry[c]}`:'';
+      steps.push({
+        col:c, nd, text:`${cn}: ${ad[c]} + ${bd[c]}${carryStr} = ${sum}`,
+        emphasis:`${ad[c]} + ${bd[c]}${carryStr} = ${sum}`,
+        carry:[...carry], result:[...result],
+        filledUpTo:c, showRegroup:false
+      });
+      if(carry[c+1]) {
+        const upper=colNames[c+1]||'жоғары';
+        steps.push({
+          col:c, nd,
+          text:`${sum} ≥ 10! ${result[c]} жазамыз, 1 ${upper}ке ауыстырамыз`,
+          emphasis:`10 ${cn.toLowerCase()} → 1 ${upper.toLowerCase()}`,
+          carry:[...carry], result:[...result],
+          filledUpTo:c, showRegroup:true,
+          regroupFrom:c, regroupTo:c+1
+        });
+      } else {
+        steps.push({
+          col:c, nd,
+          text:`${cn} бағанына ${result[c]} жазамыз`,
+          emphasis:`жаз ${result[c]}`,
+          carry:[...carry], result:[...result],
+          filledUpTo:c, showRegroup:false
+        });
+      }
+    }
+    // Final step
+    steps.push({
+      col:-1, nd, text:'Жауап:', emphasis:`${a} + ${b} = ${answer}`,
+      carry:[...carry], result:[...result],
+      filledUpTo:nd, showRegroup:false, isFinal:true
+    });
+  } else {
+    // Subtraction
+    const effA=digs(a).slice(); // effective top digits after borrows
+    let borrowed=new Array(4).fill(false);
+
+    // Pre-compute borrows
+    for(let c=0;c<nd;c++) {
+      if(effA[c]<bd[c]) {
+        // borrow from next column
+        effA[c]+=10;
+        effA[c+1]=(effA[c+1]||0)-1;
+        borrowed[c]=true;
+      }
+    }
+    let result=[];
+    for(let c=0;c<nd;c++) result[c]=effA[c]-bd[c];
+
+    // Build steps column by column
+    for(let c=0;c<nd;c++) {
+      const cn=colNames[c]||`${c+1}-разряд`;
+      if(borrowed[c]) {
+        // Step: can't subtract
+        steps.push({
+          col:c, nd, isSubtract:true,
+          text:`${cn}: ${ad[c]} < ${bd[c]} — азайта алмаймыз!`,
+          emphasis:`${ad[c]} < ${bd[c]}`,
+          effA:[...effA], result:[...result], borrowed:[...borrowed],
+          filledUpTo:c-1, showRegroup:false, needBorrow:true
+        });
+        // Step: borrow
+        const upper=colNames[c+1]||'жоғары';
+        steps.push({
+          col:c, nd, isSubtract:true,
+          text:`1 ${upper.toLowerCase()}ты 10 ${cn.toLowerCase()}ке айналдырамыз`,
+          emphasis:`${upper}: ${ad[c+1]} → ${effA[c+1]}, ${cn}: ${ad[c]} → ${effA[c]}`,
+          effA:[...effA], result:[...result], borrowed:[...borrowed],
+          filledUpTo:c-1, showRegroup:true,
+          regroupFrom:c+1, regroupTo:c
+        });
+        // Step: now subtract
+        steps.push({
+          col:c, nd, isSubtract:true,
+          text:`Енді ${cn.toLowerCase()}: ${effA[c]} − ${bd[c]} = ${result[c]}`,
+          emphasis:`${effA[c]} − ${bd[c]} = ${result[c]}`,
+          effA:[...effA], result:[...result], borrowed:[...borrowed],
+          filledUpTo:c, showRegroup:false
+        });
+      } else {
+        steps.push({
+          col:c, nd, isSubtract:true,
+          text:`${cn}: ${effA[c]} − ${bd[c]} = ${result[c]}`,
+          emphasis:`${effA[c]} − ${bd[c]} = ${result[c]}`,
+          effA:[...effA], result:[...result], borrowed:[...borrowed],
+          filledUpTo:c, showRegroup:false
+        });
+        steps.push({
+          col:c, nd, isSubtract:true,
+          text:`${cn} бағанына ${result[c]} жазамыз`,
+          emphasis:`жаз ${result[c]}`,
+          effA:[...effA], result:[...result], borrowed:[...borrowed],
+          filledUpTo:c, showRegroup:false
+        });
+      }
+    }
+    steps.push({
+      col:-1, nd, isSubtract:true,
+      text:'Жауап:', emphasis:`${a} − ${b} = ${answer}`,
+      effA:[...effA], result:[...result], borrowed:[...borrowed],
+      filledUpTo:nd, showRegroup:false, isFinal:true
+    });
+  }
+  return steps;
+}
+
+function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
+  const answer=op==='+'?a+b:a-b;
+  const nd=step.nd||Math.max(String(a).length,String(b).length,String(answer).length);
+  const digs=n=>[n%10,Math.floor(n/10)%10,Math.floor(n/100)%10,Math.floor(n/1000)%10];
+  const ad=digs(a),bd=digs(b);
+  const s=step;
+
+  // Build mini vertical calc
+  let carryRow='', aRow='', bRow='', resRow='';
+  for(let c=nd-1;c>=0;c--) {
+    const lit=s.col===c||s.col===-1;
+    const dim=!lit;
+    // carry
+    let cv='&nbsp;';
+    if(!s.isSubtract && s.carry && s.carry[c] && c>0) cv=String(s.carry[c]);
+    carryRow+=`<span class="h-digit" style="font-size:12px;color:var(--accent)">${cv}</span>`;
+    // top number
+    let topD=ad[c];
+    if(s.isSubtract && s.effA && s.borrowed) {
+      if(s.filledUpTo>=c || s.showRegroup) topD=s.effA[c];
+    }
+    aRow+=`<span class="h-digit ${lit?'lit':'dim'}">${topD}</span>`;
+    bRow+=`<span class="h-digit ${lit?'lit':'dim'}">${bd[c]}</span>`;
+    // result
+    const filled=s.result && s.filledUpTo>=c;
+    resRow+=`<span class="h-digit ${filled?'result-fill':''}">${filled?s.result[c]:'?'}</span>`;
+  }
+
+  let calc=`<div class="vis-hint-calc">
+    <div class="h-row h-carry">${carryRow}</div>
+    <div class="h-row">${aRow}</div>
+    <div class="h-row"><span class="h-op">${op}</span>${bRow}</div>
+    <div class="h-line"></div>
+    <div class="h-row">${resRow}</div>
+  </div>`;
+
+  // Blocks: simplified — show the active column's blocks
+  let blocks='';
+  if(s.showRegroup) {
+    const fromName=['бірлік','ондық','жүздік'][s.regroupFrom]||'';
+    const toName=['бірлік','ондық','жүздік'][s.regroupTo]||'';
+    if(s.regroupFrom<s.regroupTo) {
+      // carry up: 10 lower → 1 upper
+      blocks+=`<div class="vis-block-row"><div class="vis-block-label">Бұрын:</div>
+        <div class="vis-block-group">${miniBlocks(0,10,'ones')}</div></div>
+        <div class="vis-block-row"><div class="vis-block-label"></div>
+        <span class="vis-arrow">↓ 10 ${fromName} = 1 ${toName}</span></div>
+        <div class="vis-block-row"><div class="vis-block-label">Кейін:</div>
+        <div class="vis-block-group highlight regroup-anim">${miniBlocks(1,0,'mixed')}</div></div>`;
+    } else {
+      // borrow down: 1 upper → 10 lower
+      blocks+=`<div class="vis-block-row"><div class="vis-block-label">Бұрын:</div>
+        <div class="vis-block-group">${miniBlocks(1,0,'mixed')}</div></div>
+        <div class="vis-block-row"><div class="vis-block-label"></div>
+        <span class="vis-arrow">↓ 1 ${fromName} = 10 ${toName}</span></div>
+        <div class="vis-block-row"><div class="vis-block-label">Кейін:</div>
+        <div class="vis-block-group highlight regroup-anim">${miniBlocks(0,10,'ones')}</div></div>`;
+    }
+  } else if(s.isFinal) {
+    const ansD=digs(answer);
+    blocks+=`<div class="vis-block-row"><div class="vis-block-label">Жауап:</div>
+      <div class="vis-block-group success">${miniBlocks4(ansD[3],ansD[2],ansD[1],ansD[0])}</div></div>`;
+  } else if(s.col>=0) {
+    const c=s.col;
+    if(!s.isSubtract) {
+      blocks+=`<div class="vis-block-row"><div class="vis-block-label">${ad[c]}:</div>
+        <div class="vis-block-group highlight">${miniBlocksN(c,ad[c])}</div></div>
+        <div class="vis-block-row"><div class="vis-block-label">+ ${bd[c]}:</div>
+        <div class="vis-block-group highlight">${miniBlocksN(c,bd[c])}</div></div>`;
+    } else {
+      const topD=s.effA?s.effA[c]:ad[c];
+      blocks+=`<div class="vis-block-row"><div class="vis-block-label">${topD}:</div>
+        <div class="vis-block-group highlight">${miniBlocksN(c,topD)}</div></div>
+        <div class="vis-block-row"><div class="vis-block-label">− ${bd[c]}:</div>
+        <div class="vis-block-group strike">${miniBlocksN(c,bd[c])}</div></div>`;
+      if(s.filledUpTo>=c) {
+        blocks+=`<div class="vis-block-row"><div class="vis-block-label">= ${s.result[c]}:</div>
+          <div class="vis-block-group success">${miniBlocksN(c,s.result[c])}</div></div>`;
+      }
+    }
+  }
+
+  let dots='';
+  for(let i=0;i<totalSteps;i++) {
+    dots+=`<span class="step-dot ${i===stepIdx?'active':''} ${i<stepIdx?'done':''}"></span>`;
+  }
+
+  return `<div class="vis-hint pop-in">
+    <div class="vis-hint-header">
+      <span>💡 Қадам ${stepIdx+1}/${totalSteps}</span>
+      <div class="step-dots">${dots}</div>
+    </div>
+    <div class="vis-hint-body">
+      ${calc}
+      <div class="vis-hint-blocks">${blocks}</div>
+    </div>
+    <div class="vis-hint-text">
+      ${s.text} <span class="emphasis">${s.emphasis}</span>
+    </div>
+    <div class="vis-hint-nav">
+      <button class="vis-nav-btn" onclick="hintNav(-1)" ${stepIdx===0?'disabled':''}>← Артқа</button>
+      <button class="vis-nav-btn primary" onclick="hintNav(1)">${stepIdx>=totalSteps-1?'Түсіндім ✓':'Келесі →'}</button>
+    </div>
+  </div>`;
+}
+
+// Render blocks for a specific column level (0=ones, 1=tens, 2=hundreds)
+function miniBlocksN(col,count) {
+  if(count<=0) return '<span style="color:var(--text-dim);font-size:11px">—</span>';
+  if(col===0) return miniBlocks(0,count,'ones');
+  if(col===1) return miniBlocks(count,0,'tens');
+  if(col===2) {
+    // hundreds — scaled down for hint area
+    const hGap=H_W+6;
+    const sc=0.35;
+    let svg=`<svg viewBox="0 0 ${count*hGap} ${H_H}" width="${Math.round(count*hGap*sc)}" height="${Math.round(H_H*sc)}">`;
+    for(let i=0;i<count;i++) svg+=svgHundred(i*hGap,0);
+    return svg+`</svg>`;
+  }
+  // thousands
+  const thSz=H_H,thGap=thSz+6,sc2=0.25;
+  let svg2=`<svg viewBox="0 0 ${count*thGap} ${thSz}" width="${Math.round(count*thGap*sc2)}" height="${Math.round(thSz*sc2)}">`;
+  for(let i=0;i<count;i++) svg2+=svgThousand(i*thGap,0);
+  return svg2+`</svg>`;
+}
+
+function miniBlocks3(h,t,o) {
+  let parts=[];
+  if(h>0) parts.push(miniBlocksN(2,h));
+  if(t>0) parts.push(miniBlocksN(1,t));
+  if(o>0) parts.push(miniBlocksN(0,o));
+  return parts.join(' ')|| '<span style="color:var(--text-dim)">0</span>';
+}
+function miniBlocks4(th,h,t,o) {
+  let parts=[];
+  if(th>0) parts.push(miniBlocksN(3,th));
+  if(h>0) parts.push(miniBlocksN(2,h));
+  if(t>0) parts.push(miniBlocksN(1,t));
+  if(o>0) parts.push(miniBlocksN(0,o));
+  return parts.join(' ')|| '<span style="color:var(--text-dim)">0</span>';
+}
+
+function miniBlocks(tens, ones, mode) {
+  const items=[];
+  for(let i=0;i<tens;i++) items.push('t');
+  for(let i=0;i<ones;i++) items.push('o');
+  if(items.length===0) return '<span style="color:var(--text-dim);font-size:11px">—</span>';
+  const rodW=TEN_W+6;
+  const cubeW=BU+4;
+  const w = tens*rodW + Math.min(ones,10)*cubeW + (tens&&ones?8:0);
+  const h = ones>5 ? TEN_H : (tens ? TEN_H : BU+4);
+  const sc=0.4;
+  let svg=`<svg viewBox="0 0 ${Math.max(w,20)} ${Math.max(h,16)}" width="${Math.round(Math.max(w,20)*sc)}" height="${Math.round(Math.max(h,16)*sc)}">`;
+  let cx=0;
+  for(let i=0;i<tens;i++) {
+    svg+=svgTen(cx,0);
+    cx+=rodW;
+  }
+  if(tens&&ones) cx+=8;
+  for(let i=0;i<ones;i++) {
+    const col=i%5, row=Math.floor(i/5);
+    svg+=svgOne(cx+col*cubeW, row*cubeW);
+  }
+  svg+=`</svg>`;
+  return svg;
+}
+
+function miniBlockTen() {
+  return `<svg viewBox="0 0 ${TEN_W} ${TEN_H}" width="${Math.round(TEN_W*0.4)}" height="${Math.round(TEN_H*0.4)}">${svgTen(0,0)}</svg>`;
+}
+
+// Hint navigation state
+let hintState = { steps:[], idx:0 };
+
+window.hintNav = function(dir) {
+  hintState.idx += dir;
+  if(hintState.idx >= hintState.steps.length) {
+    // close hint
+    document.getElementById('hintArea').innerHTML='';
+    return;
+  }
+  hintState.idx = Math.max(0, hintState.idx);
+  const {a,b,op} = currentOps;
+  const step = hintState.steps[hintState.idx];
+  document.getElementById('hintArea').innerHTML =
+    renderVisualHint(a,b,op, hintState.idx, hintState.steps.length, step);
+};
+
+function showVisualHint(maxSteps) {
+  const {a,b,op} = currentOps;
+  const allSteps = buildVisualSteps(a,b,op);
+  hintState.steps = maxSteps ? allSteps.slice(0, maxSteps) : allSteps;
+  hintState.idx = 0;
+  const step = hintState.steps[0];
+  document.getElementById('hintArea').innerHTML =
+    renderVisualHint(a,b,op, 0, hintState.steps.length, step);
+}
+
+function renderPVCell(type, count) {
+  if(count===0) return '<span style="color:var(--text-dim);font-size:12px">—</span>';
+  let svg='';
+  if(type==='o') {
+    const cols=Math.min(count,3), rows=Math.ceil(count/3);
+    const sp=BU+4;
+    const w=cols*sp, h=rows*sp;
+    svg=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`;
+    for(let i=0;i<count;i++) {
+      const c=i%3, r=Math.floor(i/3);
+      svg+=svgOne(c*sp, r*sp);
+    }
+    svg+=`</svg>`;
+  } else if(type==='t') {
+    const rodGap=TEN_W+6;
+    const w=count*rodGap, h=TEN_H;
+    svg=`<svg viewBox="0 0 ${Math.max(w,TEN_W)} ${h}" width="${Math.max(w,TEN_W)}" height="${h}">`;
+    for(let i=0;i<count;i++) svg+=svgTen(i*rodGap,0);
+    svg+=`</svg>`;
+  } else if(type==='h') {
+    const hGap=H_W+10;
+    const w=count*hGap, h=H_H;
+    svg=`<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">`;
+    for(let i=0;i<count;i++) svg+=svgHundred(i*hGap,0);
+    svg+=`</svg>`;
+  } else if(type==='th') {
+    const thSz=H_H, thGap=thSz+8;
+    const w=count*thGap, h2=thSz;
+    svg=`<svg viewBox="0 0 ${Math.max(w,thSz)} ${h2}" width="${Math.max(w,thSz)}" height="${h2}">`;
+    for(let i=0;i<count;i++) svg+=svgThousand(i*thGap,0);
+    svg+=`</svg>`;
+  }
+  return svg;
+}
+
+function genOps(ws) {
+  let a,b,op;
+  const lv=state.level;
+  // ── Addition levels (vertical, 2+ digits) ──
+  if(lv==='a3') { // 2-digit no carry
+    do { a=rand(11,49); b=rand(10,49); }
+    while((a%10+b%10)>=10 || (Math.floor(a/10)+Math.floor(b/10))>=10);
+    op='+';
+  } else if(lv==='a4') { // 2-digit ones carry only
+    do { a=rand(13,79); b=rand(12,79); }
+    while((a%10+b%10)<10 || (Math.floor(a/10)+Math.floor(b/10)+1)>=10);
+    op='+';
+  } else if(lv==='a5') { // 2-digit tens carry only (result 3-digit)
+    do { a=rand(50,89); b=rand(50,89); }
+    while((a%10+b%10)>=10 || (Math.floor(a/10)+Math.floor(b/10))<10);
+    op='+';
+  } else if(lv==='a6') { // 2-digit both carry
+    do { a=rand(55,89); b=rand(45,89); }
+    while((a%10+b%10)<10 || (Math.floor(a/10)+Math.floor(b/10)+1)<10 || a+b>199);
+    op='+';
+  } else if(lv==='a7') { // 3-digit no carry
+    do { a=rand(100,499); b=rand(100,499); }
+    while(dO(a)+dO(b)>=10 || dT(a)+dT(b)>=10 || dH(a)+dH(b)>=10);
+    op='+';
+  } else if(lv==='a8') { // 3-digit ones carry only
+    do { a=rand(100,499); b=rand(100,499); }
+    while(dO(a)+dO(b)<10 || dT(a)+dT(b)+1>=10 || dH(a)+dH(b)>=10);
+    op='+';
+  } else if(lv==='a9') { // 3-digit tens carry only
+    do { a=rand(150,499); b=rand(150,499); }
+    while(dO(a)+dO(b)>=10 || dT(a)+dT(b)<10 || dH(a)+dH(b)+1>=10);
+    op='+';
+  } else if(lv==='a10') { // 3-digit multiple carries
+    do { a=rand(150,499); b=rand(150,499); }
+    while(!( (dO(a)+dO(b)>=10) && (dT(a)+dT(b)+1>=10) ) || a+b>999);
+    op='+';
+  // ── 4-digit addition ──
+  } else if(lv==='a4d1') { // no carry
+    do{a=rand(1000,4999);b=rand(1000,4999);}while(countCarries(a,b)!==0||a+b>9999);
+    op='+';
+  } else if(lv==='a4d2') { // ones carry
+    do{a=rand(1000,4999);b=rand(1000,4999);}while(!(dO(a)+dO(b)>=10&&countCarries(a,b)===1)||a+b>9999);
+    op='+';
+  } else if(lv==='a4d3') { // tens carry
+    do{a=rand(1000,4999);b=rand(1000,4999);}while(!(dO(a)+dO(b)<10&&dT(a)+dT(b)>=10&&countCarries(a,b)===1)||a+b>9999);
+    op='+';
+  } else if(lv==='a4d4') { // multiple carries
+    do{a=rand(1000,4999);b=rand(1000,4999);}while(countCarries(a,b)<2||a+b>9999);
+    op='+';
+  // ── Subtraction levels ──
+  } else if(lv==='s2') { // 2-digit no borrow
+    do { a=rand(22,99); b=rand(11,a-1); }
+    while(dO(a)<dO(b) || dT(a)<dT(b));
+    op='−';
+  } else if(lv==='s3') { // 2-digit ones borrow
+    do { a=rand(22,99); b=rand(11,a-1); }
+    while(dO(a)>=dO(b) || dT(a)<=dT(b));
+    op='−';
+  } else if(lv==='s4') { // 3-digit no borrow
+    do { a=rand(222,999); b=rand(111,a-1); }
+    while(dO(a)<dO(b) || dT(a)<dT(b) || dH(a)<dH(b));
+    op='−';
+  } else if(lv==='s5') { // 3-digit ones borrow only
+    do { a=rand(222,999); b=rand(111,a-1); }
+    while(dO(a)>=dO(b) || (dT(a)-1)<dT(b) || dH(a)<dH(b));
+    op='−';
+  } else if(lv==='s6') { // 3-digit tens borrow only
+    do { a=rand(222,999); b=rand(111,a-1); }
+    while(dO(a)<dO(b) || dT(a)>=dT(b) || (dH(a)-1)<dH(b));
+    op='−';
+  } else if(lv==='s7') { // 3-digit multiple borrows
+    do { a=rand(333,999); b=rand(111,a-1); }
+    while(dO(a)>=dO(b) || (dT(a)-1)>=dT(b) || dH(a)<=dH(b));
+    op='−';
+  // ── 4-digit subtraction ──
+  } else if(lv==='s4d1') { // no borrow
+    do{a=rand(2000,9999);b=rand(1000,a-1);}while(countBorrows(a,b)!==0);
+    op='−';
+  } else if(lv==='s4d2') { // ones borrow
+    do{a=rand(2000,9999);b=rand(1000,a-1);}while(!(dO(a)<dO(b)&&countBorrows(a,b)===1));
+    op='−';
+  } else if(lv==='s4d3') { // tens borrow
+    do{a=rand(2000,9999);b=rand(1000,a-1);}while(!(dO(a)>=dO(b)&&dT(a)<dT(b)&&countBorrows(a,b)===1));
+    op='−';
+  } else if(lv==='s4d4') { // multiple borrows
+    do{a=rand(2000,9999);b=rand(1000,a-1);}while(countBorrows(a,b)<2);
+    op='−';
+  }
+
+  const answer = op==='+'? a+b : a-b;
+  const numDigits = Math.max(String(a).length, String(b).length, String(answer).length);
+  const is1d = (numDigits===1 && answer<=9);
+
+  // Digit extraction
+  const digits = (n,nd) => {
+    const s=String(n).padStart(nd,'0');
+    return s.split('').map(Number);
+  };
+  const nd = Math.max(numDigits, String(answer).length);
+  const aDigits = digits(a, nd);
+  const bDigits = digits(b, nd);
+  const hasCarry = lv.startsWith('a') && ['a2','a4','a5','a6','a8','a9','a10'].includes(lv);
+  const hasBorrow = lv.startsWith('s') && ['s3','s5','s6','s7'].includes(lv);
+
+  currentOps={a,b,op,answer,numDigits:nd,attempts:0};
+
+  // Column names right-to-left
+  const colNames=['Бірлік','Ондық','Жүздік','Мыңдық'];
+  const colIds=['ans-o','ans-t','ans-h','ans-th'];
+
+  // Build vertical calc HTML
+  let carryHTML='', aHTML='', bHTML='', ansHTML='';
+  for(let i=0;i<nd;i++) {
+    const cid = i<4 ? `carry-${colIds[i].split('-')[1]}` : '';
+    carryHTML = `<span class="vert-digit" id="${cid}">&nbsp;</span>` + carryHTML;
+    aHTML = `<span class="vert-digit">${aDigits[nd-1-i]||''}</span>` + aHTML;
+    bHTML = `<span class="vert-digit">${bDigits[nd-1-i]||''}</span>` + bHTML;
+    const aid = i<4 ? colIds[i] : `ans-${i}`;
+    if(i===0) ansHTML = `<input class="vert-input current" id="${aid}" maxlength="1">` + ansHTML;
+    else ansHTML = `<input class="vert-input locked" id="${aid}" maxlength="1" disabled>` + ansHTML;
+  }
+
+  // PV chart columns
+  let pvHead='', pvRowA='', pvRowB='';
+  const aO=a%10, aT2=Math.floor(a/10)%10, aH=Math.floor(a/100)%10;
+  const bO=b%10, bT2=Math.floor(b/10)%10, bH=Math.floor(b/100)%10;
+  const aTh=Math.floor(a/1000)%10, bTh=Math.floor(b/1000)%10;
+  if(nd>=4) {
+    pvHead+=`<th>Мыңдық</th>`;
+    pvRowA+=`<td class="pv-cell">${renderPVCell('th',aTh)}</td>`;
+    pvRowB+=`<td class="pv-cell">${renderPVCell('th',bTh)}</td>`;
+  }
+  if(nd>=3) {
+    pvHead+=`<th>Жүздік</th>`;
+    pvRowA+=`<td class="pv-cell">${renderPVCell('h',aH)}</td>`;
+    pvRowB+=`<td class="pv-cell">${renderPVCell('h',bH)}</td>`;
+  }
+  if(nd>=2) {
+    pvHead+=`<th>Ондық</th>`;
+    pvRowA+=`<td class="pv-cell">${renderPVCell('t',aT2)}</td>`;
+    pvRowB+=`<td class="pv-cell">${renderPVCell('t',bT2)}</td>`;
+  }
+  pvHead+=`<th>Бірлік</th>`;
+  pvRowA+=`<td class="pv-cell">${renderPVCell('o',aO)}</td>`;
+  pvRowB+=`<td class="pv-cell">${renderPVCell('o',bO)}</td>`;
+
+  const regroup = hasCarry||hasBorrow;
+  ws.innerHTML=`
+    <div class="prompt-card">
+      <div class="question">${a} ${op} ${b} = ?</div>
+      <div class="sub">${op==='+'?'Қосыңыз':'Азайтыңыз'}. ${regroup?'Ауысуға назар аударыңыз!':''}
+        <button class="hint-btn-inline" onclick="showOpsHintBefore()" id="hintBefore">💡 Кеңес</button>
+      </div>
+    </div>
+    <div class="ops-layout">
+      <div class="vert-calc">
+        <div class="carry-row" id="carryRow">${carryHTML}</div>
+        <div class="vert-row">${aHTML}</div>
+        <div class="vert-row"><span class="vert-op">${op}</span>${bHTML}</div>
+        <div class="vert-line"></div>
+        <div class="vert-row">${ansHTML}</div>
+        ${nd>1?'<div class="fill-order-hint"><span class="arrow">←</span> Бірліктерден бастаңыз</div>':''}
+      </div>
+      <div class="ops-pv-chart pop-in">
+        <table class="pv-table">
+          <thead><tr>${pvHead}</tr></thead>
+          <tbody>
+            <tr class="pv-row-a">${pvRowA}</tr>
+            <tr><td colspan="${nd}" class="pv-op-row">${op}</td></tr>
+            <tr class="pv-row-b">${pvRowB}</tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="hintArea"></div>
+    <div class="answer-area">
+      <button class="check-btn" onclick="checkOps()">Тексеру</button>
+    </div>
+    <div class="feedback" id="fb"></div>`;
+
+  // Right-to-left fill order
+  const fillOrder=[];
+  for(let i=0;i<nd;i++) fillOrder.push(i<4?colIds[i]:`ans-${i}`);
+  if(nd===1) {
+    document.getElementById(fillOrder[0]).classList.remove('locked');
+    document.getElementById(fillOrder[0]).classList.add('current');
+    document.getElementById(fillOrder[0]).disabled=false;
+  }
+  document.getElementById(fillOrder[0]).focus();
+
+  fillOrder.forEach((id,i)=>{
+    const inp=document.getElementById(id);
+    inp.addEventListener('input',()=>{
+      if(inp.value.length>=1 && i<fillOrder.length-1) {
+        const nextId=fillOrder[i+1];
+        const next=document.getElementById(nextId);
+        inp.classList.remove('current');
+        next.classList.remove('locked');
+        next.classList.add('current');
+        next.disabled=false;
+        next.focus();
+      }
+    });
+    inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter') checkOps();
+      if(e.key==='Backspace' && inp.value==='' && i>0) {
+        const prevId=fillOrder[i-1];
+        const prev=document.getElementById(prevId);
+        inp.classList.add('locked');
+        inp.classList.remove('current');
+        inp.disabled=true;
+        prev.classList.add('current');
+        prev.focus();
+        prev.select();
+      }
+    });
+  });
+}
+
+// Digit helpers
+function dO(n){return n%10;}
+function dT(n){return Math.floor(n/10)%10;}
+function dH(n){return Math.floor(n/100)%10;}
+function dTh(n){return Math.floor(n/1000)%10;}
+
+window.showOpsHintBefore = function() {
+  // Voluntary hint: show first 2 visual steps
+  showVisualHint(2);
+  const btn=document.getElementById('hintBefore');
+  if(btn) btn.style.display='none';
+};
+
+window.checkOps = function() {
+  const {answer,numDigits,a,b,op}=currentOps;
+  const colIds=['ans-o','ans-t','ans-h','ans-th'];
+  // Read answer from digit inputs
+  let str='';
+  for(let i=numDigits-1;i>=0;i--) {
+    const id=i<4?colIds[i]:`ans-${i}`;
+    const el=document.getElementById(id);
+    str+=el?el.value:'';
+  }
+  const userAns=parseInt(str)||0;
+  const ok=userAns===answer;
+  currentOps.attempts++;
+
+  if(ok) {
+    const inputs=document.querySelectorAll('.vert-input');
+    inputs.forEach(inp=>inp.classList.add('correct'));
+    showFeedback(true);
+  } else if(currentOps.attempts===1) {
+    const inputs=document.querySelectorAll('.vert-input');
+    inputs.forEach(inp=>{inp.classList.add('wrong'); inp.value='';});
+    setTimeout(()=>{
+      inputs.forEach(inp=>inp.classList.remove('wrong'));
+      const fillOrder=[];
+      for(let i=0;i<numDigits;i++) fillOrder.push(i<4?colIds[i]:`ans-${i}`);
+      fillOrder.forEach((id,i)=>{
+        const el=document.getElementById(id);
+        if(i===0) { el.classList.remove('locked'); el.classList.add('current'); el.disabled=false; el.focus(); }
+        else { el.classList.add('locked'); el.classList.remove('current'); el.disabled=true; }
+      });
+    },600);
+    showVisualHint(3);
+    const fb=document.getElementById('fb');
+    fb.className='feedback show wrong shake';
+    fb.innerHTML=`✗ Дұрыс емес. Кеңесті қарап, бірліктерден қайта бастаңыз!`;
+    const btn=document.getElementById('hintBefore');
+    if(btn) btn.style.display='none';
+  } else {
+    const inputs=document.querySelectorAll('.vert-input');
+    inputs.forEach(inp=>inp.classList.add('wrong'));
+    showVisualHint();
+    showFeedback(false, `Дұрыс жауап: ${answer}`);
+  }
+};
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  SHARED: CHECK FUNCTIONS & FEEDBACK                         ║
+// ║  Used by multiple modules above                             ║
+// ║  checkAnswer: counting, horizOps, comprehension             ║
+// ║  checkPV2/3/4: placeValue                                   ║
+// ║  checkExpanded, checkBuild: placeValue                      ║
+// ║  showFeedback: ALL modules                                  ║
+// ╚═══════════════════════════════════════════════════════════════╝
+window.checkAnswer = function(correct) {
+  const inp=document.getElementById('ans');
+  const val=parseInt(inp.value);
+  const ok=val===correct;
+  inp.classList.add(ok?'correct':'wrong');
+  inp.disabled=true;
+  showFeedback(ok, ok?null:`Дұрыс жауап: ${correct}`);
+};
+
+window.checkPV2 = function(ct,co) {
+  const ut=parseInt(document.getElementById('pt').value);
+  const uo=parseInt(document.getElementById('po').value);
+  const ok=ut===ct&&uo===co;
+  document.getElementById('pt').classList.add(ok||ut===ct?'correct':'wrong');
+  document.getElementById('po').classList.add(ok||uo===co?'correct':'wrong');
+  showFeedback(ok, ok?null:`Дұрыс: ${ct} ондық, ${co} бірлік`);
+};
+
+window.checkPV3 = function(ch,ct,co) {
+  const uh=parseInt(document.getElementById('ph').value);
+  const ut=parseInt(document.getElementById('pt').value);
+  const uo=parseInt(document.getElementById('po').value);
+  const ok=uh===ch&&ut===ct&&uo===co;
+  showFeedback(ok, ok?null:`Дұрыс: ${ch} жүздік, ${ct} ондық, ${co} бірлік`);
+};
+
+window.checkPV4 = function(cth,ch,ct,co) {
+  const uth=parseInt(document.getElementById('pth').value);
+  const uh=parseInt(document.getElementById('ph').value);
+  const ut=parseInt(document.getElementById('pt').value);
+  const uo=parseInt(document.getElementById('po').value);
+  const ok=uth===cth&&uh===ch&&ut===ct&&uo===co;
+  showFeedback(ok, ok?null:`Дұрыс: ${cth} мыңдық, ${ch} жүздік, ${ct} ондық, ${co} бірлік`);
+};
+
+window.checkExpanded = function(ch,ct,co) {
+  const uh=parseInt(document.getElementById('eh').value)||0;
+  const ut=parseInt(document.getElementById('et').value)||0;
+  const uo=parseInt(document.getElementById('eo').value)||0;
+  const ok=uh===ch&&ut===ct&&uo===co;
+  document.getElementById('eh').classList.add(uh===ch?'correct':'wrong');
+  document.getElementById('et').classList.add(ut===ct?'correct':'wrong');
+  document.getElementById('eo').classList.add(uo===co?'correct':'wrong');
+  showFeedback(ok, ok?null:`Дұрыс: ${ch} + ${ct} + ${co}`);
+};
+
+function showFeedback(correct, hint) {
+  const fb=document.getElementById('fb');
+  if(correct) {
+    state.score++;
+    state.stars++;
+    fb.className='feedback show correct pop-in';
+    fb.innerHTML=`<span class="star-anim">★</span> Дұрыс! Жарайсың!`;
+  } else {
+    fb.className='feedback show wrong shake';
+    fb.innerHTML=`✗ ${hint||'Қайта ойланыңыз'}`;
+  }
+  state.total++;
+  state.questionNum++;
+  saveProgress();
+  renderSidebar();
+
+  // show next button
+  const area=fb.parentElement;
+  const nb=document.createElement('button');
+  nb.className='next-btn';
+  nb.style.marginTop='12px';
+  nb.textContent=state.questionNum>=state.questionsPerLevel?'Нәтиже →':'Келесі →';
+  nb.onclick=()=>generateQuestion();
+  area.appendChild(nb);
+  setTimeout(()=>nb.focus(),100);
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  SYSTEM: ADAPTIVE ENGINE & PLACEMENT TEST                   ║
+// ║  Functions: startFromBeginning, resetProgress,              ║
+// ║    genPlacementQ, startDiagnostic, renderPlacementQuestion,  ║
+// ║    checkPlacement, finishPlacement, showAbilityMap           ║
+// ║  genPlacementQ: text-only Q generator for ALL levels        ║
+// ║    (also reused by comprehension module)                    ║
+// ╚═══════════════════════════════════════════════════════════════╝
+window.startFromBeginning = function() {
+  state.started = true;
+  state.unlockedUpTo = 0;
+  saveProgress();
+  const first = LEVEL_ORDER[0];
+  selectLevel(first.moduleId, first.levelId);
+};
+
+window.resetProgress = function() {
+  // Show inline confirmation instead of blocked confirm()
+  if(!window._resetConfirmed) {
+    const btn = document.querySelector('[onclick="resetProgress()"]');
+    if(btn) { btn.textContent='Растайсыз ба? Басыңыз'; btn.style.background='var(--error-light)'; btn.style.color='var(--error)'; }
+    window._resetConfirmed = true;
+    setTimeout(()=>{ window._resetConfirmed=false; if(btn){btn.textContent='Қайта бастау'; btn.style.background=''; btn.style.color='';} }, 3000);
+    return;
+  }
+  window._resetConfirmed = false;
+  state.completed = {};
+  state.stars = 0;
+  state.unlockedUpTo = 0;
+  state.started = false;
+  state.module = null;
+  state.level = null;
+  state.placement = null;
+  saveProgress();
+  renderSidebar();
+  renderMain();
+};
+
+// ── Adaptive placement test ──
+// Correct → jump 3 levels forward, Wrong → back 1, 2 consecutive wrong → stop.
+// No visual blocks, silent skip on wrong, ability map at the end.
+
+function genPlacementQ(levelId) {
+  // Generate a text-only question {q, sub, answer} for any level
+  const lv=levelId;
+  if(lv==='c1') { const n=rand(1,9); return {q:`${n} — бұл қандай сан?`, sub:'Count the ones', answer:n}; }
+  if(lv==='c20') { const n=rand(11,20); return {q:`1 ондық және ${n%10} бірлік = ?`, sub:'1 ten and ? ones', answer:n}; }
+  if(lv==='ct10') { const t=rand(1,9); return {q:`${t} ондық = ?`, sub:'Count by tens', answer:t*10}; }
+  if(lv==='c2') { const t=rand(1,9),o=rand(0,9); return {q:`${t} ондық ${o} бірлік = ?`, sub:'Tens and ones', answer:t*10+o}; }
+  if(lv==='c3') { const h=rand(1,9),t=rand(0,9),o=rand(0,9); return {q:`${h} жүздік ${t} ондық ${o} бірлік = ?`, sub:'Hundreds, tens, ones', answer:h*100+t*10+o}; }
+  if(lv==='c4') { const th=rand(1,3),h=rand(0,9),t=rand(0,9),o=rand(0,9); return {q:`${th} мыңдық ${h} жүздік ${t} ондық ${o} бірлік = ?`, sub:'Thousands', answer:th*1000+h*100+t*10+o}; }
+  if(lv==='pv20') { const n=rand(11,19); return {q:`${n} санының ондық цифры қандай?`, sub:'Tens digit', answer:1}; }
+  if(lv==='p1') { const n=rand(10,99),d=rand(0,1); const dig=d?Math.floor(n/10):n%10; return {q:`${n} — ${d?'ондық':'бірлік'} цифры?`, sub:'Place value', answer:dig}; }
+  if(lv==='p2') { const n=rand(100,999),d=rand(0,2); const dig=[n%10,Math.floor(n/10)%10,Math.floor(n/100)][d]; const names=['бірлік','ондық','жүздік']; return {q:`${n} — ${names[d]} цифры?`, sub:'3-digit place value', answer:dig}; }
+  if(lv==='p3') { const h=rand(1,9),t=rand(0,9),o=rand(0,9); return {q:`${h*100} + ${t*10} + ${o} = ?`, sub:'Expanded form', answer:h*100+t*10+o}; }
+  if(lv==='pv4d') { const n=rand(1000,9999),d=rand(0,3); const dig=[n%10,Math.floor(n/10)%10,Math.floor(n/100)%10,Math.floor(n/1000)][d]; const names=['бірлік','ондық','жүздік','мыңдық']; return {q:`${n} — ${names[d]} цифры?`, sub:'4-digit place value', answer:dig}; }
+  if(lv==='p4') { const th=rand(1,9),h=rand(0,9),t=rand(0,9),o=rand(0,9); return {q:`${th*1000} + ${h*100} + ${t*10} + ${o} = ?`, sub:'Build 4-digit', answer:th*1000+h*100+t*10+o}; }
+  if(lv==='m1') { let a,b; do{a=rand(10,99);b=rand(10,99);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare (answer the bigger one)', answer:Math.max(a,b)}; }
+  if(lv==='m2') { let a,b; do{a=rand(100,999);b=rand(100,999);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare', answer:Math.max(a,b)}; }
+  if(lv==='m3') { let a,b; do{a=rand(1000,9999);b=rand(1000,9999);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare', answer:Math.max(a,b)}; }
+  // Operations — just math, no visuals
+  if(lv==='a1') { let a,b; do{a=rand(1,8);b=rand(1,8);}while(a+b>9); return {q:`${a} + ${b} = ?`, sub:'Add within 10', answer:a+b}; }
+  if(lv==='s1') { const a=rand(2,9),b=rand(1,a); return {q:`${a} − ${b} = ?`, sub:'Sub within 10', answer:a-b}; }
+  if(lv==='a20n') { let a,b; do{a=rand(10,18);b=rand(1,9);}while(a%10+b>=10||a+b>20); return {q:`${a} + ${b} = ?`, sub:'Add no carry', answer:a+b}; }
+  if(lv==='a2') { let a,b; do{a=rand(2,9);b=rand(2,9);}while(a+b<=9); return {q:`${a} + ${b} = ?`, sub:'Add carry', answer:a+b}; }
+  if(lv==='s20n') { let a; do{a=rand(11,19);}while(a%10===0); const b=rand(1,a%10); return {q:`${a} − ${b} = ?`, sub:'Sub no borrow', answer:a-b}; }
+  if(lv==='s20b') { let a,b; do{a=rand(11,18);b=rand(a%10+1,9);}while(a-b<1); return {q:`${a} − ${b} = ?`, sub:'Sub borrow', answer:a-b}; }
+  // 2-digit ops
+  if(lv==='a3') { let a,b; do{a=rand(10,89);b=rand(10,89);}while(countCarries(a,b)!==0||a+b>99); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='a4') { let a,b; do{a=rand(10,89);b=rand(10,89);}while(countCarries(a,b)!==1||Math.floor(a/10)%10+Math.floor(b/10)%10>=10||a+b>99); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='a5') { let a,b; do{a=rand(10,89);b=rand(10,89);}while(!(a%10+b%10<10&&Math.floor(a/10)%10+Math.floor(b/10)%10>=10)); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='a6') { let a,b; do{a=rand(10,89);b=rand(10,89);}while(countCarries(a,b)<2); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='s2') { let a,b; do{a=rand(20,99);b=rand(10,a-1);}while(countBorrows(a,b)!==0); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  if(lv==='s3') { let a,b; do{a=rand(20,99);b=rand(10,a-1);}while(countBorrows(a,b)!==1); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  // 3-digit ops
+  if(lv==='a7') { let a,b; do{a=rand(100,899);b=rand(100,899);}while(countCarries(a,b)!==0||a+b>999); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='a8'||lv==='a9'||lv==='a10') { let a,b,need=lv==='a8'?1:lv==='a9'?1:2; do{a=rand(100,899);b=rand(100,899);}while(countCarries(a,b)<need||a+b>999); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='s4') { let a,b; do{a=rand(200,999);b=rand(100,a-1);}while(countBorrows(a,b)!==0); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  if(lv==='s5'||lv==='s6'||lv==='s7') { let a,b,need=lv==='s5'?1:lv==='s6'?1:2; do{a=rand(200,999);b=rand(100,a-1);}while(countBorrows(a,b)<need); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  // 4-digit ops
+  if(lv==='a4d1') { let a,b; do{a=rand(1000,4999);b=rand(1000,4999);}while(countCarries(a,b)!==0||a+b>9999); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='a4d2'||lv==='a4d3'||lv==='a4d4') { let a,b,need=lv==='a4d2'?1:lv==='a4d3'?2:3; do{a=rand(1000,4999);b=rand(1000,4999);}while(countCarries(a,b)<need||a+b>9999); return {q:`${a} + ${b} = ?`, answer:a+b}; }
+  if(lv==='s4d1') { let a,b; do{a=rand(2000,9999);b=rand(1000,a-1);}while(countBorrows(a,b)!==0); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  if(lv==='s4d2'||lv==='s4d3'||lv==='s4d4') { let a,b,need=lv==='s4d2'?1:lv==='s4d3'?2:3; do{a=rand(2000,9999);b=rand(1000,a-1);}while(countBorrows(a,b)<need); return {q:`${a} − ${b} = ?`, answer:a-b}; }
+  // Comprehension levels — simple arithmetic for placement
+  if(lv==='u1') { const a=rand(2,9),b=rand(1,a); return {q:`${a} − ${b} = ?`, sub:'Түсіну: 10 ішінде', answer:a-b}; }
+  if(lv==='u2') { const a=rand(5,9),b=rand(3,9); return {q:`${a} + ${b} = ?`, sub:'Түсіну: 20 ішінде', answer:a+b}; }
+  if(lv==='u3') { const a=rand(20,60),b=rand(10,39); return {q:`${a} + ${b} = ?`, sub:'Түсіну: 100 ішінде', answer:a+b}; }
+  if(lv==='u4') { const a=rand(100,500),b=rand(100,400); return {q:`${a} + ${b} = ?`, sub:'Түсіну: 1000 ішінде', answer:a+b}; }
+  if(lv==='u5') { const a=rand(1000,5000),b=rand(1000,4000); return {q:`${a} + ${b} = ?`, sub:'Түсіну: 10000 ішінде', answer:a+b}; }
+  // fallback
+  return {q:'1 + 1 = ?', answer:2};
+}
+
+window.startDiagnostic = function() {
+  state.started = true;
+  state.placement = {
+    active: true,
+    currentIdx: 0,
+    consecutiveWrong: 0,
+    history: [],  // {idx, correct}
+    maxReached: 0,
+    questionCount: 0
+  };
+  saveProgress();
+  renderPlacementQuestion();
+};
+
+function renderPlacementQuestion() {
+  const p = state.placement;
+  if(!p || !p.active) return;
+  const idx = Math.max(0, Math.min(p.currentIdx, LEVEL_ORDER.length-1));
+  const entry = LEVEL_ORDER[idx];
+  const mod = MODULES.find(m=>m.id===entry.moduleId);
+  const lvl = mod.levels.find(l=>l.id===entry.levelId);
+  const qData = genPlacementQ(entry.levelId);
+  p.questionCount++;
+
+  const main = document.getElementById('main');
+  main.innerHTML=`
+    <div class="header">
+      <h2>🎯 Деңгейді анықтау</h2>
+      <span class="level-tag">${mod.icon} ${lvl.name}</span>
+    </div>
+    <div class="diag-progress">
+      <span class="pt-num">Сұрақ ${p.questionCount}</span>
+      <div class="diag-bar"><div class="diag-fill" style="width:${(idx/LEVEL_ORDER.length*100).toFixed(0)}%"></div></div>
+    </div>
+    <div class="pt-question-area pop-in">
+      <div class="pt-q">${qData.q}</div>
+      ${qData.sub?`<div class="pt-sub">${qData.sub}</div>`:''}
+      <div class="answer-area" style="justify-content:center">
+        <input type="number" class="answer-input" id="pt-ans" placeholder="?" autofocus>
+        <button class="check-btn" onclick="checkPlacement(${qData.answer})">→</button>
+      </div>
+    </div>`;
+  renderSidebar();
+  const inp=document.getElementById('pt-ans');
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')checkPlacement(qData.answer);});
+  inp.focus();
+}
+
+window.checkPlacement = function(correctAnswer) {
+  const p = state.placement;
+  if(!p || !p.active) return;
+  const inp = document.getElementById('pt-ans');
+  if(!inp) return;
+  const userAns = parseInt(inp.value);
+  if(isNaN(userAns)) return;
+
+  const correct = userAns === correctAnswer;
+  p.history.push({idx: p.currentIdx, correct});
+
+  if(correct) {
+    p.consecutiveWrong = 0;
+    p.maxReached = Math.max(p.maxReached, p.currentIdx);
+    p.currentIdx = Math.min(p.currentIdx + 3, LEVEL_ORDER.length - 1);
+    // If already at the end, finish
+    if(p.currentIdx >= LEVEL_ORDER.length - 1 && p.maxReached >= LEVEL_ORDER.length - 1) {
+      finishPlacement();
+      return;
+    }
+  } else {
+    p.consecutiveWrong++;
+    if(p.consecutiveWrong >= 2) {
+      finishPlacement();
+      return;
+    }
+    p.currentIdx = Math.max(0, p.currentIdx - 1);
+  }
+  // Silent — just show next question, no feedback
+  renderPlacementQuestion();
+};
+
+function finishPlacement() {
+  const p = state.placement;
+  // Determine the boundary: last level the student got right
+  let lastCorrectIdx = -1;
+  for(const h of p.history) {
+    if(h.correct) lastCorrectIdx = Math.max(lastCorrectIdx, h.idx);
+  }
+  // Unlock all levels up to and including lastCorrectIdx, start from next
+  if(lastCorrectIdx >= 0) {
+    for(let i=0; i<=lastCorrectIdx; i++) {
+      state.completed[LEVEL_ORDER[i].levelId] = true;
+    }
+    state.unlockedUpTo = Math.min(lastCorrectIdx + 1, LEVEL_ORDER.length - 1);
+    state.stars += (lastCorrectIdx + 1) * 3; // auto-award stars
+  } else {
+    state.unlockedUpTo = 0;
+  }
+  state.placement = null;
+  state.diagnostic = false;
+  state.module = null;
+  state.level = null;
+  saveProgress();
+  renderSidebar();
+  showAbilityMap(lastCorrectIdx);
+}
+
+function showAbilityMap(lastCorrectIdx) {
+  const main = document.getElementById('main');
+  const startIdx = Math.min((lastCorrectIdx>=0?lastCorrectIdx+1:0), LEVEL_ORDER.length-1);
+  const entry = LEVEL_ORDER[startIdx];
+  const startMod = MODULES.find(m=>m.id===entry.moduleId);
+  const startLvl = startMod.levels.find(l=>l.id===entry.levelId);
+
+  let mapHTML = '<div class="ability-map">';
+  for(const mod of MODULES) {
+    const modLevels = mod.levels;
+    const completedInMod = modLevels.filter(l=>state.completed[l.id]).length;
+    const pct = Math.round(completedInMod / modLevels.length * 100);
+    const isCurrentMod = mod.id === startMod.id;
+    const allDone = completedInMod === modLevels.length;
+    const fillClass = allDone ? 'mastered' : (completedInMod > 0 ? 'current' : 'locked');
+    const badgeClass = allDone ? 'done' : (isCurrentMod ? 'active' : 'grey');
+    const badgeText = allDone ? '✓ меңгерілді' : (isCurrentMod ? '← мұндасыз' : `${completedInMod}/${modLevels.length}`);
+    mapHTML += `<div class="am-stage">
+      <div class="am-icon">${mod.icon}</div>
+      <div class="am-info">
+        <div class="am-name">${mod.name}</div>
+        <div class="am-bar"><div class="am-fill ${fillClass}" style="width:${pct}%"></div></div>
+      </div>
+      <span class="am-badge ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }
+  mapHTML += '</div>';
+
+  main.innerHTML=`<div class="welcome">
+    <div style="font-size:64px;margin-bottom:16px">🗺️</div>
+    <h2>Сіздің деңгейіңіз анықталды!</h2>
+    <p style="font-size:15px;color:var(--text-dim);margin:8px 0 24px">${startIdx} деңгей ашылды · ${state.stars} жұлдыз</p>
+    ${mapHTML}
+    <p style="margin-top:20px;font-size:15px">Келесі: <strong>${startMod.icon} ${startMod.name} — ${startLvl.name}</strong></p>
+    <button class="check-btn" style="margin-top:16px;font-size:16px;padding:12px 32px" onclick="selectLevel('${entry.moduleId}','${entry.levelId}')">Бастау →</button>
+  </div>`;
+}
+
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  SYSTEM: LEVEL COMPLETION & PROGRESSION                     ║
+// ║  Functions: showLevelComplete, goNextLevel                  ║
+// ╚═══════════════════════════════════════════════════════════════╝
+function showLevelComplete(ws) {
+  // Mastery threshold: 4/5 for comprehension, 8/10 for regular
+  const mastery = COMP_LVL.has(state.level) ? 4 : 8;
+  const pct=Math.round(state.score/state.questionsPerLevel*100);
+  const passed=state.score >= mastery;
+  let unlockMsg = '';
+  if(passed) {
+    state.completed[state.level]=true;
+    state.stars += state.score;
+    // Unlock next level
+    const curIdx = getLevelGlobalIndex(state.level);
+    if(curIdx < LEVEL_ORDER.length - 1 && state.unlockedUpTo <= curIdx) {
+      state.unlockedUpTo = curIdx + 1;
+      const nextEntry = LEVEL_ORDER[curIdx + 1];
+      const nextMod = MODULES.find(m=>m.id===nextEntry.moduleId);
+      const nextLvl = nextMod.levels.find(l=>l.id===nextEntry.levelId);
+      unlockMsg = `<p style="font-size:14px;color:var(--success);margin-top:8px">🔓 Жаңа деңгей ашылды: ${nextMod.icon} ${nextLvl.name}</p>`;
+    }
+    saveProgress();
+    renderSidebar();
+  }
+  ws.innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:40px">
+      <div style="font-size:64px;margin-bottom:16px" class="star-anim">${passed?'🎉':'📚'}</div>
+      <h2 style="font-size:28px;font-family:'Fredoka'">${passed?'Тамаша!':'Қайталап көріңіз'}</h2>
+      <p style="font-size:18px;color:var(--text-dim);margin:12px 0">
+        ${state.score} / ${state.questionsPerLevel} дұрыс (${pct}%)
+      </p>
+      <p style="font-size:13px;color:var(--text-dim)">Меңгеру табалдырығы: ${mastery}/${state.questionsPerLevel}</p>
+      ${!passed?`<p style="font-size:13px;color:var(--error);margin-top:4px">Келесі деңгейге өту үшін кемінде ${mastery} дұрыс жауап қажет</p>`:''}
+      <div style="display:flex;gap:4px;font-size:32px;margin:8px 0">
+        ${'★'.repeat(state.score)}${'☆'.repeat(state.questionsPerLevel-state.score)}
+      </div>
+      ${unlockMsg}
+      <div style="display:flex;gap:12px;margin-top:24px">
+        <button class="check-btn" onclick="state.questionNum=0;state.score=0;state.total=0;generateQuestion();">Қайталау</button>
+        ${passed?`<button class="next-btn" onclick="goNextLevel()">Келесі деңгей →</button>`:''}
+      </div>
+    </div>`;
+}
+
+window.goNextLevel = function() {
+  // Use global ordering
+  const curIdx = getLevelGlobalIndex(state.level);
+  if(curIdx < LEVEL_ORDER.length - 1) {
+    const next = LEVEL_ORDER[curIdx + 1];
+    selectLevel(next.moduleId, next.levelId);
+  } else {
+    state.module = null;
+    state.level = null;
+    renderSidebar();
+    renderMain();
+  }
+};
+
+// ── Init ──
+renderSidebar();
+renderMain();
+</script>
+<div id="app"></div>
+<script src="bridge.js"></script>
+</body>
+</html>
