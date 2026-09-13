@@ -6,23 +6,24 @@
 <title>Есеп жолы · Мәтінді есептер</title>
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="../core/ui.css">
+<!-- ?v=N busts the phone's cache: bump it in every index.html when core or route files change -->
+<link rel="stylesheet" href="../core/ui.css?v=3">
 </head>
 <body>
 <div id="app" class="app"></div>
 <!-- platform -->
-<script src="../core/core.js"></script>
-<script src="../core/figs.js"></script>
-<script src="../core/map.js"></script>
+<script src="../core/core.js?v=3"></script>
+<script src="../core/figs.js?v=3"></script>
+<script src="../core/map.js?v=3"></script>
 <!-- route WP (see MAP.md) -->
-<script src="stages.js"></script>
-<script src="icons.js"></script>
-<script src="bank.js"></script>
-<script src="generate.js"></script>
-<script src="state.js"></script>
-<script src="screens.js"></script>
-<script src="practice.js"></script>
-<script src="diag_test.js"></script>
+<script src="stages.js?v=3"></script>
+<script src="icons.js?v=3"></script>
+<script src="bank.js?v=3"></script>
+<script src="generate.js?v=3"></script>
+<script src="state.js?v=3"></script>
+<script src="screens.js?v=3"></script>
+<script src="practice.js?v=3"></script>
+<script src="diag_test.js?v=3"></script>
 <script>
 (async function(){ initState(await Core.start('WP')); showHome(); })();
 </script>
