@@ -323,11 +323,17 @@
       return p.op === 'div' ? { a: t * m, b: t, v: m } : { a: t, b: m, v: t * m };
     }
 
+    /* The widget always offers a BUTTON as well as Enter: on a tablet the
+     * on-screen keyboard's Enter is not discoverable, and a drill whose only
+     * way to answer is a key the child cannot find reads as "it says I'm wrong". */
     var SHELL =
       '<div style="display:flex;flex-direction:column;gap:10px;align-items:center">' +
       '<div class="sp-head note" style="font-weight:800;text-align:center"></div>' +
       '<div class="sp-q" style="font-family:var(--disp);font-size:2rem;font-weight:600"></div>' +
-      '<input class="big sp-in" inputmode="numeric" style="max-width:170px;text-align:center">' +
+      '<div class="sp-row" style="display:flex;gap:8px;align-items:center">' +
+      '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
+      '<button class="btn sp-ok" type="button">Қою</button></div>' +
+      '<div class="sp-msg" style="min-height:1.5em;font-weight:800;text-align:center"></div>' +
       '<div class="sp-bar" style="width:100%;max-width:260px;height:8px;border-radius:5px;' +
       'background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;' +
       'background:var(--accent);border-radius:5px"></i></div>' +
@@ -335,28 +341,47 @@
 
     /* ── lvl 1–2 · practice with the correction procedure ── */
     if (lvl < 3) {
-      var LIMIT = lvl === 2 ? 4000 : 0;          // lvl 2: a pause is an error
+      /* 6 s, not 4. Rocket Math's hesitation standard is ~2 s, but it is SPOKEN
+       * to a partner; here the child must read the problem, find the digits and
+       * hit a button, which is a slower channel. At 4 s a child answering every
+       * fact correctly was being sent to the correction screen — the app looked
+       * like it was calling right answers wrong. */
+      var LIMIT = lvl === 2 ? 6000 : 0;
       var ROUND = 10, ALLOW = lvl === 1 ? 3 : 2;
+      /* Backing up three after every correction can outrun the ten problems
+       * ahead of it, so a consistently borderline child never reached the end.
+       * The round is now bounded by how many problems it may SHOW. */
+      var BUDGET = 26;
       return {
         stem: 'Жаттығу · ' + OP + ' ' + f0.n,
         kind: 'custom',
         ans: 'иә',
         ansHTML: '<b>раундты таза аяқтау</b>',
         h1: 'Қателессең — бүкіл мысал көрсетіледі, оны ҮШ РЕТ қайталайсың, сосын ҮШ мысал артқа қайтасың.',
-        h2: lvl === 2 ? 'Бұл деңгейде кідіріс те қате саналады (4 секунд).' :
+        h2: lvl === 2 ? 'Бұл деңгейде ' + (LIMIT / 1000) + ' секундтан ұзақ ойлансаң да түзету басталады.' :
           'Бұл деңгейде уақыт шектелмейді — тек дұрыстығы маңызды.',
         expl: 'Раундта ' + ROUND + ' мысал. ' + ALLOW + ' түзетуден аспасаң — өттің. ' +
           'Түзету — жаза емес, есте сақтаудың жолы.',
         mount: function (el, submit) {
-          var q = [], i = 0, fixes = 0, cur = null, t0 = 0, rep = 0, mode = 'run', tmr = null;
+          var q = [], i = 0, fixes = 0, shown = 0, cur = null, t0 = 0, rep = 0,
+            mode = 'run', tmr = null, clk = null, over = false;
           for (var n = 0; n < ROUND; n++) q.push(fact());
           el.innerHTML = SHELL;
           var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
             inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
-            go = el.querySelector('.sp-go');
-          inp.style.display = 'none';
+            go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
+            msg = el.querySelector('.sp-msg');
+          row.style.display = 'none';
+          function stopClocks() {
+            if (tmr) { clearTimeout(tmr); tmr = null; }
+            if (clk) { clearInterval(clk); clk = null; }
+          }
+          function say(text, colour) {
+            msg.textContent = text || '';
+            msg.style.color = colour || 'var(--muted)';
+          }
           function show() {
-            bar.style.width = Math.min(100, i / ROUND * 100) + '%';
+            stopClocks();
             if (mode === 'run') {
               head.textContent = 'Мысал ' + Math.min(i + 1, ROUND) + ' / ' + ROUND +
                 (fixes ? ' · түзету: ' + fixes : '');
@@ -367,43 +392,83 @@
               qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v;
             }
             inp.value = ''; inp.focus(); t0 = Date.now();
-            if (tmr) clearTimeout(tmr);
-            if (mode === 'run' && LIMIT) tmr = setTimeout(function () { miss(); }, LIMIT);
+            if (mode === 'run' && LIMIT) {
+              // a VISIBLE countdown: a clock the child cannot see feels arbitrary
+              bar.style.background = 'var(--gold)';
+              clk = setInterval(function () {
+                var leftMs = LIMIT - (Date.now() - t0);
+                bar.style.width = Math.max(0, leftMs / LIMIT * 100) + '%';
+              }, 80);
+              tmr = setTimeout(function () { miss('slow'); }, LIMIT);
+            } else {
+              bar.style.background = 'var(--accent)';
+              bar.style.width = Math.min(100, i / ROUND * 100) + '%';
+            }
           }
           function nextFact() {
-            if (i >= ROUND) return finish();
-            cur = q[i]; mode = 'run'; show();
+            if (i >= ROUND || shown >= BUDGET) return finish();
+            shown++; cur = q[i]; mode = 'run'; show();
           }
-          function miss() {                        // wrong answer, or too slow
-            fixes++; rep = 0; mode = 'fix'; show();
+          function miss(why, typed) {               // wrong answer, or too slow
+            stopClocks();
+            fixes++; rep = 0; mode = 'fix';
+            // Never let a correct-but-slow answer look like a wrong one.
+            if (why === 'slow') say('Жауабың дұрыс болуы мүмкін, бірақ уақыт бітті — ' +
+              'мақсат ойланбай айту.', 'var(--gold)');
+            else say('Сенің жауабың: ' + typed + '. Дұрысы: ' + cur.v + '.', 'var(--bad)');
+            show();
           }
           function finish() {
-            if (tmr) clearTimeout(tmr);
-            inp.style.display = 'none'; qEl.textContent = '';
+            if (over) return;
+            over = true;
+            stopClocks();
+            row.style.display = 'none'; qEl.textContent = '';
             var ok = fixes <= ALLOW;
+            bar.style.background = ok ? 'var(--good)' : 'var(--bad)';
+            bar.style.width = '100%';
             head.innerHTML = 'Раунд бітті · түзету: <b>' + fixes + '</b> (рұқсат: ' + ALLOW + ')';
+            say(ok ? 'Өттің ✓'
+              : (LIMIT ? 'Жауаптарың дұрыс болса да, ' + (LIMIT / 1000) +
+                ' секундтан ұзаққа созылды. Тағы бір раунд жаса.'
+                : 'Тағы бір раунд жаса.'), ok ? 'var(--good)' : 'var(--bad)');
             go.textContent = 'Қайта бастау'; go.style.display = '';
             submit(ok ? 'иә' : 'жоқ');
           }
-          inp.addEventListener('keydown', function (e) {
-            if (e.key !== 'Enter' || !cur) return;
+          function answer() {
+            if (!cur || over) return;
             var v = parseInt(inp.value, 10);
-            if (isNaN(v)) return;
+            if (isNaN(v)) { say('Сан жаз.', 'var(--muted)'); return; }
             if (mode === 'fix') {
-              if (v !== cur.v) { show(); return; }
+              if (v !== cur.v) {
+                // a mistyped repetition used to silently reset, with no way out
+                say('Қайталауда дәл ' + cur.v + ' деп жаз.', 'var(--bad)');
+                inp.value = ''; inp.focus();
+                return;
+              }
               rep++;
-              if (rep < 3) { show(); return; }
-              i = Math.max(0, i - 3);              // back up three problems
-              if (fixes > ALLOW + 3) return finish();
+              if (rep < 3) { say('Тағы ' + (3 - rep) + ' рет.', 'var(--gold)'); show(); return; }
+              say('');
+              i = Math.max(0, i - 3);               // back up three problems
+              /* Once the corrections have passed ALLOW the round cannot be won,
+               * so end it here. It used to grind on to ALLOW + 3, which for a
+               * child who is over the clock on every fact meant about three
+               * minutes of losing before the app finally said so. The repetition
+               * that just happened is the part with teaching value; the rest is
+               * only delay. */
+              if (fixes > ALLOW) return finish();
               nextFact(); return;
             }
-            if (tmr) clearTimeout(tmr);
-            if (v === cur.v && (!LIMIT || Date.now() - t0 <= LIMIT)) { i++; nextFact(); }
-            else miss();
-          });
+            stopClocks();
+            if (v === cur.v) { say('✓', 'var(--good)'); i++; nextFact(); }
+            else miss('wrong', v);
+          }
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
+          el.querySelector('.sp-ok').addEventListener('click', answer);
           go.addEventListener('click', function () {
+            if (over) return;
             q = []; for (var n2 = 0; n2 < ROUND; n2++) q.push(fact());
-            i = 0; fixes = 0; inp.style.display = ''; go.style.display = 'none';
+            i = 0; fixes = 0; shown = 0; say('');
+            row.style.display = ''; go.style.display = 'none';
             nextFact();
           });
         }
@@ -411,7 +476,7 @@
     }
 
     /* ── lvl 3 · the timed test: copy sets your own bar, then compute ── */
-    var T = { copy: 6, calc: 9, need: 0.6 };
+    var T = { copy: 8, calc: 12, need: 0.6 };
     return {
       stem: 'Жылдамдық сынағы · ' + OP + ' ' + f0.n,
       kind: 'custom',
@@ -423,12 +488,14 @@
       expl: 'Мұнда дұрыс жауап жеткіліксіз — ойланбай айту керек. Сынақ кезінде түзету жоқ: ' +
         'талап сенің өз қол жылдамдығыңмен салыстырылады, басқа баламен емес.',
       mount: function (el, submit) {
-        var phase = 0, left = 0, done = 0, wrong = 0, base = 0, cur = null, timer = null;
+        var phase = 0, left = 0, done = 0, wrong = 0, base = 0, cur = null,
+          timer = null, over = false;
         el.innerHTML = SHELL;
         var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
           inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
-          go = el.querySelector('.sp-go');
-        inp.style.display = 'none';
+          go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
+          msg = el.querySelector('.sp-msg');
+        row.style.display = 'none';
         function next() {
           cur = fact();
           qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + (phase === 1 ? cur.v : '?');
@@ -438,38 +505,60 @@
           left -= 0.1;
           bar.style.width = Math.max(0, left / total * 100) + '%';
           head.textContent = (phase === 1 ? 'Көшір: ' : 'Есепте: ') + Math.ceil(left) + ' с · ' + done;
-          if (left <= 0) { clearInterval(timer); endPhase(); }
+          if (left <= 0) { clearInterval(timer); timer = null; endPhase(); }
         }
         function endPhase() {
-          if (phase === 1) { base = done; done = 0; start(2); }
-          else {
-            inp.style.display = 'none'; qEl.textContent = '';
-            // Floor the bar: without it a pupil who sits out the COPY phase gets
-            // base 0, a target of 1, and passes by answering a single fact.
-            var FLOOR = 4;
-            var need = Math.max(FLOOR, Math.round(base * T.need));
-            var ok = base >= FLOOR && done >= need && wrong <= 1;
-            head.innerHTML = 'Көшіру: <b>' + base + '</b> · Есептеу: <b>' + done + '</b> · керек: <b>' +
-              need + '</b>' + (wrong ? ' · қате: ' + wrong : '') +
-              (base < FLOOR ? '<br>Көшіру сынағын шын орында — ол сенің жылдамдығың.' : '');
-            submit(ok ? 'иә' : 'жоқ');
+          if (phase === 1) {
+            base = done; done = 0;
+            msg.textContent = 'Қол жылдамдығың: ' + base + '. Енді есепте.';
+            msg.style.color = 'var(--muted)';
+            start(2);
+            return;
           }
+          over = true;
+          row.style.display = 'none'; qEl.textContent = '';
+          /* FLOOR is the sit-out gate, NOT the target. Using it for both meant a
+           * slow typist (base 4–6) had to compute as fast as they copied — 100%,
+           * not the 60% the screen promised. */
+          var FLOOR = 4;
+          var need = Math.max(2, Math.round(base * T.need));
+          var ok = base >= FLOOR && done >= need && wrong <= 2;
+          bar.style.background = ok ? 'var(--good)' : 'var(--bad)';
+          bar.style.width = '100%';
+          head.innerHTML = 'Көшіру: <b>' + base + '</b> · Есептеу: <b>' + done + '</b> · керек: <b>' +
+            need + '</b>' + (wrong ? ' · қате: ' + wrong : '');
+          msg.textContent = base < FLOOR
+            ? 'Көшіру сынағын шын орында — ол сенің жылдамдығың.'
+            : ok ? 'Өттің ✓' : 'Тағы бір рет жаса.';
+          msg.style.color = ok ? 'var(--good)' : 'var(--bad)';
+          // Restore the button: without it the runner's one retry showed a dead
+          // widget with no way to start the test again.
+          go.textContent = 'Қайта бастау'; go.style.display = '';
+          submit(ok ? 'иә' : 'жоқ');
         }
         function start(ph) {
           phase = ph; done = 0;
           var total = ph === 1 ? T.copy : T.calc;
-          left = total; inp.style.display = ''; go.style.display = 'none';
+          left = total; row.style.display = ''; go.style.display = 'none';
+          bar.style.background = ph === 1 ? 'var(--gold)' : 'var(--accent)';
           next();
+          if (timer) clearInterval(timer);
           timer = setInterval(function () { tick(total); }, 100);
         }
-        inp.addEventListener('keydown', function (e) {
-          if (e.key !== 'Enter' || !cur) return;
+        function answer() {
+          if (!cur || !phase || over) return;
           var v = parseInt(inp.value, 10);
           if (isNaN(v)) return;
-          if (v === cur.v) done++; else if (phase === 2) wrong++;
+          if (v === cur.v) { done++; msg.textContent = '✓'; msg.style.color = 'var(--good)'; }
+          else if (phase === 2) { wrong++; msg.textContent = '✗'; msg.style.color = 'var(--bad)'; }
           next();
+        }
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
+        el.querySelector('.sp-ok').addEventListener('click', answer);
+        go.addEventListener('click', function () {
+          if (over) return;
+          wrong = 0; base = 0; msg.textContent = ''; start(1);
         });
-        go.addEventListener('click', function () { start(1); });
       }
     };
   };
