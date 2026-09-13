@@ -17,6 +17,33 @@
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
   const ls={get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
   const enc=encodeURIComponent;
+
+  /* ── language lock ──────────────────────────────────────────────
+     We do NOT translate anything ourselves. We only decide whether the browser
+     is allowed to translate the page:
+       kk (default) → <meta name="google" content="notranslate"> is present → Chrome never offers/auto-translates.
+       ru           → the meta is removed → the pupil may switch the page to Russian with Chrome's own translator.
+     Runs as early as core.js is parsed. Pages also carry the meta statically so the lock applies before this runs. */
+  const LANG_KEY='esep_lang';
+  const lang=()=>ls.get(LANG_KEY)||'kk';
+  (function applyLangLock(){ try{
+    const head=document.head||document.documentElement;
+    const m=head.querySelector('meta[name="google"]');
+    if(lang()==='ru'){ if(m) m.remove(); document.documentElement.removeAttribute('translate'); }
+    else if(!m){ const el=document.createElement('meta'); el.name='google'; el.content='notranslate'; head.appendChild(el); }
+  }catch(e){} })();
+  function setLang(l){ ls.set(LANG_KEY,l); if(l==='ru') ls.set('esep_ruhint',1); location.reload(); }
+  function langLinks(){ const L=lang();
+    return `<span class="langsw">${L==='kk'?'<b>ҚАЗ</b>':'<a href="#" onclick="Core.setLang(\'kk\');return false">ҚАЗ</a>'} · ${L==='ru'?'<b>РУС</b>':'<a href="#" onclick="Core.setLang(\'ru\');return false">РУС</a>'}</span>`; }
+  /* one-time note (in Russian) telling the pupil to switch the page with the browser's own translate button */
+  function ruHint(){ if(lang()!=='ru'||!ls.get('esep_ruhint')) return;
+    const d=document.createElement('div'); d.className='ruhint';
+    d.innerHTML=`<span>Перевод разрешён. Нажмите значок перевода в адресной строке браузера (или «Перевести» в меню) и выберите русский.</span><button aria-label="жабу">✕</button>`;
+    d.querySelector('button').onclick=()=>{ ls.del('esep_ruhint'); d.remove(); };
+    const put=()=>document.body&&document.body.appendChild(d);
+    if(document.body) put(); else document.addEventListener('DOMContentLoaded',put);
+  }
+  ruHint();
   async function sb(path,opt={}){
     const r=await fetch(CFG.SB_URL+'/rest/v1/'+path,{method:opt.method||'GET',
       headers:Object.assign({'apikey':CFG.SB_KEY,'Content-Type':'application/json','Prefer':opt.prefer||(opt.method&&opt.method!=='GET'?'return=representation':'')},opt.headers||{}),
@@ -63,7 +90,7 @@
   function loginUI(host,route){
     return new Promise(resolve=>{
       const known=ls.get('esep_known_v1')||{};
-      host.innerHTML=`<div class="top"><div class="brand">Есеп жолы<small>Математика · 1–5 сынып</small></div></div>
+      host.innerHTML=`<div class="top"><div class="brand">Есеп жолы<small>Математика · 1–5 сынып</small></div><div class="who">${langLinks()}</div></div>
       <div class="card"><h1>Сәлем!</h1><p>Атыңды және 4 таңбалы PIN кодыңды жаз. Бірінші рет кірсең — PIN-ді өзің ойлап тап және есте сақта.</p>
       <input class="big" id="c_nm" placeholder="Аты-жөні (мысалы: Айгүл С.)" autocomplete="off">
       <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><input class="big" id="c_kl" placeholder="Сынып (3А)" autocomplete="off" style="flex:1"></div>
@@ -129,7 +156,8 @@
     /** Portal/teacher helpers (not for routes) */
     _sb:sb, _session:()=>session, _allState:()=>STATE,
     async _loadStateOnly(){ if(!session) return null; const rows=await sb(`students?select=state,time_ms&id=eq.${session.id}`); return rows[0]||null; },
-    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br><a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div></div>`; },
+    lang, setLang,
+    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()}${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div></div>`; },
   };
   window.Core=Core;
 })();
