@@ -46,7 +46,7 @@ function showHome(){
     html+=Core.map({color:CFG.color||`var(--${rc})`, colorDark:CFG.colorDark||`var(--${rc}-d)`,
       avatar:Core.avatar(), label:CFG.title, go:'Жаттығу',
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
-        return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],unit:gr?`${gr}-сынып`:'',
+        return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
           sub:s.status==='current'?`Деңгей ${s.level}/3 · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
       +`<p class="maphint">Станцияны басып көр.</p>`;
     html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
@@ -105,7 +105,7 @@ function finishAnswer(v,btn){
     $('hints').insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
   const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
-  document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(Core.isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
+  document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; b.classList.remove('pick'); if(Core.isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
   const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } disableInputs();
   const qb=$('qbar'); if(qb) qb.style.display='none';
   const ansShow=q.ansHTML||esc(q.ans);

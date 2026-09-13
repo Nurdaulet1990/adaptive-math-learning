@@ -41,11 +41,12 @@ function map(o){
   const doneIdx=curIdx>=0?curIdx:st.reduce((a,s,i)=>s.status==='passed'?i:a,-1);
   const done=doneIdx>0?curve(pts.slice(0,doneIdx+1)):'';
 
-  /* unit bands: drawn where the unit label changes (bottom → top) */
+  /* unit bands: a route may name them itself, otherwise every 4 stations is one «бөлім» */
+  const unitOf=(s,i)=>s.unit||`${Math.floor(i/4)+1}-бөлім`;
   let units='';
-  st.forEach((s,i)=>{ if(!s.unit) return; if(i&&st[i-1].unit===s.unit) return;
+  st.forEach((s,i)=>{ const u=unitOf(s,i); if(i&&unitOf(st[i-1],i-1)===u) return;
     const y=pts[i].y+STEP*0.58;
-    units+=`<div class="unit" style="top:${(y/H*100).toFixed(3)}%"><span>${esc(s.unit)}</span></div>`; });
+    units+=`<div class="unit" style="top:${(y/H*100).toFixed(3)}%"><span>${esc(u)}</span></div>`; });
 
   const nodes=st.map((s,i)=>{
     const p=pts[i], cur=s.status==='current', passed=s.status==='passed', open=cur;
