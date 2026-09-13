@@ -65,7 +65,9 @@ a{color:var(--accent)}
 .langsw b{color:var(--rc)}
 .langsw a{color:var(--muted);text-decoration:none}
 .mutebtn{border:0;background:transparent;font-size:.95rem;cursor:pointer;padding:0 2px;line-height:1}
-.avachip{position:absolute;right:0;top:40px;font-size:20px}
+.avachip{flex:none;font-size:24px;line-height:1;align-self:center}
+.top .brand{flex:1;min-width:0}
+.top .who{flex:none}
 
 /* ── buttons: solid top, darker rim underneath, presses down ── */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:16px;padding:14px 20px;

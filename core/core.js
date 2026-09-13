@@ -186,6 +186,7 @@
     async _loadStateOnly(){ if(!session) return null; const rows=await sb(`students?select=state,time_ms&id=eq.${session.id}`); return rows[0]||null; },
     lang, setLang, avatar, setAvatar, AVATARS, sound, isMuted, toggleMute,
     topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<span class="avachip">${avatar()}</span>`:''}</div>`; },
+    /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */
   };
   window.Core=Core;
 })();
