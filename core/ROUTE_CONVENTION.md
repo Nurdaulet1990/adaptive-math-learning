@@ -31,18 +31,20 @@ esep-joly/
   core/                 ← shared, read-only for route authors
     core.js             accounts + logging (in production)
     core-stub.js        same API, local fallback (for development)
-    ui.css              shared colours, buttons, cards
+    ui.css              shared colours, buttons, cards (+ .frac / .expr for fractions)
     figs.js             shared drawings (bar models, fraction bars, tables…)
+    runner.js           ALL screens + adaptive logic (home, diagnostic, practice, hint ladder, stage test)
   <route>/              ← one folder per route, e.g. fr/  pv/  wp/
-    index.html          ≤ 40 lines: title, <link>/<script> tags, <div id="app">. Nothing else.
+    index.html          ≤ 40 lines: <link>/<script> tags, <div id="app">, one line: Runner.start({route:'FR', title:'…'})
     stages.js           the STAGES table (§3)
-    generate.js         question generators (one function per question type)
-    ui.js               screens: home, question view, feedback, hint ladder
-    figs.js             route-specific drawings only (prefer core/figs.js)
-    bank.js             fixed items / templates, if the route uses any
+    generate.js         GENERATORS: one pure function per question type (§5)
+    figs.js             FIGS: route-specific drawings only (prefer core/figs.js)
+    bank.js             CARDS (teaching cards per stage) and fixed items, if any
     MAP.md              one page: which file does what, who owns it
 ```
 
+- **A route writes NO screens and NO adaptive logic.** `core/runner.js` does home, diagnostic, practice, the 5-step hint ladder, twin items and the stage test for every route, from `STAGES` + `GENERATORS` (+ optional `CARDS`, `FIGS`). See `fr/` for a complete example (≈ 300 lines for 7 stages). `wp/` is the older template-based route and keeps its own screens for now.
+- Author preview without a class: `<route>/?preview=FR-05&lvl=2` shows one generated item with the hint ladder.
 - Each file ≤ ~300 lines and does one thing. If it grows, ask the owner before splitting.
 - All CSS/JS lives in these files. No other external scripts except `https://cdnjs.cloudflare.com` and `https://cdn.jsdelivr.net/npm/` (pinned versions).
 - Everything must work when `index.html` is opened by double-click (`file://`) with the folder structure intact.
@@ -161,7 +163,8 @@ Generators receive `lvl` and must vary at least the figure and number range acco
   Hints ≥ 3 → the answer does not count toward the streak. Step 5 → streak reset.
 - **First wrong answer** in practice: allow one retry ("Қате. Тағы ойлан немесе Кеңес бас"). Second wrong → reveal.
 - **Stage test**: 10 lvl-3 items, pass ≥ 8. Pass → next stage `current`. No hints in diag/test.
-- These rules are implemented once in `core/adaptive.js` (planned). Until then, copy the logic from `wp/practice.js`; do not invent different thresholds.
+- These rules are implemented once in `core/runner.js`. Routes never re-implement them; do not invent different thresholds.
+- Question object consumed by the runner: `{stem, kind:'choice'|'input'|'custom', choices, choiceHTML?, ans, ansHTML?, exprHTML?, fig?, hfig?, h1, h2?, steps?, expl, mount?(el, submit)}` — `fig`/`hfig` are `{type,…}` drawn by the route's `FIGS[type]` or by `core/figs.js` (`{type, fp}`); `kind:'custom'` renders its own input via `mount` and calls `submit(value)`.
 
 ---
 
