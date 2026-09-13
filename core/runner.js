@@ -15,7 +15,8 @@ const stageIdx=id=>STAGES.findIndex(s=>s[0]===id);
 const topbar=()=>Core.topbar(CFG.title);
 const KW=['артық','кем','қалды','барлығы','есе','неше','қанша','бөлігі','жартысы','ширегі','теңдей','үлкен','кіші','тең','бөлімі','алымы'];
 function stemHTML(stem,hl){ let h=esc(stem); if(!hl) return h; h=h.replace(/(\d+([.,]\d+)?(\/\d+)?)/g,'<b class="hl-num">$1</b>'); const re=new RegExp('(^|[^а-яәіңғүұқөһА-ЯӘІҢҒҮҰҚӨҺ])('+KW.join('|')+')(?=[^а-яәіңғүұқөһ]|$)','g'); return h.replace(re,'$1<mark class="hl-kw">$2</mark>'); }
-function figHTML(f){ if(!f) return ''; if(typeof f==='string') return f; if(window.FIGS&&FIGS[f.type]) return FIGS[f.type](f); if(window.renderFig) return renderFig(f.type,f.fp||''); return ''; }
+const routeFigs=()=>(typeof FIGS!=='undefined'&&FIGS)||{};
+function figHTML(f){ if(!f) return ''; if(typeof f==='string') return f; const RF=routeFigs(); if(RF[f.type]) return RF[f.type](f); if(window.renderFig) return renderFig(f.type,f.fp||''); return ''; }
 
 /* ── state ── */
 function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; }); return st; }
@@ -30,7 +31,7 @@ function makeItem(stId,lvl){ const row=stageRow(stId); const gen=GENERATORS[row[
   for(let k=0;k<8;k++){ try{ const q=gen(row[3]||{},lvl); if(q&&q.stem!==undefined&&q.ans!==undefined){ q.stage=stId; q.lvl=lvl; q.type=row[2]; q.kind=q.kind||(q.choices&&q.choices.length?'choice':'input'); q.choices=q.choices||[]; q.id=stId+'#'+Date.now().toString(36)+Math.floor(Math.random()*999); return q; } }catch(e){ console.error('generator',row[2],e); } }
   return null; }
 const stageHasContent=st=>!!GENERATORS[stageRow(st)[2]];
-function cardsOf(st){ return (window.CARDS&&CARDS[st])||[]; }
+function cardsOf(st){ return (typeof CARDS!=='undefined'&&CARDS&&CARDS[st])||[]; }
 
 /* ── home ── */
 function showHome(){
