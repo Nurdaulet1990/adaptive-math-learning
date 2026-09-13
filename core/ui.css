@@ -12,7 +12,8 @@
   --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
   --disp:'Fredoka',var(--font);
   /* route colours + their pressed shade */
-  --wp:#0E7C9B; --wp-d:#0A5E76; --fr:#B14A72; --fr-d:#8A3757; --pv:#3D6DB5; --pv-d:#2E538B; --tulip:#C6423C;
+  --wp:#0E7C9B; --wp-d:#0A5E76; --fr:#B14A72; --fr-d:#8A3757; --pv:#3D6DB5; --pv-d:#2E538B;
+  --ar:#6B4FA3; --ar-d:#523B7E; --tulip:#C6423C;   /* AR is purple, not green: --good is green and the map would blur passed/current */
   --rc:var(--accent); --rc-d:var(--accent-d);
   /* landscape (core/map.js) — deliberately low contrast so the stations stay the subject */
   --plate:rgba(255,255,255,.88);
@@ -30,7 +31,8 @@
     --good:#4CC27A; --good-d:#37945B; --good-soft:#163A26;
     --bad:#E8685C; --bad-d:#B34C43; --bad-soft:#3F1F1B;
     --fig:#202B37; --seg1:#B25F57; --seg2:#4E79B3; --whole:#4A8C5C; --stroke:#EEF2F5;
-    --wp:#3FB3D3; --wp-d:#2A87A1; --fr:#E58AA6; --fr-d:#AE6379; --pv:#88ACEC; --pv-d:#6484B4; --tulip:#E8695F;
+    --wp:#3FB3D3; --wp-d:#2A87A1; --fr:#E58AA6; --fr-d:#AE6379; --pv:#88ACEC; --pv-d:#6484B4;
+    --ar:#A88BE0; --ar-d:#7E68AC; --tulip:#E8695F;
     --rc:var(--accent); --rc-d:var(--accent-d);
     --plate:rgba(12,18,26,.82);
     --sky1:#101B2E; --sky2:#232E44; --sun:#3A4867; --starop:1;

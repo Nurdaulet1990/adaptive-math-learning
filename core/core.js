@@ -12,6 +12,7 @@
       ['WP','Мәтінді есептер','wp/','live','1–5'],
       ['FR','Бөлшектер','fr/','live','3–5'],
       ['PV','Орын мәні','pv/','live','1–4'],
+      ['AR','Көбейту мен бөлу','ar/','live','2–5'],
     ],
   };
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
@@ -79,7 +80,11 @@
     if(!a||!b) return false; if(a===b) return true;
     const fa=fracVal(a), fb=fracVal(b); if(Number.isFinite(fa)&&Number.isFinite(fb)) return Math.abs(fa-fb)<1e-9;
     if(/^-?\d+(\.\d+)?$/.test(b)){ const m=a.match(/-?\d+(\.\d+)?/); if(m) return Math.abs(parseFloat(m[0])-parseFloat(b))<1e-9; }
-    const na=parseFloat(a), nb=parseFloat(b); return Number.isFinite(na)&&Number.isFinite(nb)&&Math.abs(na-nb)<1e-9;
+    // Every number in the expected answer must match, in order. A bare parseFloat compared only the
+    // LEADING number, so '3 қ. 5' was accepted for '3 қ. 1' and '4 × 9' for '4 × 6' — and runner.js
+    // marks EVERY choice isCorrect accepts, so several options could light up green at once.
+    const na=a.match(/-?\d+(\.\d+)?/g)||[], nb=b.match(/-?\d+(\.\d+)?/g)||[];
+    return nb.length>0 && na.length===nb.length && na.every((v,i)=>Math.abs(parseFloat(v)-parseFloat(nb[i]))<1e-9);
   }
 
   /* ── session & state ── */

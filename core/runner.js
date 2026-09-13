@@ -193,12 +193,22 @@ function checkGuide(){
 }
 function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,stage:PR.stId}); nextHint(); }
 
-/* ── diagnostic ── */
-function startDiag(){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent); DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now()}; nextDiag(); }
+/* ── diagnostic ──
+   placement:'climb' (opt-in per route) — probe the EASIEST stage first and climb 1,2,4,8… stages per
+   success, then binary-search the bracket. Without the flag it stays a plain binary search, so WP/FR/PV
+   are unchanged. Why: binary search opens on the middle stage, ~50% likely to be failed by design. On a
+   long route that puts 3-digit column multiplication in front of a child who has never multiplied. */
+function startDiag(){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
+  DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),
+      climb:CFG.placement==='climb',step:0,bracketed:false}; nextDiag(); }
 function nextDiag(){
   if(DG.n>=12||DG.lo>DG.hi||Date.now()-DG.start>15*60000) return finishDiag();
-  const mid=Math.floor((DG.lo+DG.hi)/2); const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  if(DG.per[st].asked>=2){ if(DG.per[st].ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } return nextDiag(); }
+  const mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
+  const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
+  if(DG.per[st].asked>=2){
+    if(DG.per[st].ok===2){ DG.results[st]='pass'; DG.lo=mid+1; if(DG.climb&&!DG.bracketed) DG.step=DG.step*2+1; }
+    else { DG.results[st]='fail'; DG.hi=mid-1; if(DG.climb){ DG.bracketed=true; DG.step=0; } }
+    return nextDiag(); }
   const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; return nextDiag(); }
   DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12,sub:st,noHints:true,
