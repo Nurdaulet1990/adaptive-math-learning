@@ -8,27 +8,67 @@
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
 <link rel="stylesheet" href="core/ui.css">
+<style>
+/* portal: one landscape strip per route */
+.rt{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:block;text-decoration:none;color:inherit;margin-bottom:10px}
+.rt:hover{border-color:var(--rc)}
+.rt.soon{opacity:.62;pointer-events:none}
+.rt-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px 7px}
+.rt-name{font-family:var(--disp);font-weight:600;font-size:1.05rem;color:var(--rc)}
+.rt-go{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--rc);background:var(--fig);border-radius:999px;padding:3px 10px}
+.rt svg{width:100%;height:auto;display:block}
+.rt-foot{display:flex;justify-content:space-between;padding:7px 13px 10px;font-size:.76rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+</style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <script src="core/core.js"></script>
 <script>
-/* Portal: one login, then a tile per route with the student's progress. */
+/* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
 (async function(){
   const app=document.getElementById('app'); const esc=Core.esc;
   const {student,state}=await Core.login();
+  const ava=Core.avatar();
+
   function progress(code){
     const s=state[code]; if(!s||!s.stages) return null;
-    const ids=Object.keys(s.stages); const passed=ids.filter(k=>s.stages[k].status==='passed').length; const cur=ids.find(k=>s.stages[k].status==='current');
-    return {passed,total:ids.length,cur,level:cur?s.stages[cur].level:null,diag:!!s.diag};
+    const ids=Object.keys(s.stages).sort();
+    const passed=ids.filter(k=>s.stages[k].status==='passed').length;
+    const cur=ids.findIndex(k=>s.stages[k].status==='current');
+    const stars=ids.reduce((a,k)=>{ const t=s.stages[k].tests||[]; if(!t.length) return a; const b=t.reduce((m,x)=>Math.max(m,x.n?x.ok/x.n:0),0); return a+(b>=1?3:b>=0.9?2:b>=0.8?1:0); },0);
+    return {passed,total:ids.length,cur:cur<0?passed:cur,stars,diag:!!s.diag};
   }
-  let html=Core.topbar()+`<div class="card"><h1>Сәлем, ${esc(student.name.split(' ')[0])}!</h1><p>Бағытты таңда. Әр бағытта алдымен қысқа диагностика, содан кейін жаттығу және кезең тестері болады.</p></div><div class="tiles">`;
+  /* a small road with n dots; `at` = index the pupil stands on (-1 = not started) */
+  function strip(color,n,at){
+    const W=320,H=62,x0=10,x1=W-10, N=Math.min(n,9), step=(x1-x0)/(N-1||1);
+    const pts=[]; for(let i=0;i<N;i++) pts.push({x:x0+i*step, y:44+Math.sin(i*1.15)*8});
+    let d=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<N;i++){ const p=pts[i-1],q=pts[i]; d+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; }
+    const atS=at<0?-1:Math.round(at*(N-1)/Math.max(n-1,1));
+    let done=''; if(atS>0){ done=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<=atS;i++){ const p=pts[i-1],q=pts[i]; done+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; } }
+    let dots=''; pts.forEach((p,i)=>{ if(i===atS) return;
+      dots+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${i<atS?color:'var(--road-edge)'}"/>`; });
+    const me=atS>=0?`<circle cx="${pts[atS].x.toFixed(1)}" cy="${pts[atS].y.toFixed(1)}" r="9" fill="${color}" stroke="var(--card)" stroke-width="2"/><text x="${pts[atS].x.toFixed(1)}" y="${(pts[atS].y+4).toFixed(1)}" text-anchor="middle" font-size="11">${ava}</text>`:'';
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">
+      <rect width="${W}" height="${H}" fill="var(--sky2)" opacity=".5"/>
+      <path d="M0,28 L40,8 L70,26 L110,3 L148,24 L186,7 L226,27 L266,9 L304,25 L320,15 L320,${H} L0,${H}Z" fill="var(--mtn-far)" opacity=".55"/>
+      <path d="M0,40 C64,30 116,46 178,38 C238,30 284,44 320,35 L320,${H} L0,${H}Z" fill="var(--hill)" opacity=".6"/>
+      <path d="${d}" fill="none" stroke="var(--road-edge)" stroke-width="10" stroke-linecap="round"/>
+      <path d="${d}" fill="none" stroke="var(--road)" stroke-width="7.5" stroke-linecap="round"/>
+      ${done?`<path d="${done}" fill="none" stroke="${color}" stroke-width="7.5" stroke-linecap="round"/>`:''}
+      ${dots}${me}</svg>`;
+  }
+
+  let html=Core.topbar()+`<div class="card"><h1>Сәлем, ${esc(student.name.split(' ')[0])}!</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
-    const p=progress(code); const live=status==='live';
-    html+=`<a class="tile ${live?'':'soon'}" href="${live?url:'#'}"><span class="chip ${live?'':'muted'}">${code}</span> <small>${esc(grades)}-сынып</small><b>${esc(name)}</b>
-      ${live?(p?`<small>${p.diag?`${p.passed}/${p.total} кезең өтілді · қазір ${p.cur||'—'}${p.level?' · деңгей '+p.level:''}`:'диагностика әлі өтпеген'}</small>`:'<small>бастау →</small>'):'<small>жақында</small>'}</a>`;
+    const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
+    const total=p?p.total:(code==='PV'?48:code==='WP'?13:7);
+    const at=p&&p.diag?p.cur:-1;
+    html+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
+      <div class="rt-head"><span class="rt-name">${esc(name)}</span><span class="rt-go">${live?(p&&p.diag?'жалғастыру':'бастау'):'жақында'}</span></div>
+      ${strip(color,total,at)}
+      <div class="rt-foot"><span>${p&&p.diag?`${p.passed} / ${total} станция`:`${total} станция · ${esc(grades)}-сынып`}</span><span>${p&&p.stars?'★ '+p.stars:''}</span></div></a>`;
   });
-  html+=`</div><div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
+  html+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
   app.innerHTML=html;
 })();
 </script>
