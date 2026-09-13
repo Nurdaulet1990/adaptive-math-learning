@@ -22,14 +22,17 @@ function showHome(){
     html+=Core.map({color:'var(--wp)', avatar:Core.avatar(), label:'Мәтінді есептер жолы',
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:(typeof ICONS!=='undefined'?ICONS[id]:''),
-          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id} · ${gr}-сынып`}; })});
+          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id} · ${gr}-сынып`}; })})
+      +`<p class="maphint">Станцияны басып, сол жерден жаттығуға болады.</p>`;
     html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" onclick="startPractice('${cur}')">Жаттығу</button><button class="btn gold" onclick="startTest('${cur}')">Кезең тесті (10 есеп)</button></div>
       <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p></div>`;
   }
   html+=`<div class="card"><div class="stat"><div><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div><div><b>${R.nAns||0}</b><span>есеп</span></div><div><b>${acc()}%</b><span>дұрыс</span></div></div><p class="note" style="margin:8px 0 0"><a href="../">← Барлық бағыттар</a></p></div>`;
-  app().innerHTML=html; persist(); if(Core.mapScroll) Core.mapScroll();
+  app().innerHTML=html; persist();
+  if(Core.mapScroll) Core.mapScroll();
+  if(Core.mapBind) Core.mapBind(id=>startPractice(id));
 }
 
 /* ── teaching card ── */
