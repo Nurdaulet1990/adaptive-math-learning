@@ -11,7 +11,7 @@
     ROUTES:[ // code, Kazakh name, url (folder relative to repo root, or full url while a route is still hosted elsewhere), status, grades
       ['WP','Мәтінді есептер','wp/','live','1–5'],
       ['FR','Бөлшектер','fr/','live','3–5'],
-      ['PV','Орын мәні','pv/','soon','1–4'],
+      ['PV','Орын мәні','pv/','live','1–4'],
     ],
   };
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
