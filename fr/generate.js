@@ -94,7 +94,7 @@ const GENERATORS={
     const d=lvl===1?rnd(2,4):range(p.d,[2,8]); const k=lvl===1?rnd(2,4):range(p.k,[2,9]); const total=d*k; const m=lvl===3?rnd(1,d-1):1; const ans=k*m;
     const item=pick([['алма','🍎'],['кәмпит','🍬'],['шар','🎈'],['кітап','📚'],['қалам','✏️']]);
     const fr=m===1?`1/${d}`:`${m}/${d}`;
-    const q={stem:`${item[0].charAt(0).toUpperCase()+item[0].slice(1)} ${total} дана. Оның ${fr} бөлігі берілді. Неше ${item[0]} берілді?`, ans:String(ans),
+    const q={stem:`Себетте ${total} ${item[0]} бар. Оның ${fr} бөлігі берілді. Неше ${item[0]} берілді?`, ans:String(ans),
       h1:`Алдымен ${total}-ді ${d} тең бөлікке бөл — бір бөлігі шығады.${m>1?` Сосын ${m} бөлікті ал.`:''}`,
       steps:m===1?[{label:'Бір бөлігі',expr:`${total} : ${d}`,val:String(k)}]:[{label:'Бір бөлігі',expr:`${total} : ${d}`,val:String(k)},{label:`${m} бөлігі`,expr:`${k} · ${m}`,val:String(ans)}],
       expl:`${total} : ${d} = ${k}${m>1?`, ${k} · ${m} = ${ans}`:''}. Жауабы: ${ans} ${item[0]}.`};
