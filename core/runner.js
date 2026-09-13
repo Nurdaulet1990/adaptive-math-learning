@@ -34,23 +34,30 @@ const stageHasContent=st=>!!GENERATORS[stageRow(st)[2]];
 function cardsOf(st){ return (typeof CARDS!=='undefined'&&CARDS&&CARDS[st])||[]; }
 
 /* ── home ── */
+const routeIcons=()=>(typeof ICONS!=='undefined'&&ICONS)||{};
 function showHome(){
   const cur=currentStage(); let html=topbar();
   if(!R.diag){ html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест: 8–12 есеп. Сен қай кезеңнен бастайтыныңды анықтайды. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" id="b_diag">Диагностиканы бастау</button></div>`; }
-  else { const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
-    html+=`<div class="card"><div class="qbar"><span>Қазіргі кезең</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
+  else {
+    const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
+    const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
+    html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div></div>`;
+    const IC=routeIcons();
+    html+=Core.map({color:CFG.color||'var(--accent)', avatar:Core.avatar(), label:CFG.title,
+      stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
+        return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
+          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id}${gr?' · '+gr+'-сынып':''}`}; })});
+    html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" data-pr="${cur}">Жаттығу</button><button class="btn gold" data-test="${cur}">Кезең тесті (10 есеп)</button></div>
-      <p class="note" style="margin-top:10px">Келесі кезеңге өту үшін кезең тестінен 10 есептің 8-ін шығару керек.</p></div>`;
-    html+=`<div class="card"><div class="qbar"><span>Жол картасы</span><span class="chip good">${done}/${STAGES.length} өтілді</span></div>`;
-    STAGES.forEach(([id,name,,,,gr],i)=>{ const s=R.stages[id]; const cls=s.status==='passed'?'passed':id===cur?'current':''; const has=stageHasContent(id);
-      html+=`<div class="stage ${cls}"><div class="num">${i+1}</div><div class="t"><b>${esc(name)}</b><span>${esc(gr||'')}${gr?'-сынып':''}${has?'':' · әзірге жоқ'}${s.status==='passed'?' · өтілді':''}</span></div><div class="go">${(id===cur||s.status==='passed')&&has?`<button class="btn ghost" data-pr="${id}">▶</button>`:''}</div></div>`; });
-    html+='</div>'; }
+      <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p></div>`;
+  }
   html+=`<div class="card"><div class="stat"><div><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div><div><b>${R.nAns||0}</b><span>есеп</span></div><div><b>${acc()}%</b><span>дұрыс</span></div></div><p class="note" style="margin:8px 0 0"><a href="../">← Барлық бағыттар</a></p></div>`;
-  app().innerHTML=html; persist();
+  app().innerHTML=html; persist(); if(Core.mapScroll) Core.mapScroll();
   const bd=$('b_diag'); if(bd) bd.onclick=startDiag;
   app().querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>startPractice(b.dataset.pr));
   app().querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>startTest(b.dataset.test));
+  const mb=document.querySelector('.mapbox'); if(mb) mb.onclick=e=>{ const g=e.target.closest('g[id="mp-cur"]'); if(g) startPractice(cur); };
 }
 
 /* ── question view ── */
@@ -81,6 +88,7 @@ function finishAnswer(v,btn){
   document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(Core.isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
   const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } const ab=$('ansBtn'); if(ab) ab.disabled=true; disableInputs();
   const ansShow=q.ansHTML||esc(q.ans);
+  Core.sound(ok?'ok':'no');
   $('fb').innerHTML=`<div class="fb ${ok?'ok':'no'}">${ok?'Дұрыс! ✓':'Қате. Дұрыс жауабы: '+ansShow}${o.mode==='practice'&&q.expl?`<span class="expl">${esc(q.expl)}</span>`:''}</div>`;
   o.onAnswer(ok);
   if(o.mode==='practice'){ const st=R.stages[PR.stId]; const hb=$('hintBtn'); if(hb) hb.disabled=true; const dk=$('dkBtn'); if(dk) dk.style.display='none';
@@ -118,7 +126,7 @@ function onPracticeAnswer(ok){
     if(counted){ st.streak++; st.wrong=0; if(st.level===3) st.l3streak++; }
     else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; }
     else { st.streak=0; st.wrong++; if(st.level===3) st.l3streak=0; PR.twin=true; }
-    if(st.streak>=3&&st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; }
+    if(st.streak>=3&&st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
     if(st.level===3&&st.l3streak>=3&&!st.testUnlocked){ st.testUnlocked=true; msg='Кезең тесті ашылды!'; }
     if(st.wrong>=2&&st.level>1){ st.level--; st.wrong=0; st.streak=0; PR.twin=false; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
   }
