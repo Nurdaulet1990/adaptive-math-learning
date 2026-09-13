@@ -140,15 +140,32 @@ textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 .ruhint{position:fixed;left:8px;right:8px;bottom:8px;z-index:9998;display:flex;gap:10px;align-items:center;background:var(--gold-soft);color:var(--ink);border:1px solid var(--gold);border-radius:12px;padding:10px 12px;font-size:.85rem;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,.12);max-width:560px;margin:0 auto}
 .ruhint button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:1rem;cursor:pointer;padding:0 4px}
 .center{text-align:center}
-/* route map (core/map.js) */
-.mapbox{border-radius:18px;overflow:auto;border:1px solid var(--line);line-height:0;max-height:64vh;background:var(--sky1)}
-.mapbox svg{display:block;width:100%;height:auto}
-.mp-name{font-family:var(--disp);font-weight:600;font-size:12px;fill:var(--ink)}
-.mp-sub{font-family:var(--font);font-weight:700;font-size:9px;fill:var(--muted)}
-.mp-halo{animation:halo 2.8s ease-in-out infinite}
-@keyframes halo{0%,100%{opacity:.42}50%{opacity:.06}}
-.mp-ava{animation:bob 2.6s ease-in-out infinite}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+/* route map (core/map.js) — SVG landscape + HTML stations on top */
+.mapbox{border-radius:18px;overflow:auto;border:1px solid var(--line);max-height:68vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
+.mapinner{position:relative;width:100%}
+.maproad{display:block;width:100%;height:auto}
+.stn{position:absolute;width:0;height:0;pointer-events:none}
+.stn .dot,.stn .lbl{pointer-events:auto}
+.stn[data-stn]{cursor:pointer}
+.stn .dot{position:absolute;left:-23px;top:-23px;width:46px;height:46px;border-radius:50%;background:var(--card);border:3px solid var(--line);box-shadow:0 4px 10px -4px rgba(10,25,40,.5);display:grid;place-items:center;color:var(--muted)}
+.stn .dot svg{width:26px;height:26px;overflow:visible}
+.stn .num{font-family:var(--disp);font-weight:600;font-size:1rem;color:inherit}
+.stn.passed .dot{border-color:var(--good);color:var(--good)}
+.stn.cur .dot{left:-29px;top:-29px;width:58px;height:58px;background:var(--rc);border-color:var(--card);color:#fff;box-shadow:0 0 0 6px color-mix(in srgb,var(--rc) 28%,transparent),0 6px 14px -6px rgba(10,25,40,.6);animation:halo 2.6s ease-in-out infinite}
+.stn.cur .dot svg{width:30px;height:30px}
+.stn.locked{opacity:.6}
+.stn.locked .dot{border-style:dashed}
+@keyframes halo{0%,100%{box-shadow:0 0 0 6px color-mix(in srgb,var(--rc) 28%,transparent),0 6px 14px -6px rgba(10,25,40,.6)}50%{box-shadow:0 0 0 13px color-mix(in srgb,var(--rc) 6%,transparent),0 6px 14px -6px rgba(10,25,40,.6)}}
+.stn .fox{position:absolute;left:50%;top:-34px;transform:translateX(-50%);font-size:26px;line-height:1;animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-4px)}}
+.stn .lbl{position:absolute;left:32px;top:-24px;width:max-content;max-width:min(46vw,168px);background:var(--plate);border-radius:11px;padding:5px 9px;box-shadow:0 3px 10px -6px rgba(10,25,40,.5)}
+.stn.cur .lbl{left:38px;top:-27px}
+.stn.rev .lbl{left:auto;right:32px;text-align:right}
+.stn.rev.cur .lbl{right:38px}
+.stn .lbl b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--disp);font-weight:600;font-size:.82rem;line-height:1.18;color:var(--ink)}
+.stn .lbl i{display:block;font-style:normal;font-size:.66rem;font-weight:700;color:var(--muted);margin-top:1px}
+.stn .lbl .stars{display:block;font-size:.72rem;letter-spacing:1.5px;color:var(--gold);line-height:1.1}
+.maphint{font-size:.78rem;color:var(--muted);font-weight:600;margin:6px 2px 0}
 .strip{display:flex;gap:6px;margin-bottom:10px}
 .strip .pill{flex:1;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 4px;text-align:center}
 .strip .pill b{display:block;font-family:var(--disp);font-weight:600;font-size:1.05rem;line-height:1.15;font-variant-numeric:tabular-nums}
