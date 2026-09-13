@@ -13,7 +13,8 @@ function nextPractice(){
   if(!q) q=drawItem(PR.stId,st.level,{mode:'practice'});
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><p class="note">Есептер дайындалып жатыр.</p><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
   PR.q=q; PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
-  renderQuestion(q,{mode:'practice',title:`${PR.stId} · деңгей ${st.level}/3 · қатарынан ${st.streak}/3 ✓`,sub:twin?'ұқсас есеп':(st.level===3?`тестке дейін ${Math.min(st.l3streak,3)}/3`:stageName(PR.stId)),onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
+  renderQuestion(q,{mode:'practice',title:stageName(PR.stId),meta:`🔥 ${st.streak}/3`,prog:st.streak/3,
+    sub:twin?'ұқсас есеп':stageName(PR.stId),onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
   const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3;
@@ -53,8 +54,9 @@ function nextHint(){
   }
   else if(PR.step===5){
     add(`<div class="hint" style="background:var(--good-soft)"><small>5-қадам · Толық шешуі</small><span class="expl" style="display:block;white-space:pre-line">${esc(q.expl)}</span></div>`);
-    if(!window._Q.done){ window._Q.done=true; disableInputs(); $('fb').innerHTML=`<div class="fb no">Шешуін көрдің. Енді осындай есепті өзің шығарасың.</div>`; o.onAnswer(false);
-      $('fb').insertAdjacentHTML('beforeend',`<div style="height:10px"></div><div class="row"><button class="btn" onclick="afterAnswerNav()">Ұқсас есеп</button></div>`); }
+    if(!window._Q.done){ window._Q.done=true; disableInputs(); const qb=$('qbar'); if(qb) qb.style.display='none';
+      $('fb').innerHTML=`<div class="fb no">Шешуін көрдің. Енді осындай есепті өзің шығарасың.</div>`; o.onAnswer(false);
+      $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn" onclick="afterAnswerNav()">Ұқсас есеп</button></div>`); }
   }
   const hb=$('hintBtn'); if(hb){ hb.textContent=PR.step>=5?'Кеңес 5/5':`Кеңес ${PR.step+1}/5`; hb.disabled=PR.step>=5; }
   const dk=$('dkBtn'); if(dk) dk.style.display='none';

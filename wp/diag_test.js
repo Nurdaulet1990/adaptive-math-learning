@@ -16,7 +16,7 @@ function nextDiag(){
   }
   const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
-  renderQuestion(q,{mode:'diag',title:`Диагностика · ${DG.n}-есеп`, sub:st, noHints:true,
+  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12, sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
     onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:'tpl',stem:String(q.stem).slice(0,200),ans:q.ans}); nextDiag(); }});
 }
@@ -43,7 +43,7 @@ function startTest(stId){
 function nextTest(){
   if(TS.i>=TS.qs.length) return finishTest();
   const q=TS.qs[TS.i]; TS.t0=Date.now();
-  renderQuestion(q,{mode:'test',title:`Кезең тесті · ${TS.i+1}/${TS.qs.length}`,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ if(ok) TS.ok++; log({ev:'answer',mode:'test',stage:TS.stId,lvl:3,ok,ms:Date.now()-TS.t0,id:q.id,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
+  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ if(ok) TS.ok++; log({ev:'answer',mode:'test',stage:TS.stId,lvl:3,ok,ms:Date.now()-TS.t0,id:q.id,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
 }
 function finishTest(){
   const st=R.stages[TS.stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need;
