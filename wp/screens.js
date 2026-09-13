@@ -17,17 +17,19 @@ function showHome(){
     html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест: 8–12 есеп, 10–15 минут. Сен қай кезеңнен бастайтыныңды анықтайды. Сурет жоқ, тек мәтін. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" onclick="startDiag()">Диагностиканы бастау</button></div>`;
   } else {
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
-    html+=`<div class="card"><div class="qbar"><span>Қазіргі кезең</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
+    const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
+    html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div></div>`;
+    html+=Core.map({color:'var(--wp)', avatar:Core.avatar(), label:'Мәтінді есептер жолы',
+      stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
+        return {id,name,status:s.status,stars:Core.mapStars(s),icon:(typeof ICONS!=='undefined'?ICONS[id]:''),
+          sub:s.status==='current'?`${id} · деңгей ${s.level}/3`:s.status==='passed'?`${id} · өтілді`:`${id} · ${gr}-сынып`}; })});
+    html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" onclick="startPractice('${cur}')">Жаттығу</button><button class="btn gold" onclick="startTest('${cur}')">Кезең тесті (10 есеп)</button></div>
-      <p class="note" style="margin-top:10px">Келесі кезеңге өту үшін кезең тестінен 10 есептің 8-ін шығару керек. Тестті кез келген уақытта тапсыруға болады; ұсыныс: 3-деңгейге жеткен соң.</p></div>`;
-    html+=`<div class="card"><div class="qbar"><span>Жол картасы</span><span class="chip good">${done}/${STAGES.length} өтілді</span></div>`;
-    STAGES.forEach(([id,name,,,,gr],i)=>{ const s=R.stages[id]; const cls=s.status==='passed'?'passed':id===cur?'current':''; const has=stageHasContent(id);
-      html+=`<div class="stage ${cls}"><div class="num">${i+1}</div><div class="t"><b>${esc(name)}</b><span>${esc(gr)}-сынып${has?'':' · есептер әлі дайын емес'}${s.status==='passed'?' · өтілді':''}</span></div><div class="go">${(id===cur||s.status==='passed')&&has?`<button class="btn ghost" onclick="startPractice('${id}')">▶</button>`:''}</div></div>`; });
-    html+=`</div>`;
+      <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p></div>`;
   }
   html+=`<div class="card"><div class="stat"><div><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div><div><b>${R.nAns||0}</b><span>есеп</span></div><div><b>${acc()}%</b><span>дұрыс</span></div></div><p class="note" style="margin:8px 0 0"><a href="../">← Барлық бағыттар</a></p></div>`;
-  app().innerHTML=html; persist();
+  app().innerHTML=html; persist(); if(Core.mapScroll) Core.mapScroll();
 }
 
 /* ── teaching card ── */
@@ -66,6 +68,7 @@ function finishAnswer(v,btn){
   document.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
   const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } const ab=$('ansBtn'); if(ab) ab.disabled=true;
   const showExpl = o.mode==='practice';
+  Core.sound(ok?'ok':'no');
   $('fb').innerHTML=`<div class="fb ${ok?'ok':'no'}">${ok?'Дұрыс! ✓':'Қате. Дұрыс жауабы: '+esc(q.ans)}${showExpl&&q.expl?`<span class="expl">${esc(q.expl)}</span>`:''}</div>`;
   o.onAnswer(ok);
   if(o.mode==='practice'){ const st=R.stages[PR.stId]; const hb=$('hintBtn'); if(hb) hb.disabled=true; const dk=$('dkBtn'); if(dk) dk.style.display='none';

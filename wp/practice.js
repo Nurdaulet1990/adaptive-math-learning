@@ -24,7 +24,7 @@ function onPracticeAnswer(ok){
     if(counted){ st.streak++; st.wrong=0; if(st.level===3) st.l3streak++; if(PR.isTwin) PR.twinOf=null; }
     else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; if(PR.isTwin&&PR.hints<4) PR.twinOf=null; }
     else { st.streak=0; st.wrong++; if(st.level===3) st.l3streak=0; if(q.tpl) PR.twinOf=q.tpl; }
-    if(st.streak>=3 && st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; }
+    if(st.streak>=3 && st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
     if(st.level===3 && st.l3streak>=3 && !st.testUnlocked){ st.testUnlocked=true; msg='Кезең тесті ашылды!'; }
     if(st.wrong>=2 && st.level>1){ st.level--; st.wrong=0; st.streak=0; PR.twinOf=null; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
   }
