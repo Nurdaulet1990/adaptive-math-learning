@@ -21,7 +21,7 @@
  * generate2.js), so an item from a later class never appears in an earlier one.
  *
  * Renumbered BEFORE the route went live — the only moment §3 leaves free, and
- * what §9's "send the STAGES table before building" exists to create. Array
+ * what §14's "send the STAGES table before building" exists to create. Array
  * order is what core/runner.js walks (finishTest → STAGES[i+1]; the diagnostic
  * places by index), so numeric order and array order are kept identical.
  */
@@ -32,7 +32,7 @@
     // id       name (Kazakh)                       type          params                                          prereq                      grade
     ['AR-01', 'Тең топтар', 'groups', { g: [2, 5], n: [2, 5] }, [], '2'],
     ['AR-02', 'Қосудан көбейтуге', 'rep_add', { n: [2, 9], k: [2, 5] }, ['AR-01'], '2'],
-    ['AR-03', 'Қатар мен баған · ауыстырымдылық', 'array', { r: [2, 9], c: [2, 9] }, ['AR-02'], '2'],
+    ['AR-03', 'Ауыстырымдылық', 'array', { r: [2, 9], c: [2, 9] }, ['AR-02'], '2'],
     ['AR-04', 'Кесте 2', 'table', { k: [2], review: [] }, ['AR-03'], '2'],
     ['AR-05', 'Кесте 5', 'table', { k: [5], review: [2] }, ['AR-04'], '2'],
     ['AR-06', 'Кесте 10', 'table', { k: [10], review: [2, 5] }, ['AR-05'], '2'],
@@ -47,7 +47,7 @@
     ['AR-15', 'Кесте 8', 'table', { k: [8], review: [2, 3, 4, 5, 6, 7, 10] }, ['AR-14'], '3'],
     ['AR-16', 'Кесте 9', 'table', { k: [9], review: [2, 3, 4, 5, 6, 7, 8, 10] }, ['AR-15'], '3'],
     ['AR-17', '⚡ Жылдамдық ×', 'speed', { k: [2, 3, 4, 5, 6, 7, 8, 9, 10] }, ['AR-16'], '3'],
-    ['AR-18', 'Бөлу кестесі · кері амалдар', 'divfact', { k: [2, 5, 10], review: [] }, ['AR-08', 'AR-17'], '3'],
+    ['AR-18', 'Бөлу — кері амал', 'divfact', { k: [2, 5, 10], review: [] }, ['AR-08', 'AR-17'], '3'],
     ['AR-19', 'Бөлу 3, 4', 'divfact', { k: [3, 4], review: [2, 5, 10] }, ['AR-18'], '3'],
     ['AR-20', 'Бөлу 6, 7', 'divfact', { k: [6, 7], review: [2, 3, 4, 5, 10] }, ['AR-19'], '3'],
     ['AR-21', 'Бөлу 8, 9', 'divfact', { k: [8, 9], review: [2, 3, 4, 5, 6, 7, 10] }, ['AR-20'], '3'],
@@ -56,14 +56,14 @@
     // ── Бағаналап көбейту. Split by what actually makes a column hard —
     // carrying and interior zeros — not by digit count: 234 × 2 is easier than
     // 78 × 9. One new difficulty per station, exactly as the fact ladder above.
-    ['AR-24', 'Бағанаға жазу (1 × 1 таңба)', 'mul_col', { dig: 1, b: [2, 9] }, ['AR-17'], '3'],
+    ['AR-24', 'Бағанаға жазу', 'mul_col', { dig: 1, b: [2, 9] }, ['AR-17'], '3'],
     ['AR-25', '2 таңба × 1 — ауысусыз', 'mul_col', { dig: 2, carry: 'none' }, ['AR-24'], '3'],
     ['AR-26', '2 таңба × 1 — бір ауысу', 'mul_col', { dig: 2, carry: 'one' }, ['AR-25'], '3'],
     ['AR-27', '3 таңба × 1 — ауысусыз', 'mul_col', { dig: 3, carry: 'none' }, ['AR-26'], '4'],
     ['AR-28', '3 таңба × 1 — көп ауысу', 'mul_col', { dig: 3, carry: 'many' }, ['AR-27'], '4'],
     ['AR-29', 'Ішінде нөлі бар сан × 1', 'mul_col', { dig: 3, zero: true }, ['AR-28'], '4'],
     // ── Бөлу: 1 таңбалы бөлгіш, сосын цифр таңдау
-    ['AR-30', 'Баған түрінде бөлу (÷ 1 таңба)', 'div_long', { a: [24, 999], b: [2, 9] }, ['AR-23', 'AR-26'], '4'],
+    ['AR-30', 'Баған түрінде бөлу', 'div_long', { a: [24, 999], b: [2, 9] }, ['AR-23', 'AR-26'], '4'],
     ['AR-31', 'Бөліндінің цифрын таңдау', 'estimate', { a: [100, 999], b: [11, 99] }, ['AR-30'], '4'],
     // ── Көп таңбалы × көп таңбалы, сол принциппен жіктелген
     ['AR-32', '2 × 2 таңба — ауысусыз', 'mul_col2', { ad: 2, bd: 2, carry: 'none' }, ['AR-29'], '4'],

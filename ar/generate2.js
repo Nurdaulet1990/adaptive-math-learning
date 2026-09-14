@@ -1,5 +1,5 @@
 /* ar/generate2.js — AR route question generators, part 2 of 2: the ALGORITHM layer
- * (AR-10 … AR-18 — column multiplication, long division, trial quotient, decimals).
+ * (AR-24 … AR-41 — column multiplication, long division, trial quotient, decimals).
  * Loads AFTER generate.js, which publishes the shared helpers as AR_UTIL. Same
  * contract as part 1 (§5 pure, §6 three CPA levels, §7 question shape); answers are
  * single numbers for the reason given in generate.js's header.
@@ -59,7 +59,7 @@
     return out.length ? out : [0];
   }
 
-  /* ══ AR-24…28 · Бағаналап көбейту (× 1 таңба) ══════════
+  /* ══ AR-24…29 · Бағаналап көбейту (× 1 таңба) ══════════
    * Split by what actually makes a column hard — carrying and interior zeros —
    * not by digit count, because "three digits" is easy without carries and
    * "two digits" is hard with them. params: { dig, carry:'none'|'one'|'many', zero } */
@@ -107,7 +107,7 @@
     };
   };
 
-  /* ══ AR-11 · Баған түрінде бөлу (÷ 1 таңба) ═════════════════ */
+  /* ══ AR-30 · Баған түрінде бөлу (÷ 1 таңба) ═════════════════ */
   G.div_long = function (p, lvl) {
     var b = lvl === 1 ? R(2, 5) : R(2, 9);
     var q = lvl === 1 ? R(11, 49) : lvl === 2 ? R(12, 99) : R(102, 499);
@@ -136,7 +136,7 @@
     };
   };
 
-  /* ══ AR-12 · Бөліндінің цифрын таңдау (试商) ═══════════════════ */
+  /* ══ AR-31 · Бөліндінің цифрын таңдау (试商) ═══════════════════ */
   G.estimate = function (p, lvl) {
     // Divisor must not be a round ten — rounding it would be a no-op and the
     // "таңда → тексер → түзет" loop would have nothing to teach.
@@ -182,7 +182,7 @@
     };
   };
 
-  /* ══ AR-31…34 · Көп таңбалы × көп таңбалы ══════════════
+  /* ══ AR-32…35 · Көп таңбалы × көп таңбалы ══════════════
    * params: { ad, bd, carry:'none'|'any', zero:true (a 0 inside the MULTIPLIER) } */
   G.mul_col2 = function (p, lvl) {
     var ad = p.ad || 2, bd = p.bd || 2;
@@ -297,7 +297,7 @@
     };
   };
 
-  /* ══ AR-16 · Ондық бөлшек (орын мәні) ══════════════════
+  /* ══ AR-38 · Ондық бөлшек (орын мәні) ══════════════════
    * Owner ruled 2026-09-13 that AR owns decimal place value rather than PV.
    * Uses the SAME base-ten blocks as the whole-number routes, with the unit
    * redefined (100-grid = 1, strip = 0.1, small square = 0.01) — the pupil sees
@@ -356,7 +356,7 @@
     };
   };
 
-  /* ══ AR-16 · Ондық бөлінді (дәл бөлінеді) ══════════════ */
+  /* ══ AR-39 · Ондық бөлінді (дәл бөлінеді) ══════════════ */
   G.div_dec = function (p, lvl) {
     // Divisors whose only prime factors are 2 and 5 → the quotient always terminates.
     // Deriving a from an exact remainder keeps a an integer and q exact (no rounding).
@@ -382,7 +382,7 @@
     };
   };
 
-  /* ══ AR-17 · Дөңгелектеп бөлу (2 таңбаға дейін) ════════ */
+  /* ══ AR-40 · Дөңгелектеп бөлу (2 таңбаға дейін) ════════ */
   G.div_round = function (p, lvl) {
     var dp = p.dp || 2;
     var b = lvl === 1 ? R(3, 9) : lvl === 2 ? R(6, 29) : R(11, 99);
@@ -408,7 +408,7 @@
     };
   };
 
-  /* ══ AR-18 · Ондық санға бөлу (жылжыту) ════════════════ */
+  /* ══ AR-41 · Ондық санға бөлу (жылжыту) ════════════════ */
   G.div_by_dec = function (p, lvl) {
     var b = pick(lvl === 1 ? [0.5, 0.2, 0.1] : lvl === 2 ? [0.25, 0.5, 1.5, 2.5] : [0.25, 0.75, 1.25, 0.04, 0.16]);
     var k = (String(b).split('.')[1] || '').length;

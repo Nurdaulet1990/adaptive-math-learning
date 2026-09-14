@@ -15,7 +15,7 @@ Route code **AR**. Owner: assistant (AR route author). Runs on `../core/runner.j
 
 **Load order is load-bearing.** `generate2.js` and `figs2.js` read `AR_UTIL` / `AR_DRAW` from part 1 and each merges into the shared `GENERATORS` / `FIGS` object with `Object.assign`. Both throw a clear error if loaded first, and `_selfcheck.js` asserts the order in `index.html`.
 
-Preview one generator without logging in: `ar/?preview=AR-07&lvl=1` (a drill) or `ar/?preview=AR-28&lvl=2`.
+Preview one generator without going through the diagnostic or the map — you still sign in as a pupil first: `ar/?preview=AR-07&lvl=1` (a drill) or `ar/?preview=AR-28&lvl=2`. `lvl` defaults to 2.
 
 ---
 
@@ -27,33 +27,60 @@ Preview one generator without logging in: `ar/?preview=AR-07&lvl=1` (a drill) or
 
 ## Status for the platform owner
 
-### 1 · `Core.isCorrect` accepts wrong answers for non-numeric strings ⚠️ bug
-The `parseFloat` fallback at the end of `isCorrect` compares only the leading number:
+### 1–3 · The three `core/` changes — ✅ all landed, closed
+
+`ROUTE_CONVENTION.md` v1.1 (2026-09-14) and the shipped `core/` confirm all three went in:
+`isCorrect` now requires every number in the expected answer to match in order (§4 is written to
+the new behaviour); `CFG.ROUTES` carries `['AR','Көбейту мен бөлу','ar/','live','2–5']`; and
+`ui.css` has `--ar` / `--ar-d` in both themes, so `index.html` no longer needs the fallback
+spelling. `placement:'climb'` landed too and is documented in §10. `owner-patch/` has been emptied
+of these and now holds only the one change still outstanding, below.
+
+The scalar-answer discipline stays regardless: §4's `kind:'custom'` trap 2 still applies — the
+feedback line prints a single value (`Дұрыс жауабы: X`), so a compound answer would display wrong
+even though it now grades right.
+
+> Colour note, kept because it is easy to repeat: purple, not green. The first attempt used a
+> teal-green and **the current station became almost indistinguishable from the passed ones** on
+> the map, since `--good` is green too. FR never hit this because its route colour is magenta.
+
+### 3b · ⚠️ NEW · the diagnostic places a strong pupil up to 14 stages too low
+
+`nextDiag()` asks **2 items per stage** and stops at **12 questions**, so one diagnostic can ask
+about at most **6 stages** (v1.1 §10 states this). That is fine on a short route. On AR's 41 the
+climb phase spends the whole budget before the bracket closes, and `finishDiag()` places at the
+**bottom** of what is still open:
 
 ```
-isCorrect({ans:'3 қ. 1'}, '3 қ. 5')  → true
-isCorrect({ans:'4 × 6'},  '4 × 9')   → true
-isCorrect({ans:'7'},      '7 алма')  → true
+true level AR-28  →  placed AR-16   12 stages low
+true level AR-30  →  placed AR-16   14 stages low   ← worst
+true level AR-41  →  placed AR-32    9 stages low
 ```
 
-This bites any route that uses a compound answer **or an expression-valued choice** — the runner marks *every* option `isCorrect` accepts, so several would light up green at once. AR works around it by using only scalar answers, but the fix belongs in `core/`: require a full-string numeric match rather than `parseFloat`'s prefix match. Worth checking WP/PV for existing answers of this shape.
+Twelve stages is roughly a year of content the child must re-do before meeting anything new —
+which is the exact failure the diagnostic exists to prevent.
 
-### 2 · `AR-06` was never actually claimed — my earlier worry was wrong
-`ROUTE_CONVENTION.md` §3 shows `['FR-09', …, ['FR-07','AR-06'], '4']`. The real `fr/stages.js` stops at **FR-07**; `FR-09` is only an illustration in the doc. Nothing references AR today, so **the AR numbering is free** and this table can be signed off as-is. (I over-read a doc example as a live constraint — sorry for the false alarm.)
+The fix is one line: **ask 1 item per stage while climbing, 2 once bracketed.** The climb only needs
+a coarse "clearly above them?" signal and is self-correcting — a stray wrong answer just brackets
+earlier, and the bisect phase still asks two. Worst error falls from 14 stages to 1, and a beginner
+is placed in 4 questions instead of 6. It is gated on `DG.climb`, so WP/FR/PV are provably
+untouched: the evidence script replays `nextDiag` for 84 route-length × true-level combinations
+without `placement:'climb'` and gets identical probes, question counts and placements.
 
-### 3 · `core/core.js` and `core/ui.css` need one line each (owner-only files)
-- `CFG.ROUTES` — add `['AR','Көбейту мен бөлу','ar/','live','2–5']` so the portal lists it.
-- `ui.css` — add the route colour `--ar:#6B4FA3; --ar-d:#523B7E;` (dark: `#A88BE0` / `#7E68AC`). `index.html` already passes `var(--ar,#6B4FA3)`, so it renders correctly before and after.
-  Purple, not green: the first attempt used a teal-green and **the current station became almost indistinguishable from the passed ones** on the map, since `--good` is green too. FR never hit this because its route colour is magenta.
-
-**Applied 2026-09-13 on the owner's instruction.** The patched `core/core.js` and `core/ui.css` ship in `core-updated/`; `owner-patch/` keeps the diffs and the regression test. Re-verified after applying: 6 300 FR + 17 100 AR questions, no verdict changes, no choice set accepting more than one answer.
+Patch, patched file and the replay script: `owner-patch/`.
 
 ### 4 · Decimal place value — resolved: AR owns it
 The owner ruled on 2026-09-13 that AR owns decimal place value rather than PV, so **AR-38 `Ондық бөлшек`** (generator `dec_pv`) sits before the decimal-division stages. No `PV-??` placeholder remains.
 
-### 5 · §8 of the convention, two corrections
-- **Decimal separator is a dot** (`5.25`), per the owner on 2026-09-13 — §8 says comma. Note that `Core.isCorrect` normalises `,`→`.` anyway, so this only ever affected *display*, never grading.
-- The convention says fixed items live in `bank.js` for diagnostics and stage tests. **`core/runner.js` has no such mechanism** — `startDiag` and `startTest` both call `makeItem()`, i.e. the generators. AR therefore ships no `ITEMS`, and §5 should be corrected.
+### 5 · Convention corrections — ✅ all in v1.1, closed
+
+Both are in the published v1.1: §8 is now the decimal **point**, and §5 states outright that no
+fixed-item mechanism exists (`startDiag`/`startTest` both call the generators) plus the ≥6-distinct-
+items rule that fails silently. §3's example ids are marked illustrative, so the `AR-06` scare is
+documented as a doc bug rather than a numbering constraint.
+
+v1.1 also renumbered hand-off from §9 to **§14**; the references in `_selfcheck.js` and `stages.js`
+have been repointed.
 
 ### 6 · File split — done (approved 2026-09-13)
 
@@ -64,7 +91,7 @@ The owner ruled on 2026-09-13 that AR owns decimal place value rather than PV, s
 | generators | one file, 648 | `generate.js` + `generate2.js` |
 | drawings | one file, 381 | `figs.js` + `figs2.js` |
 
-The seam is the one that already existed in the route's design — **facts (AR-01…17) vs algorithms (AR-18…27)** — not an arbitrary line count. Shared code is published from part 1 (`AR_UTIL`, `AR_DRAW`) rather than duplicated.
+The seam is the one that already existed in the route's design — **facts (AR-01…23) vs algorithms (AR-24…41)** — not an arbitrary line count. Shared code is published from part 1 (`AR_UTIL`, `AR_DRAW`) rather than duplicated.
 
 ### 7 · Kazakh terminology — checked against published KZ lesson material, four terms changed
 
@@ -113,6 +140,58 @@ Confirmed correct and left alone: `бөлінгіш` (dividend) · `бөлгіш
 
 **Two defects found while splitting the column stages.** `div_long2` — the generator for both multi-digit-divisor stations — was referenced by `stages.js` but had never been written; the route would have thrown on reaching AR-36. It is written now, framed on the толымсыз бөлінгіш like `div_long`, carrying the helper table in from AR-31 as the scaffold and withdrawing it by lvl 3, and holding a zero *inside* the quotient back until lvl 3 because writing that digit is its own trap. Separately, `G.speed` picked a focus group from a fixed list and then filtered it against the stage's tables, so AR-07 could head a round "× 6, 7" while drilling 2, 5 and 10. Focus groups are now built from the stage's own tables, and a second axis (small multipliers 2–5 vs large 6–10, the way fact-fluency programmes split a table) both fixes the label and widens the drill stages past the runner's 6-distinct floor.
 
+**«Copy what? Everything I write is wrong.»** Reported from play-testing the lvl-3 timed test, and
+reproducible on screen: the COPY phase is the one place in the route where the answer is ALREADY
+displayed, and nothing said so. The header read «Көшір: 8 с · 0», the stem read `7 × 3 = 21`, and
+that was the entire instruction. Worse, a wrong copy scored **silently** — the ✗ branch only ran in
+phase 2, so the counter sat at 0 whatever you typed, and the phase then ended telling you to «do the
+copy test for real», which reads as an accusation. And the 8-second clock was already running while
+the pupil worked out what was being asked, so the phase measured confusion, not hand speed.
+
+Four changes: a standing instruction line inside the widget («Жауабы жазулы тұр — асты сызылған
+санды сол күйінде жаз»); the number to copy picked out in the accent colour and underlined; feedback
+on every answer in both phases, with the copy miss naming the number that was wanted; and **the clock
+starts on the first answer, not when the phase opens** — measured: staring at the screen for six
+seconds before starting now yields the same 8 copies as starting instantly. An idle timeout still
+ends a phase nobody answers, so the widget cannot hang.
+
+The lvl 1–2 drill got the same standing instruction, naming the round length, the «Қою» button and
+the per-item limit, and the correction screen now says what the repetition is for.
+
+**The drill is now verified inside the real runner, not just in isolation.** The first round of
+fixes was proved against the mounted widget alone; the case the pupil actually meets goes through
+`renderQuestion`, the teaching card, `_Q.done` and the one-retry rule as well. Driven end to end at
+phone width against the real `core/runner.js`: answering every fact correctly 4.3 s after it appears
+— the sequence that used to loop for ever — now gives 0 correction screens, «Раунд бітті · түзету:
+0», «Өттің ✓», a usable restart button and no page errors.
+
+That pass also caught what the widget fixes could not: **the teaching card never mentioned the
+clock at level 2.** AR-07 said only «Үшінші деңгейде уақыт өлшенеді», so the first time a correct
+answer was refused for being slow, it looked like a bug rather than the rule. AR-07 now has a second
+card naming the 6 s limit, the visible countdown and the «Қою» button; AR-11 said 4 s and now says
+6; AR-17 and AR-22 said the compute phase had to reach *half* the copy rate when the bar is 60%, and
+now give the real phase lengths (8 s / 12 s) and the real target.
+
+**Audited against ROUTE_CONVENTION v1.1 (2026-09-14).** Everything v1.1 names as a stale copy in
+this file is fixed: the climb figure is 2,4,8,16 (`step = step*2+1`), the placement anecdote no
+longer quotes a 19-stage route, and preview does require signing in as a pupil first. The `§9`
+cross-references in `_selfcheck.js` and `stages.js` now point at **§14**, and the `isCorrect` copy
+inside `_selfcheck.js` has been re-taken verbatim from the current `core/core.js` — v1.1 §14.4 is
+right that it had gone stale, and stale in the dangerous direction: it still had the old parseFloat
+fallback, so the check was **laxer** than production. Re-run with the real comparer: still 0
+failures, 49 200 questions.
+
+Two other clauses bit. §3's ~24-character map-bubble limit: four stage names were over it (AR-03 at
+32), now shortened — names are not ids, so this is safe on a live route. And §2's `?v=N`
+cache-busting was already in place, but `index.html` still carried `var(--ar,#6B4FA3)` with a
+comment saying the token did not exist yet; it does, in both themes, so the fallback spelling is
+gone.
+
+Checked and clean: no generator throws (the two `throw`s are the part-2 load-order guards §2 asks
+for), every icon is `currentColor` only, no route file touches `Core.*`. One deliberate shadow:
+`FIGS.array` overrides core's `array` type — `figHTML()` checks route figs first, and §12 says the
+route type wins. Core's takes a `fp` string; AR's takes `{r, c}`.
+
 **The drill was failing children who were right.** Reported from play-testing: "it keeps saying I'm wrong." Driving the widget headlessly reproduced it exactly — at lvl 2 a pupil answering EVERY fact correctly, 4.3 s after it appeared, was sent to the correction screen seven times and the round never ended. Four defects, all fixed:
 
 - The hesitation limit was **4 s measured from when the problem appears**, so it had to cover reading, recall, typing and submitting. Rocket Math's ~2 s standard is *spoken* to a partner; typing is a slower channel. Raised to 6 s, and the remaining time is now drawn as a draining bar — a clock the child cannot see feels arbitrary.
@@ -124,7 +203,9 @@ At lvl 3 the timed test had two more: the restart button was never restored afte
 
 **What is still a classroom-only mechanic.** Rocket Math's practice is *oral* — the partner hears the hesitation and the learner says the fact aloud. Typing is a weaker channel than speaking, and there is no second child. The procedure transferred; the modality did not.
 
-**Placement climbs from the easiest stage, it does not binary-search.** `core/runner.js` normally probes the middle of the stage list — a search that is ~50% likely to be failed at question one *by design*. On a 19-stage route spanning grades 2–5 that put `674 × 4` in front of a child who had never multiplied, with no picture and no hint button (the diagnostic runs `noHints`). `index.html` passes `placement:'climb'`, which opens on AR-01 and jumps 1, 2, 4, 8 stages per success before bracketing. A beginner now answers **2 easy questions** and starts at AR-01; a child who knows through AR-15 still lands on AR-16 in 12. The flag is opt-in, so WP/FR/PV are untouched — patch in `owner-patch/runner.js.patch`.
+**Placement climbs from the easiest stage, it does not binary-search.** `core/runner.js` normally probes the middle of the stage list — a search that is ~50% likely to be failed at question one *by design*. On a route spanning grades 2–5 that opened on a mid-route stage for a child who had never multiplied, with no picture and no hint button (the diagnostic runs `noHints`); on today's 41 stages the middle is AR-21, the 8- and 9-times division facts. `index.html` passes `placement:'climb'`, which opens on AR-01 and then jumps **2, 4, 8, 16** stages per success (`step = step*2+1` internally) before the first failure brackets the range and it bisects inside it. A beginner answers **2 easy questions** and starts at AR-01.
+
+Mind the cap on a route this long (ROUTE_CONVENTION §10): the diagnostic stops at **12 questions**, 2 per stage, so at most **6 stages** are ever asked about. Climbing from AR-01 those 6 probes land on AR-01, 03, 07, 15, 31 and one more — a child who really knows everything through AR-35 runs out of questions with the bracket still open and is placed at the **bottom** of it. That is the intended bias (too low beats too high), but it means a strong pupil will practise below their level for a while; the teacher page's manual stage set is the remedy.
 
 **Kazakh case endings are stored, not generated.** `THING` carries each noun's accusative and each container's locative and dative as written-out forms (`қарындаш → қарындашты`, `қорап → қорапқа / қорапта`). The first version appended fixed suffixes and produced `қарындашды`, `пеналке`, `қорапте`. §8 says not to hard-code endings and to use `core/words.js` — that file does not exist yet, so the forms live in the table where a human can check them; move them to `core/words.js` if it is ever added.
 

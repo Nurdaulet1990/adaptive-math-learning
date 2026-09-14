@@ -1,6 +1,6 @@
 /* ar/generate.js — AR route question generators, part 1 of 2: the FACT layer
- * (AR-01 … AR-09 — equal groups, tables, division facts, distributivity, remainder).
- * The ALGORITHM layer (AR-10 … AR-18) lives in generate2.js. Both merge into the same
+ * (AR-01 … AR-23 — equal groups, tables, the speed drills, division facts, distributivity,
+ * remainder). The ALGORITHM layer (AR-24 … AR-41) lives in generate2.js. Both merge into the same
  * global GENERATORS object; the shared helpers below are published as AR_UTIL for
  * generate2.js to reuse, so THIS FILE MUST LOAD FIRST.
  * Split from one 648-line file with the owner's approval (ROUTE_CONVENTION.md §2,
@@ -8,13 +8,14 @@
  *
  * §5: pure functions, no DOM, no globals, no Core.  type(params, lvl) -> question (§7).
  * lvl 1 Нақты · lvl 2 Сұлба · lvl 3 Мәтін (§6) — figure AND number range change.
- * DECIMAL SEPARATOR: dot (5.25) — owner's ruling 2026-09-13; §8 still says comma.
+ * DECIMAL SEPARATOR: dot (5.25) — owner's ruling 2026-09-13, now ROUTE_CONVENTION §8.
  *
  * ── Why every answer here is a SINGLE number ──
- * Core.isCorrect falls back to parseFloat(given) vs parseFloat(ans) for non-numeric
- * answers, so compound answers collide: '3 қ. 5' is accepted for '3 қ. 1', '4 × 9'
- * for '4 × 6'. A patch is proposed in owner-patch/; until it lands, AR asks for one
- * number per question and shows the full result via ansHTML/expl.
+ * The isCorrect patch LANDED (v1.1 §4: every number in the expected answer must
+ * match, in order), so a compound answer would now grade correctly. AR still asks
+ * for one number per question, because §4's kind:'custom' trap 2 is unchanged —
+ * the feedback line prints a single value, «Дұрыс жауабы: X», so a compound answer
+ * would be DISPLAYED wrong even where it is graded right. Full result via ansHTML/expl.
  */
 (function (root) {
   'use strict';
@@ -43,9 +44,10 @@
   ];
 
   /* Distinct wrong options for kind:'choice'. Every value must be a DISTINCT
-   * NUMBER: core/runner.js marks every option Core.isCorrect() accepts, and that
-   * comparer falls back to parseFloat — so two options that share a leading
-   * number would both light up green. */
+   * NUMBER: core/runner.js marks every option Core.isCorrect() accepts, so two
+   * options that compare equal both light up green (ROUTE_CONVENTION §4). Since
+   * the patch landed that means equal by the full number sequence, not just by a
+   * shared leading number — but distinct values are still the rule. */
   function opts(correct, pool) {
     var out = [String(correct)], guard = 0, step = 1;
     while (out.length < 4 && guard++ < 60) {
@@ -70,16 +72,6 @@
       return Math.max(0, v + d);
     };
   }
-
-  /* ── Why every answer here is a SINGLE number ──────────────────────
-   * Core.isCorrect falls back to parseFloat(given) vs parseFloat(ans) when the
-   * answer is not numeric/fraction. So a compound answer collides:
-   *   isCorrect({ans:'3 қ. 1'}, '3 қ. 5')  → true   (both parseFloat to 3)
-   *   isCorrect({ans:'4 × 6'},  '4 × 9')   → true   (both parseFloat to 4)
-   * Verified against core/core.js. Until that fallback is tightened, AR asks
-   * for one number per question and shows the full result via ansHTML/expl.
-   * Reported to the platform owner — see MAP.md.
-   */
 
   var G = {};
 
@@ -329,6 +321,7 @@
     var SHELL =
       '<div style="display:flex;flex-direction:column;gap:10px;align-items:center">' +
       '<div class="sp-head note" style="font-weight:800;text-align:center"></div>' +
+      '<div class="sp-tip note" style="text-align:center;max-width:320px"></div>' +
       '<div class="sp-q" style="font-family:var(--disp);font-size:2rem;font-weight:600"></div>' +
       '<div class="sp-row" style="display:flex;gap:8px;align-items:center">' +
       '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
@@ -370,8 +363,10 @@
           var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
             inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
             go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
-            msg = el.querySelector('.sp-msg');
+            msg = el.querySelector('.sp-msg'), tip = el.querySelector('.sp-tip');
           row.style.display = 'none';
+          tip.textContent = ROUND + ' мысал. Жауабыңды «Қою» түймесімен не Enter-мен бер.' +
+            (LIMIT ? ' Әр мысалға ' + (LIMIT / 1000) + ' секунд.' : '');
           function stopClocks() {
             if (tmr) { clearTimeout(tmr); tmr = null; }
             if (clk) { clearInterval(clk); clk = null; }
@@ -385,10 +380,13 @@
             if (mode === 'run') {
               head.textContent = 'Мысал ' + Math.min(i + 1, ROUND) + ' / ' + ROUND +
                 (fixes ? ' · түзету: ' + fixes : '');
+              tip.textContent = ROUND + ' мысал. Жауабыңды «Қою» түймесімен не Enter-мен бер.' +
+                (LIMIT ? ' Әр мысалға ' + (LIMIT / 1000) + ' секунд.' : '');
               qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ?';
             } else {
               head.innerHTML = '<span style="color:var(--bad)">Қайтала: ' +
                 cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v + '</span> · ' + rep + '/3';
+              tip.textContent = 'Түзету: осы теңдікті дәл сол күйінде үш рет жаз.';
               qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v;
             }
             inp.value = ''; inp.focus(); t0 = Date.now();
@@ -475,51 +473,72 @@
       };
     }
 
-    /* ── lvl 3 · the timed test: copy sets your own bar, then compute ── */
-    var T = { copy: 8, calc: 12, need: 0.6 };
+    /* ── lvl 3 · the timed test: copy sets your own bar, then compute ──
+     * Play-testing note: the COPY phase is the one screen in the whole route
+     * where the answer is ALREADY on display, so "what am I supposed to type?"
+     * is the obvious reaction — and the first version answered it nowhere.
+     * The head said «Көшір: 8 с» and the stem said `7 × 3 = 21`; a wrong copy
+     * scored silently (the ✗ branch only ran in phase 2), so the counter stayed
+     * at 0 no matter what you typed, and the phase ended accusing you of not
+     * having tried. Hence: a standing instruction, the number to copy picked out
+     * visually, feedback on every answer in BOTH phases, and a clock that does
+     * not start until the first answer — reading time is not hand speed. */
+    var T = { copy: 8, calc: 12, need: 0.6, idle: 25000 };
     return {
       stem: 'Жылдамдық сынағы · ' + OP + ' ' + f0.n,
       kind: 'custom',
       ans: 'иә',
       ansHTML: '<b>өз жылдамдығыңа жеттің</b>',
-      h1: 'Алдымен ' + T.copy + ' секунд көшіресің — бұл сенің қол жылдамдығың.',
-      h2: 'Сосын ' + T.calc + ' секунд есептейсің. Өз жылдамдығыңның ' +
+      h1: 'Алдымен ' + T.copy + ' секунд КӨШІРЕСІҢ: жауабы жазулы тұрады, сен тек сол санды жазасың.',
+      h2: 'Сосын ' + T.calc + ' секунд ЕСЕПТЕЙСІҢ. Өз жылдамдығыңның ' +
         Math.round(T.need * 100) + '%-іне жетсең — өттің.',
-      expl: 'Мұнда дұрыс жауап жеткіліксіз — ойланбай айту керек. Сынақ кезінде түзету жоқ: ' +
-        'талап сенің өз қол жылдамдығыңмен салыстырылады, басқа баламен емес.',
+      expl: 'Мұнда дұрыс жауап жеткіліксіз — ойланбай айту керек. Көшіру кезеңі сенің қол ' +
+        'жылдамдығыңды өлшейді, сондықтан талап басқа баламен емес, өзіңмен салыстырылады. ' +
+        'Уақыт бірінші жауабыңнан кейін ғана жүре бастайды.',
       mount: function (el, submit) {
         var phase = 0, left = 0, done = 0, wrong = 0, base = 0, cur = null,
-          timer = null, over = false;
+          timer = null, idle = null, running = false, over = false;
         el.innerHTML = SHELL;
         var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
           inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
           go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
-          msg = el.querySelector('.sp-msg');
+          msg = el.querySelector('.sp-msg'), tip = el.querySelector('.sp-tip');
         row.style.display = 'none';
+        tip.textContent = 'Екі кезең: алдымен КӨШІРУ (жауабы жазулы — соны жазасың), ' +
+          'сосын ЕСЕПТЕУ. Уақыт бірінші жауабыңнан кейін басталады.';
+        function stop() {
+          if (timer) { clearInterval(timer); timer = null; }
+          if (idle) { clearTimeout(idle); idle = null; }
+        }
         function next() {
           cur = fact();
-          qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + (phase === 1 ? cur.v : '?');
+          // In the copy phase the number to type IS the lesson, so it is picked
+          // out; numbers are generated, never typed by a pupil, so this is safe.
+          qEl.innerHTML = phase === 1
+            ? cur.a + ' ' + OP + ' ' + cur.b + ' = <b style="color:var(--accent);' +
+              'border-bottom:3px solid var(--accent)">' + cur.v + '</b>'
+            : cur.a + ' ' + OP + ' ' + cur.b + ' = ?';
           inp.value = ''; inp.focus();
         }
         function tick(total) {
           left -= 0.1;
           bar.style.width = Math.max(0, left / total * 100) + '%';
           head.textContent = (phase === 1 ? 'Көшір: ' : 'Есепте: ') + Math.ceil(left) + ' с · ' + done;
-          if (left <= 0) { clearInterval(timer); timer = null; endPhase(); }
+          if (left <= 0) { stop(); endPhase(); }
         }
         function endPhase() {
+          stop(); running = false;
           if (phase === 1) {
             base = done; done = 0;
-            msg.textContent = 'Қол жылдамдығың: ' + base + '. Енді есепте.';
+            msg.textContent = 'Қол жылдамдығың: ' + base + ' мысал.';
             msg.style.color = 'var(--muted)';
             start(2);
             return;
           }
           over = true;
-          row.style.display = 'none'; qEl.textContent = '';
+          row.style.display = 'none'; qEl.textContent = ''; tip.textContent = '';
           /* FLOOR is the sit-out gate, NOT the target. Using it for both meant a
-           * slow typist (base 4–6) had to compute as fast as they copied — 100%,
-           * not the 60% the screen promised. */
+             slow typist (base 4–6) had to compute as fast as they copied. */
           var FLOOR = 4;
           var need = Math.max(2, Math.round(base * T.need));
           var ok = base >= FLOOR && done >= need && wrong <= 2;
@@ -528,7 +547,8 @@
           head.innerHTML = 'Көшіру: <b>' + base + '</b> · Есептеу: <b>' + done + '</b> · керек: <b>' +
             need + '</b>' + (wrong ? ' · қате: ' + wrong : '');
           msg.textContent = base < FLOOR
-            ? 'Көшіру сынағын шын орында — ол сенің жылдамдығың.'
+            ? 'Көшіру кезеңінде ' + base + ' мысал шықты. Онда жауабы жазулы тұрады — ' +
+              'астын сызған санды сол күйінде жазу керек. Тағы бір рет жаса.'
             : ok ? 'Өттің ✓' : 'Тағы бір рет жаса.';
           msg.style.color = ok ? 'var(--good)' : 'var(--bad)';
           // Restore the button: without it the runner's one retry showed a dead
@@ -537,20 +557,40 @@
           submit(ok ? 'иә' : 'жоқ');
         }
         function start(ph) {
-          phase = ph; done = 0;
-          var total = ph === 1 ? T.copy : T.calc;
-          left = total; row.style.display = ''; go.style.display = 'none';
+          stop();
+          phase = ph; done = 0; running = false;
+          row.style.display = ''; go.style.display = 'none';
           bar.style.background = ph === 1 ? 'var(--gold)' : 'var(--accent)';
+          bar.style.width = '100%';
+          tip.textContent = ph === 1
+            ? 'Жауабы жазулы тұр — асты сызылған санды сол күйінде жаз.'
+            : 'Енді жауабын өзің тап.';
+          head.textContent = (ph === 1 ? 'Көшіру' : 'Есептеу') + ' · бірінші жауабыңнан кейін ' +
+            (ph === 1 ? T.copy : T.calc) + ' секунд саналады';
           next();
-          if (timer) clearInterval(timer);
-          timer = setInterval(function () { tick(total); }, 100);
+          // if the pupil never answers at all, do not hang the widget
+          idle = setTimeout(function () { endPhase(); }, T.idle);
         }
         function answer() {
           if (!cur || !phase || over) return;
           var v = parseInt(inp.value, 10);
-          if (isNaN(v)) return;
-          if (v === cur.v) { done++; msg.textContent = '✓'; msg.style.color = 'var(--good)'; }
-          else if (phase === 2) { wrong++; msg.textContent = '✗'; msg.style.color = 'var(--bad)'; }
+          if (isNaN(v)) { msg.textContent = 'Сан жаз.'; msg.style.color = 'var(--muted)'; return; }
+          if (!running) {                       // the clock starts on the first answer
+            running = true;
+            if (idle) { clearTimeout(idle); idle = null; }
+            left = phase === 1 ? T.copy : T.calc;
+            var total = left;
+            timer = setInterval(function () { tick(total); }, 100);
+          }
+          if (v === cur.v) {
+            done++; msg.textContent = '✓'; msg.style.color = 'var(--good)';
+          } else if (phase === 1) {
+            // used to be silent: the counter never moved and nothing said why
+            msg.textContent = '✗ ' + cur.v + ' деп жазу керек еді';
+            msg.style.color = 'var(--bad)';
+          } else {
+            wrong++; msg.textContent = '✗'; msg.style.color = 'var(--bad)';
+          }
           next();
         }
         inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
