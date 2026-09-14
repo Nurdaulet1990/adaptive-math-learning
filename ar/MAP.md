@@ -140,6 +140,29 @@ Confirmed correct and left alone: `бөлінгіш` (dividend) · `бөлгіш
 
 **Two defects found while splitting the column stages.** `div_long2` — the generator for both multi-digit-divisor stations — was referenced by `stages.js` but had never been written; the route would have thrown on reaching AR-36. It is written now, framed on the толымсыз бөлінгіш like `div_long`, carrying the helper table in from AR-31 as the scaffold and withdrawing it by lvl 3, and holding a zero *inside* the quotient back until lvl 3 because writing that digit is its own trap. Separately, `G.speed` picked a focus group from a fixed list and then filtered it against the stage's tables, so AR-07 could head a round "× 6, 7" while drilling 2, 5 and 10. Focus groups are now built from the stage's own tables, and a second axis (small multipliers 2–5 vs large 6–10, the way fact-fluency programmes split a table) both fixes the label and widens the drill stages past the runner's 6-distinct floor.
 
+**The ⚡ stations were an exam repeated thirteen times.** Play-tested verdict: "a bit hard, and I
+was bored" — from an adult. Both halves had one cause. A level-3 item was a whole two-phase timed
+test (8 s copy + 12 s compute), but `core/runner.js` needs **3 counted-correct in a row at level 3**
+to unlock the stage test and then draws **10 more** items for the test itself. So clearing one ⚡
+station meant thirteen back-to-back timed tests — about **5 minutes** of relentless typing, **21
+minutes** across the four ⚡ stations. The unit of work was the wrong size.
+
+**One level-3 item is now ONE FACT with an 8-second clock.** The runner's ten draws then add up to
+exactly what the station is for: a ten-fact timed test, ~90 seconds — which is Rocket Math's
+one-minute written test, arrived at from the other direction. Clearing a station drops from 5.2 to
+2.6 minutes, and the four together from 21 to 10. The cost is the personal hand-speed baseline: the
+copy phase is gone, so the bar is a flat 8 s per fact rather than 60% of a measured rate. At 8 s a
+slow typist who *knows* the fact still lands it comfortably, and a child counting on fingers does
+not — which is the discrimination the stage exists to make.
+
+**The engagement lives at levels 1–2, where the child actually spends time.** A combo counter (🔥 7)
+that a wrong answer resets, a best-of-session line to beat, and the whole fact flashed back green on
+every correct answer — feedback and one more correct exposure in the same beat. The correction now
+costs **one** retype, not three: Rocket Math says three, but three *spoken* takes six seconds and
+three *typed* takes fifteen, and the modality changes the cost. The missed fact is re-inserted a few
+places later in the same round instead of rewinding the counter three places, so it still comes back
+soon but the round stays exactly ten long — a shaky child can no longer make it balloon.
+
 **«Copy what? Everything I write is wrong.»** Reported from play-testing the lvl-3 timed test, and
 reproducible on screen: the COPY phase is the one place in the route where the answer is ALREADY
 displayed, and nothing said so. The header read «Көшір: 8 с · 0», the stem read `7 × 3 = 21`, and

@@ -283,11 +283,34 @@
    * three times, then back up three problems and come again.
    * §5 forbids touching Core, so the speed bar cannot be stored; each test measures
    * the pupil's own input speed on the spot and asks for a share of it. */
+  /* ══ ⚡ Жаттығу / Жылдамдық — the fact-fluency drill ════════════════════
+   * Rocket Math's shape: practise with correction first, test for automaticity
+   * after. What the first build got wrong was the SIZE of a level-3 item.
+   *
+   * It used to be a whole two-phase timed test (8 s copy + 12 s compute). But
+   * core/runner.js draws TEN level-3 items for a stage test and needs 8 right,
+   * and it wants 3 counted-correct in a row at level 3 before it even unlocks —
+   * so clearing one ⚡ station meant thirteen back-to-back timed tests, about
+   * five minutes of relentless typing, and nearly twenty minutes across the four
+   * ⚡ stations. That is why it felt both hard and boring: the unit of work was
+   * an exam, repeated thirteen times.
+   *
+   * Now ONE level-3 item is ONE FACT with an 8-second clock. The runner's ten
+   * draws then add up to exactly the thing this stage is for — a ten-fact timed
+   * test, ~90 seconds, which is Rocket Math's one-minute written test.
+   * The personal-hand-speed baseline goes away with the copy phase; an 8 s
+   * ceiling per fact is generous enough for a slow typist that the trade is
+   * worth it, and lvl 1–2 carry no clock or a visible 6 s one.
+   *
+   * Levels 1–2 are where the child actually spends time, so that is where the
+   * engagement lives: a combo counter, a best-of-session line, the whole fact
+   * flashed back on every correct answer, and a correction that costs ONE
+   * retype rather than three (Rocket Math says three, but three SPOKEN takes
+   * six seconds and three TYPED takes fifteen — the modality changes the cost).
+   */
   G.speed = function (p, lvl) {
     /* Focus groups are built FROM this stage's tables, never filtered down to
-     * them afterwards: a round drilling 2, 5, 10 must not be headed "× 6, 7".
-     * Singles, every pair, the textbook groupings that fit entirely inside p.k,
-     * and the full mix — enough distinct rounds for the runner's stage test. */
+     * them afterwards: a round drilling 2, 5, 10 must not be headed "× 6, 7". */
     var has = function (x) { return p.k.indexOf(x) >= 0; };
     var FOCUS = [];
     p.k.forEach(function (t) { FOCUS.push([t]); });
@@ -303,10 +326,8 @@
     // multipliers come automatic long before the big ones, so drill them apart.
     var SIZE = [{ m: [2, 10], n: '' }, { m: [2, 5], n: ' · кіші' }, { m: [6, 10], n: ' · үлкен' }];
     var sz = pick(SIZE);
-    var f0 = {
-      n: (tables.length === p.k.length ? 'барлық кесте'
-        : tables.length === 1 ? tables[0] + ' кестесі' : tables.join(', ')) + sz.n
-    };
+    var fname = (tables.length === p.k.length ? 'барлық кесте'
+      : tables.length === 1 ? tables[0] + ' кестесі' : tables.join(', ')) + sz.n;
     var OP = p.op === 'div' ? '÷' : '×';
     // A division drill is the same loop with the fact turned around: the pupil
     // retrieves 56 ÷ 7 from the 7-table they just made automatic.
@@ -315,289 +336,208 @@
       return p.op === 'div' ? { a: t * m, b: t, v: m } : { a: t, b: m, v: t * m };
     }
 
-    /* The widget always offers a BUTTON as well as Enter: on a tablet the
-     * on-screen keyboard's Enter is not discoverable, and a drill whose only
-     * way to answer is a key the child cannot find reads as "it says I'm wrong". */
-    var SHELL =
-      '<div style="display:flex;flex-direction:column;gap:10px;align-items:center">' +
-      '<div class="sp-head note" style="font-weight:800;text-align:center"></div>' +
-      '<div class="sp-tip note" style="text-align:center;max-width:320px"></div>' +
-      '<div class="sp-q" style="font-family:var(--disp);font-size:2rem;font-weight:600"></div>' +
-      '<div class="sp-row" style="display:flex;gap:8px;align-items:center">' +
-      '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
-      '<button class="btn sp-ok" type="button">Қою</button></div>' +
-      '<div class="sp-msg" style="min-height:1.5em;font-weight:800;text-align:center"></div>' +
-      '<div class="sp-bar" style="width:100%;max-width:260px;height:8px;border-radius:5px;' +
-      'background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;' +
-      'background:var(--accent);border-radius:5px"></i></div>' +
-      '<button class="btn sp-go" type="button">Бастау</button></div>';
-
-    /* ── lvl 1–2 · practice with the correction procedure ── */
-    if (lvl < 3) {
-      /* 6 s, not 4. Rocket Math's hesitation standard is ~2 s, but it is SPOKEN
-       * to a partner; here the child must read the problem, find the digits and
-       * hit a button, which is a slower channel. At 4 s a child answering every
-       * fact correctly was being sent to the correction screen — the app looked
-       * like it was calling right answers wrong. */
-      var LIMIT = lvl === 2 ? 6000 : 0;
-      var ROUND = 10, ALLOW = lvl === 1 ? 3 : 2;
-      /* Backing up three after every correction can outrun the ten problems
-       * ahead of it, so a consistently borderline child never reached the end.
-       * The round is now bounded by how many problems it may SHOW. */
-      var BUDGET = 26;
+    /* ── lvl 3 · ONE fact against the clock. This is what the stage test runs. ── */
+    if (lvl === 3) {
+      var LIM = 8000;
+      var f3 = fact();
       return {
-        stem: 'Жаттығу · ' + OP + ' ' + f0.n,
+        stem: f3.a + ' ' + OP + ' ' + f3.b + ' = ?',
         kind: 'custom',
-        ans: 'иә',
-        ansHTML: '<b>раундты таза аяқтау</b>',
-        h1: 'Қателессең — бүкіл мысал көрсетіледі, оны ҮШ РЕТ қайталайсың, сосын ҮШ мысал артқа қайтасың.',
-        h2: lvl === 2 ? 'Бұл деңгейде ' + (LIMIT / 1000) + ' секундтан ұзақ ойлансаң да түзету басталады.' :
-          'Бұл деңгейде уақыт шектелмейді — тек дұрыстығы маңызды.',
-        expl: 'Раундта ' + ROUND + ' мысал. ' + ALLOW + ' түзетуден аспасаң — өттің. ' +
-          'Түзету — жаза емес, есте сақтаудың жолы.',
+        ans: String(f3.v),
+        h1: 'Мұнда дұрыс жауап жеткіліксіз — ' + (LIM / 1000) + ' секунд ішінде үлгеру керек.',
+        h2: 'Есептеп отырсаң — кесте әлі автоматты емес. Жаттығу деңгейіне қайт.',
+        expl: f3.a + ' ' + OP + ' ' + f3.b + ' = ' + f3.v + '. Бұл кезеңде мақсат — ойланбай айту.',
         mount: function (el, submit) {
-          var q = [], i = 0, fixes = 0, shown = 0, cur = null, t0 = 0, rep = 0,
-            mode = 'run', tmr = null, clk = null, over = false;
-          for (var n = 0; n < ROUND; n++) q.push(fact());
-          el.innerHTML = SHELL;
-          var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
-            inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
-            go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
-            msg = el.querySelector('.sp-msg'), tip = el.querySelector('.sp-tip');
-          row.style.display = 'none';
-          tip.textContent = ROUND + ' мысал. Жауабыңды «Қою» түймесімен не Enter-мен бер.' +
-            (LIMIT ? ' Әр мысалға ' + (LIMIT / 1000) + ' секунд.' : '');
-          function stopClocks() {
-            if (tmr) { clearTimeout(tmr); tmr = null; }
-            if (clk) { clearInterval(clk); clk = null; }
-          }
-          function say(text, colour) {
-            msg.textContent = text || '';
-            msg.style.color = colour || 'var(--muted)';
-          }
-          function show() {
-            stopClocks();
-            if (mode === 'run') {
-              head.textContent = 'Мысал ' + Math.min(i + 1, ROUND) + ' / ' + ROUND +
-                (fixes ? ' · түзету: ' + fixes : '');
-              tip.textContent = ROUND + ' мысал. Жауабыңды «Қою» түймесімен не Enter-мен бер.' +
-                (LIMIT ? ' Әр мысалға ' + (LIMIT / 1000) + ' секунд.' : '');
-              qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ?';
-            } else {
-              head.innerHTML = '<span style="color:var(--bad)">Қайтала: ' +
-                cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v + '</span> · ' + rep + '/3';
-              tip.textContent = 'Түзету: осы теңдікті дәл сол күйінде үш рет жаз.';
-              qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v;
-            }
-            inp.value = ''; inp.focus(); t0 = Date.now();
-            if (mode === 'run' && LIMIT) {
-              // a VISIBLE countdown: a clock the child cannot see feels arbitrary
-              bar.style.background = 'var(--gold)';
-              clk = setInterval(function () {
-                var leftMs = LIMIT - (Date.now() - t0);
-                bar.style.width = Math.max(0, leftMs / LIMIT * 100) + '%';
-              }, 80);
-              tmr = setTimeout(function () { miss('slow'); }, LIMIT);
-            } else {
-              bar.style.background = 'var(--accent)';
-              bar.style.width = Math.min(100, i / ROUND * 100) + '%';
-            }
-          }
-          function nextFact() {
-            if (i >= ROUND || shown >= BUDGET) return finish();
-            shown++; cur = q[i]; mode = 'run'; show();
-          }
-          function miss(why, typed) {               // wrong answer, or too slow
-            stopClocks();
-            fixes++; rep = 0; mode = 'fix';
-            // Never let a correct-but-slow answer look like a wrong one.
-            if (why === 'slow') say('Жауабың дұрыс болуы мүмкін, бірақ уақыт бітті — ' +
-              'мақсат ойланбай айту.', 'var(--gold)');
-            else say('Сенің жауабың: ' + typed + '. Дұрысы: ' + cur.v + '.', 'var(--bad)');
-            show();
-          }
-          function finish() {
-            if (over) return;
-            over = true;
-            stopClocks();
-            row.style.display = 'none'; qEl.textContent = '';
-            var ok = fixes <= ALLOW;
-            bar.style.background = ok ? 'var(--good)' : 'var(--bad)';
-            bar.style.width = '100%';
-            head.innerHTML = 'Раунд бітті · түзету: <b>' + fixes + '</b> (рұқсат: ' + ALLOW + ')';
-            say(ok ? 'Өттің ✓'
-              : (LIMIT ? 'Жауаптарың дұрыс болса да, ' + (LIMIT / 1000) +
-                ' секундтан ұзаққа созылды. Тағы бір раунд жаса.'
-                : 'Тағы бір раунд жаса.'), ok ? 'var(--good)' : 'var(--bad)');
-            go.textContent = 'Қайта бастау'; go.style.display = '';
-            submit(ok ? 'иә' : 'жоқ');
-          }
-          function answer() {
-            if (!cur || over) return;
-            var v = parseInt(inp.value, 10);
-            if (isNaN(v)) { say('Сан жаз.', 'var(--muted)'); return; }
-            if (mode === 'fix') {
-              if (v !== cur.v) {
-                // a mistyped repetition used to silently reset, with no way out
-                say('Қайталауда дәл ' + cur.v + ' деп жаз.', 'var(--bad)');
-                inp.value = ''; inp.focus();
-                return;
+          var left = LIM, timer = null, answered = false;
+          el.innerHTML =
+            '<div style="display:flex;flex-direction:column;gap:10px;align-items:center">' +
+            '<div class="sp-head note" style="font-weight:800">' + fname + ' · ' +
+            (LIM / 1000) + ' с</div>' +
+            '<div class="sp-q" style="font-family:var(--disp);font-size:2.2rem;font-weight:600">' +
+            f3.a + ' ' + OP + ' ' + f3.b + ' = ?</div>' +
+            '<div style="display:flex;gap:8px;align-items:center">' +
+            '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
+            '<button class="btn sp-ok" type="button">Қою</button></div>' +
+            '<div class="sp-msg" style="min-height:1.5em;font-weight:800"></div>' +
+            '<div class="sp-bar" style="width:100%;max-width:240px;height:8px;border-radius:5px;' +
+            'background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;' +
+            'background:var(--accent);border-radius:5px"></i></div></div>';
+          var inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
+            msg = el.querySelector('.sp-msg'), head = el.querySelector('.sp-head');
+          inp.focus();
+          timer = setInterval(function () {
+            left -= 100;
+            bar.style.width = Math.max(0, left / LIM * 100) + '%';
+            head.textContent = fname + ' · ' + Math.max(0, Math.ceil(left / 1000)) + ' с';
+            if (left <= LIM * 0.35) bar.style.background = 'var(--gold)';
+            if (left <= 0) {
+              clearInterval(timer); timer = null;
+              bar.style.background = 'var(--bad)';
+              if (!answered) {
+                msg.textContent = 'Уақыт бітті';
+                msg.style.color = 'var(--bad)';
+                head.textContent = 'Жауап: ' + f3.v;
+                answered = true;
+                submit('—');            // a sentinel that cannot grade correct
               }
-              rep++;
-              if (rep < 3) { say('Тағы ' + (3 - rep) + ' рет.', 'var(--gold)'); show(); return; }
-              say('');
-              i = Math.max(0, i - 3);               // back up three problems
-              /* Once the corrections have passed ALLOW the round cannot be won,
-               * so end it here. It used to grind on to ALLOW + 3, which for a
-               * child who is over the clock on every fact meant about three
-               * minutes of losing before the app finally said so. The repetition
-               * that just happened is the part with teaching value; the rest is
-               * only delay. */
-              if (fixes > ALLOW) return finish();
-              nextFact(); return;
             }
-            stopClocks();
-            if (v === cur.v) { say('✓', 'var(--good)'); i++; nextFact(); }
-            else miss('wrong', v);
+          }, 100);
+          function send() {
+            var v = parseInt(inp.value, 10);
+            if (isNaN(v)) return;
+            if (timer) { clearInterval(timer); timer = null; }
+            answered = true;
+            // the runner owns grading and the one retry; just report the value
+            submit(String(v));
           }
-          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
-          el.querySelector('.sp-ok').addEventListener('click', answer);
-          go.addEventListener('click', function () {
-            if (over) return;
-            q = []; for (var n2 = 0; n2 < ROUND; n2++) q.push(fact());
-            i = 0; fixes = 0; shown = 0; say('');
-            row.style.display = ''; go.style.display = 'none';
-            nextFact();
-          });
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
+          el.querySelector('.sp-ok').addEventListener('click', send);
         }
       };
     }
 
-    /* ── lvl 3 · the timed test: copy sets your own bar, then compute ──
-     * Play-testing note: the COPY phase is the one screen in the whole route
-     * where the answer is ALREADY on display, so "what am I supposed to type?"
-     * is the obvious reaction — and the first version answered it nowhere.
-     * The head said «Көшір: 8 с» and the stem said `7 × 3 = 21`; a wrong copy
-     * scored silently (the ✗ branch only ran in phase 2), so the counter stayed
-     * at 0 no matter what you typed, and the phase ended accusing you of not
-     * having tried. Hence: a standing instruction, the number to copy picked out
-     * visually, feedback on every answer in BOTH phases, and a clock that does
-     * not start until the first answer — reading time is not hand speed. */
-    var T = { copy: 8, calc: 12, need: 0.6, idle: 25000 };
+    /* ── lvl 1–2 · the practice round, where the child spends their time ── */
+    var LIMIT = lvl === 2 ? 6000 : 0;          // lvl 2: a hesitation is an error
+    var ROUND = 10, ALLOW = lvl === 2 ? 2 : 3;
     return {
-      stem: 'Жылдамдық сынағы · ' + OP + ' ' + f0.n,
+      stem: 'Жаттығу · ' + OP + ' ' + fname,
       kind: 'custom',
       ans: 'иә',
-      ansHTML: '<b>өз жылдамдығыңа жеттің</b>',
-      h1: 'Алдымен ' + T.copy + ' секунд КӨШІРЕСІҢ: жауабы жазулы тұрады, сен тек сол санды жазасың.',
-      h2: 'Сосын ' + T.calc + ' секунд ЕСЕПТЕЙСІҢ. Өз жылдамдығыңның ' +
-        Math.round(T.need * 100) + '%-іне жетсең — өттің.',
-      expl: 'Мұнда дұрыс жауап жеткіліксіз — ойланбай айту керек. Көшіру кезеңі сенің қол ' +
-        'жылдамдығыңды өлшейді, сондықтан талап басқа баламен емес, өзіңмен салыстырылады. ' +
-        'Уақыт бірінші жауабыңнан кейін ғана жүре бастайды.',
+      ansHTML: '<b>раундты таза аяқтау</b>',
+      h1: 'Қателессең — бүкіл мысал көрсетіледі, оны бір рет қайталайсың, сосын ол мысал ' +
+        'раундтың ішінде тағы бір рет келеді.',
+      h2: lvl === 2 ? 'Бұл деңгейде әр мысалға ' + (LIMIT / 1000) + ' секунд — қалған уақыт жолақпен көрінеді.' :
+        'Бұл деңгейде уақыт шектелмейді — тек дұрыстығы маңызды.',
+      expl: 'Раундта ' + ROUND + ' мысал. ' + ALLOW + ' түзетуден аспасаң — өттің. ' +
+        'Түзету — жаза емес, есте сақтаудың жолы.',
       mount: function (el, submit) {
-        var phase = 0, left = 0, done = 0, wrong = 0, base = 0, cur = null,
-          timer = null, idle = null, running = false, over = false;
-        el.innerHTML = SHELL;
+        var q = [], i = 0, fixes = 0, combo = 0, best = 0, cur = null,
+          t0 = 0, mode = 'run', tmr = null, clk = null, over = false;
+        for (var n = 0; n < ROUND; n++) q.push(fact());
+        el.innerHTML =
+          '<div style="display:flex;flex-direction:column;gap:9px;align-items:center">' +
+          '<div class="sp-head note" style="font-weight:800;text-align:center"></div>' +
+          '<div class="sp-combo" style="font-family:var(--disp);font-weight:700;min-height:1.6em"></div>' +
+          '<div class="sp-q" style="font-family:var(--disp);font-size:2rem;font-weight:600"></div>' +
+          '<div class="sp-row" style="display:flex;gap:8px;align-items:center">' +
+          '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
+          '<button class="btn sp-ok" type="button">Қою</button></div>' +
+          '<div class="sp-msg" style="min-height:1.5em;font-weight:800;text-align:center"></div>' +
+          '<div class="sp-bar" style="width:100%;max-width:240px;height:8px;border-radius:5px;' +
+          'background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;' +
+          'background:var(--accent);border-radius:5px"></i></div>' +
+          '<button class="btn sp-go" type="button">Бастау</button></div>';
         var head = el.querySelector('.sp-head'), qEl = el.querySelector('.sp-q'),
           inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
           go = el.querySelector('.sp-go'), row = el.querySelector('.sp-row'),
-          msg = el.querySelector('.sp-msg'), tip = el.querySelector('.sp-tip');
+          msg = el.querySelector('.sp-msg'), cb = el.querySelector('.sp-combo');
         row.style.display = 'none';
-        tip.textContent = 'Екі кезең: алдымен КӨШІРУ (жауабы жазулы — соны жазасың), ' +
-          'сосын ЕСЕПТЕУ. Уақыт бірінші жауабыңнан кейін басталады.';
         function stop() {
-          if (timer) { clearInterval(timer); timer = null; }
-          if (idle) { clearTimeout(idle); idle = null; }
+          if (tmr) { clearTimeout(tmr); tmr = null; }
+          if (clk) { clearInterval(clk); clk = null; }
         }
-        function next() {
-          cur = fact();
-          // In the copy phase the number to type IS the lesson, so it is picked
-          // out; numbers are generated, never typed by a pupil, so this is safe.
-          qEl.innerHTML = phase === 1
-            ? cur.a + ' ' + OP + ' ' + cur.b + ' = <b style="color:var(--accent);' +
-              'border-bottom:3px solid var(--accent)">' + cur.v + '</b>'
-            : cur.a + ' ' + OP + ' ' + cur.b + ' = ?';
-          inp.value = ''; inp.focus();
+        function drawCombo() {
+          cb.innerHTML = combo > 1
+            ? '<span style="color:var(--gold);font-size:1.3rem">🔥 ' + combo + '</span>' +
+              (best > combo ? '<span class="note" style="margin-left:10px">рекорд ' + best + '</span>' : '')
+            : (best > 1 ? '<span class="note">рекорд: ' + best + '</span>' : '');
         }
-        function tick(total) {
-          left -= 0.1;
-          bar.style.width = Math.max(0, left / total * 100) + '%';
-          head.textContent = (phase === 1 ? 'Көшір: ' : 'Есепте: ') + Math.ceil(left) + ' с · ' + done;
-          if (left <= 0) { stop(); endPhase(); }
-        }
-        function endPhase() {
-          stop(); running = false;
-          if (phase === 1) {
-            base = done; done = 0;
-            msg.textContent = 'Қол жылдамдығың: ' + base + ' мысал.';
-            msg.style.color = 'var(--muted)';
-            start(2);
-            return;
+        function show() {
+          stop();
+          drawCombo();
+          if (mode === 'run') {
+            head.textContent = 'Мысал ' + Math.min(i + 1, ROUND) + ' / ' + ROUND +
+              (fixes ? ' · түзету: ' + fixes : '');
+            qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ?';
+          } else {
+            head.innerHTML = '<span style="color:var(--bad)">Қайтала: ' +
+              cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v + '</span>';
+            qEl.textContent = cur.a + ' ' + OP + ' ' + cur.b + ' = ' + cur.v;
           }
-          over = true;
-          row.style.display = 'none'; qEl.textContent = ''; tip.textContent = '';
-          /* FLOOR is the sit-out gate, NOT the target. Using it for both meant a
-             slow typist (base 4–6) had to compute as fast as they copied. */
-          var FLOOR = 4;
-          var need = Math.max(2, Math.round(base * T.need));
-          var ok = base >= FLOOR && done >= need && wrong <= 2;
+          inp.value = ''; inp.focus(); t0 = Date.now();
+          if (mode === 'run' && LIMIT) {
+            bar.style.background = 'var(--gold)';
+            clk = setInterval(function () {
+              bar.style.width = Math.max(0, (LIMIT - (Date.now() - t0)) / LIMIT * 100) + '%';
+            }, 80);
+            tmr = setTimeout(function () { miss('slow'); }, LIMIT);
+          } else {
+            bar.style.background = 'var(--accent)';
+            bar.style.width = Math.min(100, i / ROUND * 100) + '%';
+          }
+        }
+        function nextFact() {
+          if (i >= ROUND) return finish();
+          cur = q[i]; mode = 'run'; show();
+        }
+        function miss(why, typed) {
+          stop();
+          fixes++; combo = 0; mode = 'fix';
+          // Never let a correct-but-slow answer look like a wrong one.
+          if (why === 'slow') {
+            msg.textContent = 'Уақыт бітті — жауабың дұрыс болса да, мақсат ойланбай айту.';
+            msg.style.color = 'var(--gold)';
+          } else {
+            msg.textContent = 'Сенің жауабың: ' + typed + '. Дұрысы: ' + cur.v + '.';
+            msg.style.color = 'var(--bad)';
+          }
+          show();
+        }
+        function finish() {
+          if (over) return;
+          over = true; stop();
+          row.style.display = 'none'; qEl.textContent = ''; cb.innerHTML = '';
+          var ok = fixes <= ALLOW;
           bar.style.background = ok ? 'var(--good)' : 'var(--bad)';
           bar.style.width = '100%';
-          head.innerHTML = 'Көшіру: <b>' + base + '</b> · Есептеу: <b>' + done + '</b> · керек: <b>' +
-            need + '</b>' + (wrong ? ' · қате: ' + wrong : '');
-          msg.textContent = base < FLOOR
-            ? 'Көшіру кезеңінде ' + base + ' мысал шықты. Онда жауабы жазулы тұрады — ' +
-              'астын сызған санды сол күйінде жазу керек. Тағы бір рет жаса.'
-            : ok ? 'Өттің ✓' : 'Тағы бір рет жаса.';
+          head.innerHTML = 'Раунд бітті · түзету: <b>' + fixes + '</b> (рұқсат: ' + ALLOW + ')' +
+            ' · ең ұзын тізбек: <b>' + best + '</b>';
+          msg.textContent = ok ? 'Өттің ✓'
+            : (LIMIT ? 'Жауаптарың дұрыс болса да, ' + (LIMIT / 1000) +
+              ' секундтан ұзаққа созылды. Тағы бір раунд жаса.' : 'Тағы бір раунд жаса.');
           msg.style.color = ok ? 'var(--good)' : 'var(--bad)';
-          // Restore the button: without it the runner's one retry showed a dead
-          // widget with no way to start the test again.
           go.textContent = 'Қайта бастау'; go.style.display = '';
           submit(ok ? 'иә' : 'жоқ');
         }
-        function start(ph) {
-          stop();
-          phase = ph; done = 0; running = false;
-          row.style.display = ''; go.style.display = 'none';
-          bar.style.background = ph === 1 ? 'var(--gold)' : 'var(--accent)';
-          bar.style.width = '100%';
-          tip.textContent = ph === 1
-            ? 'Жауабы жазулы тұр — асты сызылған санды сол күйінде жаз.'
-            : 'Енді жауабын өзің тап.';
-          head.textContent = (ph === 1 ? 'Көшіру' : 'Есептеу') + ' · бірінші жауабыңнан кейін ' +
-            (ph === 1 ? T.copy : T.calc) + ' секунд саналады';
-          next();
-          // if the pupil never answers at all, do not hang the widget
-          idle = setTimeout(function () { endPhase(); }, T.idle);
-        }
         function answer() {
-          if (!cur || !phase || over) return;
+          if (!cur || over) return;
           var v = parseInt(inp.value, 10);
           if (isNaN(v)) { msg.textContent = 'Сан жаз.'; msg.style.color = 'var(--muted)'; return; }
-          if (!running) {                       // the clock starts on the first answer
-            running = true;
-            if (idle) { clearTimeout(idle); idle = null; }
-            left = phase === 1 ? T.copy : T.calc;
-            var total = left;
-            timer = setInterval(function () { tick(total); }, 100);
+          if (mode === 'fix') {
+            if (v !== cur.v) {
+              msg.textContent = 'Қайталауда дәл ' + cur.v + ' деп жаз.';
+              msg.style.color = 'var(--bad)';
+              inp.value = ''; inp.focus();
+              return;
+            }
+            /* One retype, then the fact comes back INSIDE the round instead of
+             * rewinding the counter three places. Same intent as Rocket Math's
+             * "back up three" — meet the fact again soon — but the round stays
+             * exactly ROUND long, so a shaky child cannot make it balloon. */
+            msg.textContent = '';
+            if (q.length < ROUND + 4) q.splice(Math.min(i + 3, q.length), 0, cur);
+            i++;
+            if (fixes > ALLOW + 1) return finish();
+            nextFact(); return;
           }
+          stop();
           if (v === cur.v) {
-            done++; msg.textContent = '✓'; msg.style.color = 'var(--good)';
-          } else if (phase === 1) {
-            // used to be silent: the counter never moved and nothing said why
-            msg.textContent = '✗ ' + cur.v + ' деп жазу керек еді';
-            msg.style.color = 'var(--bad)';
-          } else {
-            wrong++; msg.textContent = '✗'; msg.style.color = 'var(--bad)';
-          }
-          next();
+            combo++; if (combo > best) best = combo;
+            // flash the WHOLE fact back: feedback and one more correct exposure
+            msg.innerHTML = '<span style="color:var(--good)">' + cur.a + ' ' + OP + ' ' +
+              cur.b + ' = ' + cur.v + ' ✓</span>';
+            msg.style.color = 'var(--good)';
+            i++; nextFact();
+          } else miss('wrong', v);
         }
         inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
         el.querySelector('.sp-ok').addEventListener('click', answer);
         go.addEventListener('click', function () {
           if (over) return;
-          wrong = 0; base = 0; msg.textContent = ''; start(1);
+          q = []; for (var n2 = 0; n2 < ROUND; n2++) q.push(fact());
+          i = 0; fixes = 0; combo = 0; msg.textContent = '';
+          row.style.display = ''; go.style.display = 'none';
+          nextFact();
         });
       }
     };
