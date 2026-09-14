@@ -49,9 +49,19 @@ const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placeme
    also the only navigation on a phone — pv's own stylesheet hides its sidebar under 768px. */
 const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=6'; document.head.appendChild(mapCSS);
 const mapWrap=document.createElement('style'); mapWrap.textContent=
- `#pvmap{max-width:560px;margin:0 auto;padding:12px 12px 28px;font-family:Nunito,system-ui,sans-serif}
-  #pvmap h1{font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.5rem;margin:0 0 4px;color:var(--ink)}
-  #pvmap .sub{font-size:.9rem;color:var(--muted);font-weight:700;margin:0 0 12px}
+ /* width:100% matters: #main is a flex container, so without it the map shrinks to its content
+     (~340px) and sits in a narrow column instead of filling the 560px reading measure. */
+ `#pvmap{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto;padding:12px 12px 28px;font-family:Nunito,system-ui,sans-serif}
+  /* the legacy module sidebar is PV's alone — no other route has one. The map replaced it. */
+  .sidebar{display:none!important}
+  #pvmap .top{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0 12px}
+  #pvmap .brand{flex:1;min-width:0;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.12rem;color:var(--pv,#3D6DB5)}
+  #pvmap .brand small{display:block;font-family:Nunito,system-ui,sans-serif;font-weight:700;font-size:.68rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  #pvmap .who{flex:none;font-size:.85rem;color:var(--muted);text-align:right;line-height:1.5}
+  #pvmap .who b{color:var(--ink)}
+  #pvmap .who a{color:var(--muted);text-decoration:none}
+  #pvmap .mutebtn{border:0;background:transparent;font-size:.95rem;cursor:pointer;padding:0 2px;line-height:1}
+  #pvmap .avachip{flex:none;font-size:24px;line-height:1;align-self:center}
   #pvmap .strip{display:flex;gap:8px;margin-bottom:12px}
   #pvmap .strip div{flex:1;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:9px 4px;text-align:center}
   #pvmap .strip b{display:block;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.2rem;color:var(--ink)}
@@ -81,17 +91,20 @@ function showMap(){
       status:state.completed[e.levelId]?'passed':(i===cur?'current':(i<cur?'passed':'locked')),
       sub:state.completed[e.levelId]?'Өтілді':(i===cur?'Осы жерден жалғастыр':mod.name)}; });
   const fresh=done===0&&cur===0;
-  main.innerHTML=`<div id="pvmap"><h1>Орын мәні</h1><p class="sub">1–4 сынып · ${Core.esc(Core.student.name)}</p>
+  main.innerHTML=`<div id="pvmap">${Core.topbar('Орын мәні · 1–4 сынып')}
     <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${state.stars||0}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
     ${fresh?`<button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">🎯 Диагностика — қай жерден бастау керек?</button>`:''}
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
     <p class="hint">Станцияны басып көр.</p></div>`;
-  Core.mapScroll();
+  showBack(false); Core.mapScroll();
   Core.mapBind(id=>{ const idx=parseInt(id.slice(3),10)-1; const e=LEVEL_ORDER[idx]; if(!e) return;
     selectLevel(e.moduleId,e.levelId); });
   const dg=document.getElementById('pvdiag'); if(dg) dg.onclick=()=>{ showBack(true); startDiagnostic(); };
 }
-const showBack=on=>{ const b=document.getElementById('pvback'); if(b) b.style.display=on?'block':'none'; };
+/* Off the map, PV shows its own level screens, which carry no header — so the floating strip
+   (name · ҚАЗ/РУС · all routes · exit) appears there and hides on the map, where Core.topbar has it. */
+const showBack=on=>{ const b=document.getElementById('pvback'); if(b) b.style.display=on?'block':'none';
+  const s=document.getElementById('pvbar'); if(s) s.style.display=on?'block':'none'; };
 /* whichever way a level is entered (map, sidebar, «next level» after a result), offer the way back */
 const _sl=selectLevel; selectLevel=function(){ showBack(true); return _sl.apply(this,arguments); };
 /* PV renders its own welcome screen whenever no level is picked — show the map there instead */
@@ -102,9 +115,9 @@ const loadScript=src=>new Promise((res,rej)=>{ const s=document.createElement('s
 host.style.display='block';
 loadScript('../core/map.js?v=6').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
-  back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; back.style.display='none'; renderSidebar(); showMap(); };
+  back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);
-  const bar=document.createElement('div'); bar.style.cssText='position:fixed;right:10px;top:8px;z-index:999;font:700 12px Nunito,system-ui,sans-serif;background:#fff;border:1px solid #DCE0E4;border-radius:999px;padding:5px 10px;color:#1B2733;box-shadow:0 2px 6px rgba(0,0,0,.08)';
+  const bar=document.createElement('div'); bar.id='pvbar'; bar.style.cssText='display:none;position:fixed;right:10px;top:8px;z-index:999;font:700 12px Nunito,system-ui,sans-serif;background:#fff;border:1px solid #DCE0E4;border-radius:999px;padding:5px 10px;color:#1B2733;box-shadow:0 2px 6px rgba(0,0,0,.08)';
   const L=Core.lang(); const link=(c,t)=>L===c?`<b style="color:#0E7C9B">${t}</b>`:`<a href="#" data-l="${c}" style="color:#5E6B7A;text-decoration:none">${t}</a>`;
   bar.innerHTML=`${Core.esc(Core.student.name)} · ${link('kk','ҚАЗ')} · ${link('ru','РУС')} · <a href="../" style="color:#0E7C9B;text-decoration:none">барлық бағыттар</a> · <a href="#" id="pvout" style="color:#5E6B7A;text-decoration:none">шығу</a>`;
   document.body.appendChild(bar); document.getElementById('pvout').onclick=e=>{ e.preventDefault(); Core.logout(); };
