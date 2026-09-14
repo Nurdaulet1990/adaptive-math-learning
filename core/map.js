@@ -51,7 +51,8 @@ function map(o){
   const nodes=st.map((s,i)=>{
     const p=pts[i], cur=s.status==='current', passed=s.status==='passed', open=cur;
     const cls=`stn ${cur?'cur':passed?'passed':'locked'}${open?' open':''}`;
-    const stars=passed?`<span class="stars">${'★'.repeat(s.stars||0)}${'☆'.repeat(3-(s.stars||0))}</span>`:'';
+    // stars:null means "this route keeps no star score" (PV) — draw nothing rather than three empty stars
+    const stars=(passed&&s.stars!=null)?`<span class="stars">${'★'.repeat(s.stars)}${'☆'.repeat(3-s.stars)}</span>`:'';
     const icon=s.icon||`<span class="num">${i+1}</span>`;
     const tap=cur||passed;
     return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%"${tap?` data-stn="${esc(s.id)}"`:''}>

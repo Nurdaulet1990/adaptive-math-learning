@@ -1,0 +1,67 @@
+/* Есеп жолы · core/map.css — everything the route map (core/map.js) needs, and nothing else.
+   Split out of ui.css so a page with its own stylesheet (pv/) can load the map without inheriting
+   the platform's .app/.card/.btn rules. Every selector here is scoped to .mapbox / .stn / .unit.
+   The tokens below are the same values ui.css defines; declaring them again is harmless. */
+:root{
+  --card:#FFFFFF; --panel:#FFFFFF; --ink:#1B2733; --muted:#5E6B7A; --line:#DDE1E6; --fig:#EEF4F7;
+  --good:#2E9E5B; --good-d:#237B47; --gold:#D99A1E; --tulip:#C6423C;
+  --disp:'Fredoka',system-ui,sans-serif;
+  --plate:rgba(255,255,255,.88);
+  --sky1:#D6E9F2; --sky2:#F0E7D2; --sun:#F8EFCF; --starop:0;
+  --mtn-far:#C2CFDA; --mtn:#AEBECD; --snow:#EFF4F8;
+  --hill:#C6D5AE; --hill2:#B2C596;
+  --g1:#E9E0C4; --g2:#DED2B0;
+  --road:#F1E1BE; --road-edge:#D9C395; --road-line:#FFFBF0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --card:#1A232E; --panel:#1A2430; --ink:#EEF2F5; --muted:#A5B0BC; --line:#2C3743; --fig:#202B37;
+    --good:#4CC27A; --good-d:#37945B; --gold:#E6B347; --tulip:#E8695F;
+    --plate:rgba(12,18,26,.82);
+    --sky1:#101B2E; --sky2:#232E44; --sun:#3A4867; --starop:1;
+    --mtn-far:#1C2837; --mtn:#243244; --snow:#465872;
+    --hill:#20342F; --hill2:#1A2A26;
+    --g1:#212927; --g2:#191F1E;
+    --road:#4E4430; --road-edge:#372F21; --road-line:#8B7B57;
+  }
+}
+.mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
+.mapinner{position:relative;width:100%}
+.maproad{display:block;width:100%;height:auto}
+.stn{position:absolute;width:0;height:0}
+.stn .dot{position:absolute;left:-36px;top:-36px;width:72px;height:72px;border-radius:50%;
+  background:var(--card);border:0;box-shadow:0 6px 0 var(--line),0 10px 16px -8px rgba(10,25,40,.5);
+  display:grid;place-items:center;color:var(--muted);cursor:default;transition:transform .07s,box-shadow .07s}
+.stn .dot svg{width:38px;height:38px;overflow:visible}
+.stn .num{font-family:var(--disp);font-weight:600;font-size:1.4rem;color:inherit}
+.stn[data-stn] .dot{cursor:pointer}
+.stn[data-stn] .dot:active{transform:translateY(6px);box-shadow:0 0 0 var(--line),0 4px 8px -6px rgba(10,25,40,.5)}
+.stn.passed .dot{background:var(--good);color:#fff;box-shadow:0 6px 0 var(--good-d),0 10px 16px -8px rgba(10,25,40,.5)}
+.stn.passed .dot:active{box-shadow:0 0 0 var(--good-d)}
+.stn.cur .dot{left:-42px;top:-42px;width:84px;height:84px;background:var(--rc);color:#fff;
+  box-shadow:0 7px 0 var(--rc-d),0 12px 20px -10px rgba(10,25,40,.55)}
+.stn.cur .dot svg{width:44px;height:44px}
+.stn.cur .dot:active{box-shadow:0 0 0 var(--rc-d)}
+.stn.locked{opacity:.75}
+.stn.locked .dot{background:var(--fig);color:var(--muted);box-shadow:0 6px 0 var(--line)}
+.stn .stars{position:absolute;left:50%;transform:translateX(-50%);top:38px;font-size:.78rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-shadow:0 1px 2px rgba(255,255,255,.6)}
+.stn.cur .stars{top:46px}
+.stn .fox{position:absolute;left:34px;top:-6px;font-size:28px;line-height:1;animation:mp-bob 2.6s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(10,25,40,.35))}
+@keyframes mp-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.stn .bub{position:absolute;left:50%;bottom:52px;transform:translateX(-50%) scale(.9);transform-origin:bottom center;
+  width:max-content;max-width:min(78vw,250px);background:var(--card);border-radius:16px;padding:12px 14px;
+  box-shadow:0 6px 0 var(--line),0 14px 26px -12px rgba(10,25,40,.5);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s;z-index:5}
+.stn.cur .bub{bottom:62px}
+.stn.open .bub{opacity:1;transform:translateX(-50%) scale(1);pointer-events:auto}
+.stn .bub::after{content:"";position:absolute;left:50%;bottom:-9px;width:18px;height:18px;background:var(--card);transform:translateX(-50%) rotate(45deg);border-radius:3px}
+.stn .bub b{display:block;font-family:var(--disp);font-weight:600;font-size:1.02rem;line-height:1.2;color:var(--ink)}
+.stn .bub i{display:block;font-style:normal;font-size:.76rem;font-weight:700;color:var(--muted);margin:2px 0 9px}
+.stn .bub .btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;font-family:var(--disp);
+  font-weight:600;font-size:.95rem;padding:10px 14px;border:0;border-radius:13px;cursor:pointer;
+  background:var(--rc);color:#fff;box-shadow:0 4px 0 var(--rc-d);transition:transform .06s,box-shadow .06s}
+.stn .bub .btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--rc-d)}
+.unit{position:absolute;left:0;right:0;transform:translateY(-50%);display:flex;align-items:center;gap:10px;padding:0 16px;pointer-events:none}
+.unit::before,.unit::after{content:"";flex:1;height:2px;background:var(--plate);border-radius:2px}
+.unit span{font-family:var(--disp);font-weight:600;font-size:.8rem;letter-spacing:.04em;color:var(--ink);
+  background:var(--plate);border-radius:999px;padding:4px 12px;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.stn .fox{animation:none}}

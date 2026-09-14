@@ -15,6 +15,12 @@
       ['AR','Көбейту мен бөлу','ar/','live','2–5'],
     ],
   };
+  /* A page without <meta name="viewport"> is laid out at 980px and then shrunk on a phone — everything
+     turns microscopic. core.js loads in <head>, so adding it here fixes any page that forgot it. */
+  (function viewportGuard(){ try{ if(document.querySelector('meta[name="viewport"]')) return;
+    const m=document.createElement('meta'); m.name='viewport'; m.content='width=device-width,initial-scale=1';
+    (document.head||document.documentElement).appendChild(m); }catch(e){} })();
+
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
   const ls={get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
   const enc=encodeURIComponent;

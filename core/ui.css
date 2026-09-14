@@ -2,6 +2,7 @@
    v2: chunky pressable buttons, one primary action at the bottom of a question, feedback sheet,
    bigger map stations, quieter landscape. Every colour is a token so light/dark both work. */
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;900&display=swap');
+@import url('map.css?v=6');
 :root{
   --bg:#F6F4EE; --card:#FFFFFF; --panel:#FFFFFF; --ink:#1B2733; --muted:#5E6B7A; --line:#DDE1E6;
   --accent:#0E7C9B; --accent-d:#0A5E76; --accent-ink:#FFFFFF; --accent-soft:#E3F1F6;
@@ -170,44 +171,8 @@ table.t3{border-collapse:collapse;width:100%;font-weight:800;font-variant-numeri
 table.t3 th,table.t3 td{border:1px solid var(--line);padding:8px 10px;text-align:center;background:var(--card)}
 table.t3 th{background:var(--accent-soft);color:var(--accent);font-size:.85rem}
 
-/* ── route map (core/map.js) ── */
-.mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
-.mapinner{position:relative;width:100%}
-.maproad{display:block;width:100%;height:auto}
-.stn{position:absolute;width:0;height:0}
-.stn .dot{position:absolute;left:-36px;top:-36px;width:72px;height:72px;border-radius:50%;
-  background:var(--card);border:0;box-shadow:0 6px 0 var(--line),0 10px 16px -8px rgba(10,25,40,.5);
-  display:grid;place-items:center;color:var(--muted);cursor:default;transition:transform .07s,box-shadow .07s}
-.stn .dot svg{width:38px;height:38px;overflow:visible}
-.stn .num{font-family:var(--disp);font-weight:600;font-size:1.4rem;color:inherit}
-.stn[data-stn] .dot{cursor:pointer}
-.stn[data-stn] .dot:active{transform:translateY(6px);box-shadow:0 0 0 var(--line),0 4px 8px -6px rgba(10,25,40,.5)}
-.stn.passed .dot{background:var(--good);color:#fff;box-shadow:0 6px 0 var(--good-d),0 10px 16px -8px rgba(10,25,40,.5)}
-.stn.passed .dot:active{box-shadow:0 0 0 var(--good-d)}
-.stn.cur .dot{left:-42px;top:-42px;width:84px;height:84px;background:var(--rc);color:#fff;
-  box-shadow:0 7px 0 var(--rc-d),0 12px 20px -10px rgba(10,25,40,.55)}
-.stn.cur .dot svg{width:44px;height:44px}
-.stn.cur .dot:active{box-shadow:0 0 0 var(--rc-d)}
-.stn.locked{opacity:.75}
-.stn.locked .dot{background:var(--fig);color:var(--muted);box-shadow:0 6px 0 var(--line)}
-.stn .stars{position:absolute;left:50%;transform:translateX(-50%);top:38px;font-size:.78rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-shadow:0 1px 2px rgba(255,255,255,.6)}
-.stn.cur .stars{top:46px}
-.stn .fox{position:absolute;left:34px;top:-6px;font-size:28px;line-height:1;animation:bob 2.6s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(10,25,40,.35))}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-/* bubble: only one is open at a time */
-.stn .bub{position:absolute;left:50%;bottom:52px;transform:translateX(-50%) scale(.9);transform-origin:bottom center;
-  width:max-content;max-width:min(78vw,250px);background:var(--card);border-radius:16px;padding:12px 14px;
-  box-shadow:0 6px 0 var(--line),0 14px 26px -12px rgba(10,25,40,.5);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s;z-index:5}
-.stn.cur .bub{bottom:62px}
-.stn.open .bub{opacity:1;transform:translateX(-50%) scale(1);pointer-events:auto}
-.stn .bub::after{content:"";position:absolute;left:50%;bottom:-9px;width:18px;height:18px;background:var(--card);transform:translateX(-50%) rotate(45deg);border-radius:3px}
-.stn .bub b{display:block;font-family:var(--disp);font-weight:600;font-size:1.02rem;line-height:1.2;color:var(--ink)}
-.stn .bub i{display:block;font-style:normal;font-size:.76rem;font-weight:700;color:var(--muted);margin:2px 0 9px}
-.stn .bub .btn{width:100%;min-height:46px;font-size:.95rem;padding:10px 14px;border-radius:13px}
-.unit{position:absolute;left:0;right:0;transform:translateY(-50%);display:flex;align-items:center;gap:10px;padding:0 16px;pointer-events:none}
-.unit::before,.unit::after{content:"";flex:1;height:2px;background:var(--plate);border-radius:2px}
-.unit span{font-family:var(--disp);font-weight:600;font-size:.8rem;letter-spacing:.04em;color:var(--ink);
-  background:var(--plate);border-radius:999px;padding:4px 12px;white-space:nowrap}
+/* ── route map ── the map's own styles live in core/map.css (imported at the top of this file),
+   so a page with its own stylesheet (pv/) can load just the map without the rules above. */
 .maphint{font-size:.8rem;color:var(--muted);font-weight:600;margin:8px 2px 0;text-align:center}
 
 /* ── stats strip, cards, misc ── */
