@@ -67,6 +67,7 @@ const mapWrap=document.createElement('style'); mapWrap.textContent=
   #pvmap .strip b{display:block;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.2rem;color:var(--ink)}
   #pvmap .strip span{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   #pvmap .hint{font-size:.8rem;color:var(--muted);font-weight:600;text-align:center;margin:8px 0 0}
+  #pvmap .hint a{color:var(--pv,#3D6DB5);text-decoration:none}
   /* PV's own level screens keep their widgets, but sit on the same 560px measure as every other route,
      instead of stretching across the whole window now that the sidebar is gone. */
   #main>*{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto}
@@ -100,16 +101,15 @@ function showMap(){
     <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${state.stars||0}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
     ${fresh?`<button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">🎯 Диагностика — қай жерден бастау керек?</button>`:''}
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
-    <p class="hint">Станцияны басып көр.</p></div>`;
+    <p class="hint">Станцияны басып көр · <a href="../">барлық бағыттар</a></p></div>`;
   showBack(false); Core.mapScroll();
   Core.mapBind(id=>{ const idx=parseInt(id.slice(3),10)-1; const e=LEVEL_ORDER[idx]; if(!e) return;
     selectLevel(e.moduleId,e.levelId); });
   const dg=document.getElementById('pvdiag'); if(dg) dg.onclick=()=>{ showBack(true); startDiagnostic(); };
 }
-/* Off the map, PV shows its own level screens, which carry no header — so the floating strip
-   (name · ҚАЗ/РУС · all routes · exit) appears there and hides on the map, where Core.topbar has it. */
-const showBack=on=>{ const b=document.getElementById('pvback'); if(b) b.style.display=on?'block':'none';
-  const s=document.getElementById('pvbar'); if(s) s.style.display=on?'block':'none'; };
+/* Off the map, PV shows its own level screens. They carry only «← Карта», the same way the other
+   routes' question screens carry only ✕ — name, language and exit live on the map's Core.topbar. */
+const showBack=on=>{ const b=document.getElementById('pvback'); if(b) b.style.display=on?'block':'none'; };
 /* whichever way a level is entered (map, sidebar, «next level» after a result), offer the way back */
 const _sl=selectLevel; selectLevel=function(){ showBack(true); return _sl.apply(this,arguments); };
 /* PV renders its own welcome screen whenever no level is picked — show the map there instead */
@@ -122,10 +122,5 @@ loadScript('../core/map.js?v=6').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);
-  const bar=document.createElement('div'); bar.id='pvbar'; bar.style.cssText='display:none;position:fixed;right:10px;top:8px;z-index:999;font:700 12px Nunito,system-ui,sans-serif;background:#fff;border:1px solid #DCE0E4;border-radius:999px;padding:5px 10px;color:#1B2733;box-shadow:0 2px 6px rgba(0,0,0,.08)';
-  const L=Core.lang(); const link=(c,t)=>L===c?`<b style="color:#0E7C9B">${t}</b>`:`<a href="#" data-l="${c}" style="color:#5E6B7A;text-decoration:none">${t}</a>`;
-  bar.innerHTML=`${Core.esc(Core.student.name)} · ${link('kk','ҚАЗ')} · ${link('ru','РУС')} · <a href="../" style="color:#0E7C9B;text-decoration:none">барлық бағыттар</a> · <a href="#" id="pvout" style="color:#5E6B7A;text-decoration:none">шығу</a>`;
-  document.body.appendChild(bar); document.getElementById('pvout').onclick=e=>{ e.preventDefault(); Core.logout(); };
-  bar.querySelectorAll('[data-l]').forEach(a=>a.onclick=e=>{ e.preventDefault(); Core.setLang(a.dataset.l); });
   state.module=null; state.level=null; renderSidebar(); showMap(); });
 })();
