@@ -194,10 +194,11 @@ function checkGuide(){
 function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,stage:PR.stId}); nextHint(); }
 
 /* ── diagnostic ──
-   placement:'climb' (opt-in per route) — probe the EASIEST stage first and climb 1,2,4,8… stages per
-   success, then binary-search the bracket. Without the flag it stays a plain binary search, so WP/FR/PV
-   are unchanged. Why: binary search opens on the middle stage, ~50% likely to be failed by design. On a
-   long route that puts 3-digit column multiplication in front of a child who has never multiplied. */
+   placement:'climb' (opt-in per route) — probe the EASIEST stage first and climb 2,4,8,16… stages per
+   success (step=step*2+1, so the pupil moves step+1 stages), then binary-search the bracket. Without the
+   flag it stays a plain binary search, so WP/FR/PV are unchanged. Why: binary search opens on the middle
+   stage, ~50% likely to be failed by design — on AR's 41 stages that is the 8/9 division facts (AR-21)
+   as question one, for a child who has never multiplied. See ROUTE_CONVENTION.md §10. */
 function startDiag(){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
   DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),
       climb:CFG.placement==='climb',step:0,bracketed:false}; nextDiag(); }
