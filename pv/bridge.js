@@ -97,9 +97,10 @@ const _sl=selectLevel; selectLevel=function(){ showBack(true); return _sl.apply(
 /* PV renders its own welcome screen whenever no level is picked — show the map there instead */
 const _rm=renderMain; renderMain=function(){ if(R&&!state.level){ showMap(); return; } return _rm.apply(this,arguments); };
 
-/* boot: login → load → re-render */
+/* boot: pull in the map component (pv/index.html only loads core.js), then login → load → re-render */
+const loadScript=src=>new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
 host.style.display='block';
-Core.start('PV').then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
+loadScript('../core/map.js?v=6').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; back.style.display='none'; renderSidebar(); showMap(); };
   document.body.appendChild(back);
