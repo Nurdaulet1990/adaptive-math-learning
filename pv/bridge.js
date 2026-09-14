@@ -67,6 +67,11 @@ const mapWrap=document.createElement('style'); mapWrap.textContent=
   #pvmap .strip b{display:block;font-family:Fredoka,system-ui,sans-serif;font-weight:600;font-size:1.2rem;color:var(--ink)}
   #pvmap .strip span{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
   #pvmap .hint{font-size:.8rem;color:var(--muted);font-weight:600;text-align:center;margin:8px 0 0}
+  /* PV's own level screens keep their widgets, but sit on the same 560px measure as every other route,
+     instead of stretching across the whole window now that the sidebar is gone. */
+  #main>*{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto}
+  /* narrow screens: keep the header text clear of the fixed «← Карта» button */
+  @media (max-width:660px){ #main>.header{padding-left:96px} }
   #pvback{position:fixed;left:10px;top:8px;z-index:999;font:700 13px Nunito,system-ui,sans-serif;background:var(--card);
     border:1px solid var(--line);border-radius:999px;padding:7px 13px;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08)}`;
 document.head.appendChild(mapWrap);
