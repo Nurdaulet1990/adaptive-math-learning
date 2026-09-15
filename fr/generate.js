@@ -31,7 +31,19 @@ const GENERATORS={
     if(sameNum){ n1=n2=rnd(1,4); d1=rnd(n1+1,9); do{ d2=rnd(n1+1,12); }while(d2===d1); }
     else { d1=d2=lvl===1?rnd(3,8):range(p.d,[3,12]); n1=rnd(1,d1-1); n2=rnd(1,d1-1); if(lvl===1&&n1===n2) n2=n1===1?2:n1-1; }
     const v1=n1/d1,v2=n2/d2; const ans=v1>v2?'>':v1<v2?'<':'=';
-    const q={stem:'Бос орынға тиісті белгіні таңда.', exprHTML:`${fracHTML(n1,d1)}<span class="q">?</span>${fracHTML(n2,d2)}`, kind:'choice', choices:['>','<','='], ans,
+    /* At level 3 the two fractions go INTO the stem, and that one line is the
+       whole fix.  core/runner.js's startTest draws ten items and dedupes them by
+       stem+ans; this station's variation lives in exprHTML, which that dedupe
+       never sees.  With one fixed sentence and an answer out of {>,<,=} the
+       station offers three distinct items — under startTest's floor of six — so
+       it refuses to open the level test and says only "not enough questions".
+       finishTest is the only place a stage is marked 'passed', so a pupil whose
+       current station is this one could not leave it, however long they
+       practised.  The diagnostic places by index, so anyone put at FR-03 or
+       later never met this; a beginner met it at the second station.
+       The numbers belong in the stem anyway: level 3 is the text-only level,
+       and a screen reader cannot see exprHTML either. */
+    const q={stem:lvl===3?`${n1}/${d1} және ${n2}/${d2} — салыстыр. Тиісті белгіні таңда.`:'Бос орынға тиісті белгіні таңда.', exprHTML:`${fracHTML(n1,d1)}<span class="q">?</span>${fracHTML(n2,d2)}`, kind:'choice', choices:['>','<','='], ans,
       h1:sameNum?'Алымдары бірдей: бөлімі кіші болса — бөлік үлкен, демек бөлшек үлкен.':'Бөлімдері бірдей: алымы үлкені — үлкен бөлшек.',
       h2:sameNum?`Бөлімдерін салыстыр: ${d1} және ${d2}`:`Алымдарын салыстыр: ${n1} және ${n2}`,
       expl:sameNum?`Бөлімі ${d1<d2?d1:d2} кіші → бөлігі үлкен: ${n1}/${d1} ${ans} ${n2}/${d2}.`:`Бөлімдері бірдей (${d1}). ${n1} ${ans} ${n2}, демек ${n1}/${d1} ${ans} ${n2}/${d2}.`};
