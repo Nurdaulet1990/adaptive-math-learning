@@ -85,14 +85,13 @@ core_add(p,lvl){
     /* level 1 carries NO sentence: the balance itself is the question (§ MAP "Деңгей 1"). */
     const A=a+x;
     if(f==='a+x'||f==='x+a'){ q.fig=BAL({b:a,c:1},{b:A}); q.hfig=BAL({b:a,c:1},{b:A},a); q.h1=H_BAL; }
-    /* Subtraction keeps the bar it always had. A pan cannot take anything away: TE-04 would
-       mean tipping an unknown amount out of the cup, and TE-03 only fits after it has been
-       rewritten as an addition — which is the SOLUTION, not the question. So the question is
-       the countable bar with the two marks (lid = the whole is known, empty label = it is not),
-       and the balance comes back as the hint, where the rewriting belongs. */
-    else if(f==='a-x'){ q.fig={type:'ubar',segs:[a,'?'],total:A}; q.hfig=BAL({b:A},{b:a,c:1},a);
+    /* Subtraction follows the signed-off grammar (see FIGS.lid / FIGS.torn). A pan cannot take
+       anything away, so the balance is ruled out here outright — not even as a hint. The whole
+       known with a part hidden is the lid; the whole itself unknown is the torn strip carrying
+       the empty label. Two failures, two marks, never merged. */
+    else if(f==='a-x'){ q.fig={type:'lid',total:A,open:a};
       q.h1='Бүтін белгілі. Жабық бөлікті тап.'; }
-    else { q.fig={type:'ubar',segs:[a,x],total:'?'};
+    else { q.fig={type:'torn',gone:a,left:x};
       q.h1='Екі бөлікті бірге сана — бүтін сол.'; }
     q.stem=ASK;
     Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a]));

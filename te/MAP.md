@@ -47,18 +47,30 @@ remove an unknown amount from one.
 |---|---|---|---|
 | TE-01 | `5 + x = 12` | `bal` — 5 blocks + cup ǀ 12 blocks | |
 | TE-02 | `x + 5 = 12` | same drawing as TE-01 | a pan has no left and right; at level 1 the two forms *are* one puzzle. They part company at level 3, where they are written differently. |
-| TE-03 | `12 − x = 5` | `ubar` — 5 squares + a lidded strip «?», brace reads 12 | a pan cannot take anything away |
-| TE-04 | `x − 5 = 7` | `ubar` — 5 + 7 squares, brace reads «?» | the whole is the unknown → empty label |
+| TE-03 | `12 − x = 5` | `lid` — 12 cells, 5 open with dots, the rest under a lid marked x, the whole on the bracket above | a pan cannot take anything away |
+| TE-04 | `x − 5 = 7` | `torn` — one unmarked strip with the empty label inside, and the same strip torn into 5 ǀ 7 below | nothing is hidden here, so a lid would lie |
 | TE-05 | `3 · x = 12` | `bal` — 3 cups ǀ 12 blocks | the one multiplicative core a pan can hold |
 | TE-06 | `x · 4 = 12` | `grp` — 3 boxes of 4, «?» on the bracket that counts them | the unknown *is* the number of cups → unplaceable |
 | TE-07 | `12 : x = 4` | same as TE-06 | same unknown, same picture |
 | TE-08 | `x : 3 = 4` | `grp` — 3 boxes of 4, brace below reads «?» | the unknown is the whole → the empty-label mark (`?` on the brace, not in a cell) |
 
-**The two subtractive cores keep the bar.** A balance shows a *solved* state, not an act of
-taking away: TE-04 would mean tipping an unknown amount out of the cup, and TE-03 fits on a pan
-only after it has been rewritten as an addition — which is the solution, not the question. So
-the question is the countable bar carrying the two marks (a lid = the whole is known, an empty
-label = it is not), and for TE-03 the balance comes back as `hfig`, where that rewriting belongs.
+**The two subtractive cores follow their own signed-off grammar** (《减法方程画法》, owner
+sign-off 2026-09-20; the balance is on that document's ruled-out list, because a pan shows a
+settled state and can never show an act of taking away). The two forms fail differently — TE-03
+fails at working backwards, TE-04 fails at "I see a minus, so I subtract" — so they get two
+different marks, and the marks are deliberately not merged:
+
+- **lid** (TE-03, whole known, a part hidden): the child cannot lift it, which is the point —
+  the answer has to come from the other sentence in the family. The lid overhangs the cells it
+  covers (flush, it reads as blacked-out cells), carries a knob, and never takes a colour that
+  means a quantity: `var(--muted)` is this route's "an object is hiding something" colour.
+- **torn strip** (TE-04, whole unknown): nothing is hidden, so a lid would be a lie. The top
+  strip carries the empty label *inside* it and — the load-bearing rule — **no cells, no dots, no
+  number**: it gives a length, never a count. The pieces below are the same strip torn in two,
+  and their jags must visibly interlock, since that interlock is the entire argument that the
+  two pieces were once that one strip. Taken-away left, left-over right, in the reading order of
+  `x − 3 = 6`. Never reversed.
+
 Addition and multiplication are the other way round: there the pan *is* the natural statement.
 
 The hint for a balance item (`hfig`, hint step 2) is the same balance with the blocks that

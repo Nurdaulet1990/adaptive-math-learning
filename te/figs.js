@@ -1,6 +1,7 @@
 /* te/figs.js — the drawings core/figs.js cannot do:
      bal  — a two-pan balance (level 1 of the core stages: no words at all)
-     ubar — the part-part-whole bar in countable unit squares (level 1 of the subtractive cores)
+     lid  — «8 − x = 3»: the whole known, one part under a lid (level 1 of TE-03)
+     torn — «x − 3 = 6»: one unmarked strip, and the same strip torn in two (level 1 of TE-04)
      grp  — equal groups with the count asked (level 1 where a balance cannot hold the unknown)
      wrap — a core bar with one outer step
    Everything else (bar, bar_equal) comes from core/figs.js — see MAP.md. */
@@ -12,7 +13,7 @@ const FIGS={
        b = solid blocks (known)   c = sealed cups (the unknown, drawn with «?»)
        cross = pair off this many blocks per pan — the hint picture
      A pan may hold only known blocks and a KNOWN number of whole cups, and nothing may be
-     taken off it. That rule is why the subtractive cores and TE-06/TE-07 use ubar and grp
+     taken off it. That rule is why the subtractive cores use lid/torn and TE-06/TE-07 use grp
      instead — see MAP.md. */
   bal(f){
     const W=340, H=178, U=18, GAP=4, PER=5;
@@ -43,31 +44,64 @@ const FIGS={
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
   },
 
-  /* {type:'ubar', segs:[n|'?', …], total} — the part-part-whole bar in COUNTABLE unit squares,
-     the same blocks the balance uses. A segment given as '?' is drawn as a lidded strip.
-     `total` on the brace: a number = the whole is known (the lid mark), '?' = the whole itself
-     is the unknown (the empty label). Level-1 form of `bar`; level 2 keeps the proportional one. */
-  ubar(f){
-    const U=18, GAP=4, PER=12, y0=26;
-    const cells=[];
-    (f.segs||[f.a,f.b]).forEach((n,si)=>{ if(n==='?') cells.push('?'); else for(let i=0;i<n;i++) cells.push(si?'b':'a'); });
-    const cols=Math.min(cells.length,PER), rows=Math.ceil(cells.length/PER);
-    /* width first, then centre: a four-square bar left-aligned in a 300-wide box looks like a
-       mistake next to the balance, which fills its box. */
-    const contentW=(cells.indexOf('?')>=0?(cols-1)*(U+GAP)+U*3:cols*(U+GAP)-GAP);
-    const W=Math.max(300,contentW+40), x0=(W-contentW)/2;
+  /* Subtraction, from the signed-off visual grammar (《减法方程画法》, 2026-09-20).
+     Two kinds of not-knowing, two marks, and they are deliberately NOT merged: the two forms
+     fail differently, so the mark has to tell the child which move to make.
+
+     {type:'lid', total, open} — «8 − x = 3». The whole is known and sits on the bracket above;
+     part of it is under an opaque lid the child cannot lift, which is exactly why the answer has
+     to come from the other sentence in the family. The lid overhangs the cells it covers — flush,
+     it reads as "blacked-out cells" — carries a knob (a lid you could lift), and never takes a
+     colour that means a quantity, because slate is this course's colour for "an object hiding
+     something". Dots and cells stay countable: the open part is read, not measured. */
+  lid(f){
+    const W=340, CH=44, total=f.total, open=f.open, hid=total-open;
+    const CW=Math.min(30,(W-56)/total), BW=total*CW, x0=(W-BW)/2, yC=56, yB=24;
+    const R=x0+BW; let inner='';
+    /* the bracket: the whole, known, above everything */
+    inner+=`<path d="M${x0},${yB+6} V${yB-8} H${x0+BW/2-15} M${x0+BW/2+15},${yB-8} H${R} V${yB+6}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`
+      +`<text x="${x0+BW/2}" y="${yB-1}" text-anchor="middle" fill="var(--accent)" font-size="19">${ESC(total)}</text>`;
+    inner+=`<rect x="${x0}" y="${yC}" width="${BW}" height="${CH}" rx="7" fill="var(--card)" stroke="var(--stroke)" stroke-width="2.5"/>`;
+    for(let i=1;i<total;i++) inner+=`<line x1="${x0+i*CW}" y1="${yC}" x2="${x0+i*CW}" y2="${yC+CH}" stroke="var(--line)" stroke-width="1.5"/>`;
+    for(let i=hid;i<total;i++) inner+=`<circle cx="${x0+i*CW+CW/2}" cy="${yC+CH/2}" r="${Math.min(10,CW/2-3)}" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.2"/>`;
+    const lx=x0-6, lw=hid*CW+9, ly=yC-8, lh=CH+16;   /* 6 out, 3 in: a flush lid reads as blacked-out cells, but a deep overhang clips the first open dot */
+    inner+=`<rect x="${lx+8}" y="${ly+lh}" width="${lw-16}" height="5" rx="2.5" fill="var(--ink)" opacity="0.16"/>`
+      +`<rect x="${lx}" y="${ly}" width="${lw}" height="${lh}" rx="9" fill="var(--muted)"/>`
+      +`<rect x="${lx}" y="${ly}" width="${lw}" height="9" rx="4.5" fill="#fff" opacity="0.28"/>`
+      +`<rect x="${lx+lw/2-15}" y="${ly-9}" width="30" height="10" rx="5" fill="var(--muted)"/>`
+      +`<text x="${lx+lw/2}" y="${ly+lh/2+11}" text-anchor="middle" fill="var(--card)" font-size="30">x</text>`;
+    const H=yC+CH+22;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
+  },
+
+  /* {type:'torn', gone, left} — «x − 3 = 6». Here nothing is hidden: everything is on the table
+     and only the whole has no name yet, so a lid would be a lie. The top strip carries the empty
+     label INSIDE it and — the load-bearing rule — no cells, no dots, no number: it gives a length,
+     never a count. Underneath, the same strip torn in two, the jags visibly interlocking, which is
+     the whole argument that these two pieces were once that one strip. Taken-away on the left,
+     left-over on the right, in the reading order of x − 3 = 6. Never reversed. */
+  torn(f){
+    const W=340, CH=52, JAG=9, GAP=9, gone=f.gone, left=f.left, total=gone+left;
+    const CW=Math.min(30,(W-56-GAP)/total), BW=total*CW, x0=(W-BW-GAP)/2;
+    const yT=18, TH=42, yB=yT+TH+26, xm=x0+gone*CW, xr=xm+GAP, R=xr+left*CW;
+    const q=[0,1,2,3,4].map(i=>yB+i*(CH/4));
     let inner='';
-    cells.forEach((c,i)=>{
-      const x=x0+(i%PER)*(U+GAP), y=y0+Math.floor(i/PER)*(U+GAP);
-      if(c==='?') inner+=`<rect x="${x}" y="${y+4}" width="${U*3}" height="${U-4}" rx="3" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.5"/>`
-        +`<rect x="${x-2}" y="${y-1}" width="${U*3+4}" height="6" rx="2" fill="var(--ink)"/>`
-        +`<text x="${x+U*1.5}" y="${y+18}" text-anchor="middle" fill="var(--ink)" font-size="17">?</text>`;
-      else inner+=`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="${c==='a'?'var(--seg1)':'var(--seg2)'}" stroke="var(--stroke)" stroke-width="1.5"/>`;
-    });
-    const R=x0+contentW, bot=y0+rows*(U+GAP)-GAP;
-    inner+=`<path d="M${x0},${bot+8} v6 h${contentW} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
-      +`<text x="${(x0+R)/2}" y="${bot+38}" text-anchor="middle" fill="var(--ink)" font-size="21">${ESC(f.total)}</text>`;
-    const H=bot+48;
+    /* the whole: one unbroken strip, unmarked, with the empty label inside it */
+    inner+=`<rect x="${x0}" y="${yT}" width="${BW+GAP}" height="${TH}" rx="6" fill="var(--accent-soft)" stroke="var(--stroke)" stroke-width="2.5"/>`
+      +`<rect x="${x0+(BW+GAP)/2-25}" y="${yT+TH/2-16}" width="50" height="32" rx="9" fill="var(--card)" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="6 4"/>`
+      +`<text x="${x0+(BW+GAP)/2}" y="${yT+TH/2+8}" text-anchor="middle" fill="var(--accent)" font-size="21">x</text>`;
+    inner+=`<line x1="${xm+JAG/2}" y1="${yT+TH}" x2="${xm+JAG/2}" y2="${yB-8}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    /* the two pieces — the teeth of one are the gaps of the other */
+    inner+=`<path d="M${x0},${q[0]} H${xm} L${xm+JAG},${q[1]} L${xm},${q[2]} L${xm+JAG},${q[3]} L${xm},${q[4]} H${x0} Z" fill="var(--card)" stroke="var(--stroke)" stroke-width="2.5" stroke-linejoin="round"/>`
+      +`<path d="M${xr},${q[0]} H${R} V${q[4]} H${xr} L${xr+JAG},${q[3]} L${xr},${q[2]} L${xr+JAG},${q[1]} Z" fill="var(--card)" stroke="var(--stroke)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    const dot=(cx)=>`<circle cx="${cx}" cy="${yB+CH/2}" r="${Math.min(10,CW/2-3)}" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.2"/>`;
+    for(let i=1;i<gone;i++) inner+=`<line x1="${x0+i*CW}" y1="${q[0]}" x2="${x0+i*CW}" y2="${q[4]}" stroke="var(--line)" stroke-width="1.5"/>`;
+    for(let i=0;i<gone;i++) inner+=dot(x0+i*CW+CW/2);
+    for(let i=1;i<left;i++) inner+=`<line x1="${xr+i*CW}" y1="${q[0]}" x2="${xr+i*CW}" y2="${q[4]}" stroke="var(--line)" stroke-width="1.5"/>`;
+    for(let i=0;i<left;i++) inner+=dot(xr+i*CW+CW/2);
+    inner+=`<text x="${x0+gone*CW/2}" y="${q[4]+26}" text-anchor="middle" fill="var(--ink)" font-size="20">${gone}</text>`
+      +`<text x="${xr+left*CW/2}" y="${q[4]+26}" text-anchor="middle" fill="var(--ink)" font-size="20">${left}</text>`;
+    const H=q[4]+36;
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
   },
 
