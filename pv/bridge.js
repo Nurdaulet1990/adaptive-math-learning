@@ -40,7 +40,10 @@ const _fb=showFeedback; showFeedback=function(correct,hint){
   return _fb.apply(this,arguments); };
 const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.level, score=state.score, n=state.questionsPerLevel; const r=_lc.apply(this,arguments);
   if(R&&lv){ const mastery=COMP_LVL.has(lv)?4:8; Core.event({ev:'test',stage:stageId(lv),ok:score,n,pass:score>=mastery}); push(); } return r; };
-const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const r=_fp.apply(this,arguments);
+/* the re-diagnostic may only move a pupil forward — PV's own placement is free to land lower,
+   so the ceiling is restored here. Same rule as core/runner.js and wp/diag_test.js. */
+const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const before=state.unlockedUpTo||0; const r=_fp.apply(this,arguments);
+  if((state.unlockedUpTo||0)<before) state.unlockedUpTo=before;
   if(R){ const results={}; hist.forEach(h=>{ results[stageId(LEVEL_ORDER[h.idx].levelId)]=h.correct?'pass':'fail'; }); const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1); R.diag={t:Date.now(),placed:'PV-'+String(cur+1).padStart(2,'0'),results,n:hist.length}; Core.event({ev:'diag',placed:R.diag.placed,results}); push(); } return r; };
 
 /* ── the platform map as PV's home screen ──────────────────────────────────
@@ -99,7 +102,7 @@ function showMap(){
   const fresh=done===0&&cur===0;
   main.innerHTML=`<div id="pvmap">${Core.topbar('Орын мәні · 1–4 сынып')}
     <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${state.stars||0}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
-    ${fresh?`<button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">🎯 Диагностика — қай жерден бастау керек?</button>`:''}
+    <button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">${fresh?'🎯 Диагностика — қай жерден бастау керек?':'🎯 Қайта диагностика — бәрі тым оңай ма?'}</button>
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
     <p class="hint">Станцияны басып көр · <a href="../">барлық бағыттар</a></p></div>`;
   showBack(false); Core.mapScroll();

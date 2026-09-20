@@ -1,10 +1,19 @@
 /* wp/diag_test.js — diagnostic (binary search over stages, lvl-3 items) and the 10-item stage test. Owner: Nurdaulet. */
 'use strict';
 let DG=null;
-function startDiag(){
+function startDiag(again){
   const ids=STAGES.map(s=>s[0]).filter(stageL3);
-  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now()};
+  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again};
   nextDiag();
+}
+/* A pupil who rushed the first diagnostic is parked below what they can do. The re-diagnostic is
+   the way out, and it can only move them FORWARD (see finishDiag) — a second bad run must not cost
+   a child stages they really passed. Same rule in core/runner.js; PV guards finishPlacement. */
+function askRediag(){
+  app().innerHTML=topbar()+`<div class="card"><h2>Қайта диагностика</h2>
+    <p>Тағы 8–12 есеп. Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
+    <p class="note">Артқа шегінбейсің: нәтиже нашар болса да, қазіргі станцияң мен жұлдыздарың сол күйінде қалады.</p>
+    <div class="row"><button class="btn" onclick="startDiag(true)">Бастау</button><button class="btn plain" onclick="showHome()">Артқа</button></div></div>`;
 }
 function nextDiag(){
   if(DG.n>=12 || DG.lo>DG.hi || Date.now()-DG.start>15*60000){ return finishDiag(); }
@@ -22,13 +31,16 @@ function nextDiag(){
 }
 function finishDiag(){
   const ids=DG.ids; let place=Math.min(DG.lo, ids.length-1);
-  const placed=ids[place]||ids[ids.length-1];
-  const all=STAGES.map(s=>s[0]); const pi=all.indexOf(placed);
+  let placed=ids[place]||ids[ids.length-1];
+  const all=STAGES.map(s=>s[0]); const was=DG.again?all.indexOf(currentStage()):-1; let pi=all.indexOf(placed);
+  const held=DG.again&&was>pi;            /* re-diagnostic: never move a pupil backwards */
+  if(held){ pi=was; placed=all[pi]; }
   all.forEach((id,i)=>{ R.stages[id].status = i<pi?'passed':(i===pi?'current':'locked'); });
-  R.diag={t:Date.now(),placed,results:DG.results,n:DG.n};
-  log({ev:'diag',placed,results:DG.results});
+  R.diag={t:Date.now(),placed,results:DG.results,n:DG.n,again:DG.again||undefined};
+  log({ev:'diag',placed,results:DG.results,again:DG.again||undefined,held:held||undefined});
   persist();
   app().innerHTML=topbar()+`<div class="card"><h2>Диагностика аяқталды</h2><p>Сен <b>${pi+1}-кезеңнен</b> бастайсың: <b>${esc(stageName(placed))}</b>.</p>
+  ${held?`<p class="note">Бұл жолы жоғарырақ шықпады — станцияң өзгерген жоқ.</p>`:''}
   <p class="note">${Object.keys(DG.results).map(k=>`${k}: ${DG.results[k]==='pass'?'✓':'✗'}`).join(' · ')}</p><button class="btn wide" onclick="showHome()">Жалғастыру</button></div>`;
 }
 

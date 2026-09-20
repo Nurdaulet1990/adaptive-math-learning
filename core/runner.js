@@ -52,11 +52,13 @@ function showHome(){
     html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
       <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
       <div class="row"><button class="btn" data-pr="${cur}">Жаттығу</button><button class="btn gold" data-test="${cur}">Кезең тесті (10 есеп)</button></div>
-      <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p></div>`;
+      <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p>
+      <p class="note" style="margin-top:10px"><button class="btn plain" id="b_rediag">Бәрі тым оңай ма? Қайта диагностика</button></p></div>`;
   }
   html+=`<div class="card"><div class="stat"><div><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div><div><b>${R.nAns||0}</b><span>есеп</span></div><div><b>${acc()}%</b><span>дұрыс</span></div></div><p class="note" style="margin:8px 0 0"><a href="../">← Барлық бағыттар</a></p></div>`;
   app().innerHTML=html; persist(); if(Core.mapScroll) Core.mapScroll();
-  const bd=$('b_diag'); if(bd) bd.onclick=startDiag;
+  const bd=$('b_diag'); if(bd) bd.onclick=()=>startDiag();
+  const br=$('b_rediag'); if(br) br.onclick=askRediag;
   app().querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>startPractice(b.dataset.pr));
   app().querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>startTest(b.dataset.test));
   if(Core.mapBind) Core.mapBind(id=>startPractice(id));
@@ -199,9 +201,20 @@ function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,st
    flag it stays a plain binary search, so WP/FR/PV are unchanged. Why: binary search opens on the middle
    stage, ~50% likely to be failed by design — on AR's 41 stages that is the 8/9 division facts (AR-21)
    as question one, for a child who has never multiplied. See ROUTE_CONVENTION.md §10. */
-function startDiag(){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
-  DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),
+function startDiag(again){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
+  DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),again:!!again,
       climb:CFG.placement==='climb',step:0,bracketed:false}; nextDiag(); }
+/* A pupil who rushed the first diagnostic lands far below what they can do and then grinds
+   through stages they already own. The re-diagnostic exists for that, and it can only move them
+   FORWARD (see finishDiag): a second bad run must not cost a child stages they really passed,
+   or the button becomes a trap instead of a way out. Stars already earned are never touched. */
+function askRediag(){
+  app().innerHTML=topbar()+`<div class="card"><h2>Қайта диагностика</h2>
+    <p>Тағы 8–12 есеп. Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
+    <p class="note">Артқа шегінбейсің: нәтиже нашар болса да, қазіргі станцияң мен жұлдыздарың сол күйінде қалады.</p>
+    <div class="row"><button class="btn" id="rd_go">Бастау</button><button class="btn plain" id="rd_no">Артқа</button></div></div>`;
+  $('rd_go').onclick=()=>startDiag(true); $('rd_no').onclick=showHome;
+}
 function nextDiag(){
   if(DG.n>=12||DG.lo>DG.hi||Date.now()-DG.start>15*60000) return finishDiag();
   const mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
@@ -217,10 +230,14 @@ function nextDiag(){
     onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:q.type,stem:String(q.stem).slice(0,200),ans:String(q.ans)}); nextDiag(); }});
 }
 function finishDiag(){
-  const ids=DG.ids; const placed=ids[Math.min(DG.lo,ids.length-1)]; const all=STAGES.map(s=>s[0]); const pi=all.indexOf(placed);
+  const ids=DG.ids; const all=STAGES.map(s=>s[0]); const was=DG.again?all.indexOf(currentStage()):-1;
+  let placed=ids[Math.min(DG.lo,ids.length-1)], pi=all.indexOf(placed);
+  const held=DG.again&&was>pi;               /* re-diagnostic: never move a pupil backwards */
+  if(held){ pi=was; placed=all[pi]; }
   all.forEach((id,i)=>{ R.stages[id].status=i<pi?'passed':(i===pi?'current':'locked'); });
-  R.diag={t:Date.now(),placed,results:DG.results,n:DG.n}; log({ev:'diag',placed,results:DG.results}); persist();
-  app().innerHTML=topbar()+`<div class="card"><h2>Диагностика аяқталды</h2><p>Сен <b>${pi+1}-кезеңнен</b> бастайсың: <b>${esc(stageName(placed))}</b>.</p><p class="note">${Object.keys(DG.results).map(k=>`${k}: ${DG.results[k]==='pass'?'✓':'✗'}`).join(' · ')}</p><button class="btn wide" id="homeBtn">Жалғастыру</button></div>`; $('homeBtn').onclick=showHome;
+  R.diag={t:Date.now(),placed,results:DG.results,n:DG.n,again:DG.again||undefined};
+  log({ev:'diag',placed,results:DG.results,again:DG.again||undefined,held:held||undefined}); persist();
+  app().innerHTML=topbar()+`<div class="card"><h2>Диагностика аяқталды</h2><p>Сен <b>${pi+1}-кезеңнен</b> бастайсың: <b>${esc(stageName(placed))}</b>.</p>${held?`<p class="note">Бұл жолы жоғарырақ шықпады — станцияң өзгерген жоқ.</p>`:''}<p class="note">${Object.keys(DG.results).map(k=>`${k}: ${DG.results[k]==='pass'?'✓':'✗'}`).join(' · ')}</p><button class="btn wide" id="homeBtn">Жалғастыру</button></div>`; $('homeBtn').onclick=showHome;
 }
 
 /* ── stage test ── */
