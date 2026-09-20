@@ -47,12 +47,19 @@ remove an unknown amount from one.
 |---|---|---|---|
 | TE-01 | `5 + x = 12` | `bal` — 5 blocks + cup ǀ 12 blocks | |
 | TE-02 | `x + 5 = 12` | same drawing as TE-01 | a pan has no left and right; at level 1 the two forms *are* one puzzle. They part company at level 3, where they are written differently. |
-| TE-03 | `12 − x = 5` | `bal` — 12 blocks ǀ 5 blocks + cup | TE-01 mirrored, and honestly so |
-| TE-04 | `x − 5 = 7` | `bal` — cup ǀ 7 blocks + 5 **dashed** blocks | dashed = what was taken out of the cup |
+| TE-03 | `12 − x = 5` | `ubar` — 5 squares + a lidded strip «?», brace reads 12 | a pan cannot take anything away |
+| TE-04 | `x − 5 = 7` | `ubar` — 5 + 7 squares, brace reads «?» | the whole is the unknown → empty label |
 | TE-05 | `3 · x = 12` | `bal` — 3 cups ǀ 12 blocks | the one multiplicative core a pan can hold |
 | TE-06 | `x · 4 = 12` | `grp` — 3 boxes of 4, «?» on the bracket that counts them | the unknown *is* the number of cups → unplaceable |
 | TE-07 | `12 : x = 4` | same as TE-06 | same unknown, same picture |
 | TE-08 | `x : 3 = 4` | `grp` — 3 boxes of 4, brace below reads «?» | the unknown is the whole → the empty-label mark (`?` on the brace, not in a cell) |
+
+**The two subtractive cores keep the bar.** A balance shows a *solved* state, not an act of
+taking away: TE-04 would mean tipping an unknown amount out of the cup, and TE-03 fits on a pan
+only after it has been rewritten as an addition — which is the solution, not the question. So
+the question is the countable bar carrying the two marks (a lid = the whole is known, an empty
+label = it is not), and for TE-03 the balance comes back as `hfig`, where that rewriting belongs.
+Addition and multiplication are the other way round: there the pan *is* the natural statement.
 
 The hint for a balance item (`hfig`, hint step 2) is the same balance with the blocks that
 appear on *both* pans crossed out — the physical act of taking the same amount off each side,

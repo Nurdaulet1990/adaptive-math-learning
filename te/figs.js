@@ -1,5 +1,6 @@
 /* te/figs.js — the drawings core/figs.js cannot do:
      bal  — a two-pan balance (level 1 of the core stages: no words at all)
+     ubar — the part-part-whole bar in countable unit squares (level 1 of the subtractive cores)
      grp  — equal groups with the count asked (level 1 where a balance cannot hold the unknown)
      wrap — a core bar with one outer step
    Everything else (bar, bar_equal) comes from core/figs.js — see MAP.md. */
@@ -7,24 +8,23 @@
 const ESC=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const FIGS={
 
-  /* {type:'bal', l:{b,d,c}, r:{b,d,c}, cross}
-       b = solid blocks (known)   d = dashed blocks (taken out of the cup)
-       c = sealed cups (the unknown, drawn with «?»)   cross = pair off this many blocks per pan
-     A pan may hold only known blocks and a KNOWN number of whole cups — that rule is why
-     TE-06/TE-07 use grp instead. See MAP.md. */
+  /* {type:'bal', l:{b,c}, r:{b,c}, cross}
+       b = solid blocks (known)   c = sealed cups (the unknown, drawn with «?»)
+       cross = pair off this many blocks per pan — the hint picture
+     A pan may hold only known blocks and a KNOWN number of whole cups, and nothing may be
+     taken off it. That rule is why the subtractive cores and TE-06/TE-07 use ubar and grp
+     instead — see MAP.md. */
   bal(f){
     const W=340, H=178, U=18, GAP=4, PER=5;
     const BEAM=24, PAN=132, CX=[95,245];
     const blk=(x,y,crossed)=>`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.5"/>`
       +(crossed?`<line x1="${x+3}" y1="${y+3}" x2="${x+U-3}" y2="${y+U-3}" stroke="var(--muted)" stroke-width="2"/><line x1="${x+U-3}" y1="${y+3}" x2="${x+3}" y2="${y+U-3}" stroke="var(--muted)" stroke-width="2"/>`:'');
-    const dsh=(x,y)=>`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="var(--card)" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
     const cup=(x,y)=>`<path d="M${x-2},${y+4} h${U+4} l-3,${U-4} h-${U-2} z" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.5" stroke-linejoin="round"/>`
       +`<rect x="${x-4}" y="${y-1}" width="${U+8}" height="6" rx="2" fill="var(--ink)"/>`
       +`<text x="${x+U/2}" y="${y+17}" text-anchor="middle" fill="var(--ink)" font-size="14">?</text>`;
     const pan=(cx,p,cross)=>{
       const list=[];
       for(let i=0;i<(p.b||0);i++) list.push(n=>blk(n.x,n.y,i<cross));
-      for(let i=0;i<(p.d||0);i++) list.push(n=>dsh(n.x,n.y));
       for(let i=0;i<(p.c||0);i++) list.push(n=>cup(n.x,n.y));
       const rows=[]; for(let i=0;i<list.length;i+=PER) rows.push(list.slice(i,i+PER));
       rows.reverse();                    /* full rows sit at the bottom, the short one on top */
@@ -40,6 +40,30 @@ const FIGS={
       +`<line x1="170" y1="${BEAM}" x2="170" y2="164" stroke="var(--ink)" stroke-width="4"/>`
       +`<path d="M150,172 h40 l-14,-10 h-12 z" fill="var(--ink)"/>`
       +pan(CX[0],f.l||{},f.cross||0)+pan(CX[1],f.r||{},f.cross||0);
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
+  },
+
+  /* {type:'ubar', segs:[n|'?', …], total} — the part-part-whole bar in COUNTABLE unit squares,
+     the same blocks the balance uses. A segment given as '?' is drawn as a lidded strip.
+     `total` on the brace: a number = the whole is known (the lid mark), '?' = the whole itself
+     is the unknown (the empty label). Level-1 form of `bar`; level 2 keeps the proportional one. */
+  ubar(f){
+    const U=18, GAP=4, PER=12, x0=20, y0=26;
+    const cells=[];
+    (f.segs||[f.a,f.b]).forEach((n,si)=>{ if(n==='?') cells.push('?'); else for(let i=0;i<n;i++) cells.push(si?'b':'a'); });
+    const cols=Math.min(cells.length,PER), rows=Math.ceil(cells.length/PER);
+    let inner='';
+    cells.forEach((c,i)=>{
+      const x=x0+(i%PER)*(U+GAP), y=y0+Math.floor(i/PER)*(U+GAP);
+      if(c==='?') inner+=`<rect x="${x}" y="${y+4}" width="${U*3}" height="${U-4}" rx="3" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.5"/>`
+        +`<rect x="${x-2}" y="${y-1}" width="${U*3+4}" height="6" rx="2" fill="var(--ink)"/>`
+        +`<text x="${x+U*1.5}" y="${y+17}" text-anchor="middle" fill="var(--ink)" font-size="14">?</text>`;
+      else inner+=`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="${c==='a'?'var(--seg1)':'var(--seg2)'}" stroke="var(--stroke)" stroke-width="1.5"/>`;
+    });
+    const R=x0+(cells.indexOf('?')>=0?(cols-1)*(U+GAP)+U*3:cols*(U+GAP)-GAP), bot=y0+rows*(U+GAP)-GAP;
+    inner+=`<path d="M${x0},${bot+8} v6 h${R-x0} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
+      +`<text x="${(x0+R)/2}" y="${bot+34}" text-anchor="middle" fill="var(--ink)" font-size="15">${ESC(f.total)}</text>`;
+    const W=Math.max(300,R+20), H=bot+44;
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
   },
 
