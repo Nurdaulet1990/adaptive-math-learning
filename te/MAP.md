@@ -9,6 +9,7 @@ or one core with one outer step.
 |---|---|---|
 | `index.html` | — | shell. Loads the four `core/` files, then stages → figs → icons → bank → generate. `placement:'climb'` (20 stages > the ~15 threshold, §10). |
 | `stages.js` | `STAGES` | the 20 rows, in teaching order. 7 types; the structural variant lives in `params`. |
+| `words.js` | `NAMES`, `ITEMS` | Kazakh names (nominative + locative) and items (+ emoji), **lifted verbatim from `wp/generate.js`** so the morphology is already reviewed. Loaded before `generate.js`. |
 | `figs.js` | `FIGS` | **one** type: `wrap` — a core bar in a tray with one outer step. Everything else uses `core/figs.js`. |
 | `icons.js` | `ICONS` | 20 map icons, `currentColor` only, artwork within ±12. |
 | `bank.js` | `CARDS` | one teaching card per stage. No fixed items — §5. |
@@ -41,12 +42,17 @@ never drawn, so `'?,+3'` renders no `+3`. Hence `FIGS.wrap`.
 1. **Level-3 numbers go in `stem`.** `startTest` dedupes by `stem + ans` and never sees
    `exprHTML`; a stage whose variation lives outside the stem yields too few distinct items and
    the level test refuses to open. (This is the FR-02 bug, documented in `fr/generate.js`.)
-2. **No `fig` at level 3** — the bar moves to `hfig` so it stays available as hint step 2.
-3. **The answer is never a number printed in the stem**, and never 1. Otherwise a pupil can
+2. **Level 1 is a situation, not an equation.** §6 calls level 1 concrete: a short Kazakh word
+   problem and a picture you can count (`objects_rows` for the additive cores, `array` for the
+   multiplicative ones). The equation itself first appears at level 2. The wording follows
+   `wp/generate.js`'s reviewed register — same verbs — with the unknown moved out of the result
+   and into the middle, which is what this route is about.
+3. **No `fig` at level 3** — the bar moves to `hfig` so it stays available as hint step 2.
+4. **The answer is never a number printed in the stem**, and never 1. Otherwise a pupil can
    copy a number off the screen and be right.
-4. **Distractors differ by value.** `Core.isCorrect` compares the numbers in an answer, so
+5. **Distractors differ by value.** `Core.isCorrect` compares the numbers in an answer, so
    `3 · x` and `3 : x` grade as the same thing — that is why TE-17 asks for a number.
-5. **Generators retry internally** rather than returning `null` often: a sparse generator
+6. **Generators retry internally** rather than returning `null` often: a sparse generator
    starves `startTest`'s 10-draw dedupe.
 
 ## Open, needs the owner
@@ -54,4 +60,7 @@ never drawn, so `'?,+3'` renders no `+3`. Hence `FIGS.wrap`.
 - **`--te` / `--te-d` do not exist in `core/ui.css`**, and `CFG.ROUTES` has no `TE` row.
   Both are owner actions (§0). `index.html` currently asks for `var(--te)` and will fall back
   to nothing until they exist.
-- Kazakh stage names and card text passed a native reading pass (2026-09-20). No open text work.
+- Kazakh stage names and card text passed a native reading pass (2026-09-20).
+- **The level-1 situation sentences are new and have NOT been read yet.** Eight templates, one
+  per core stage; the nouns and names inside them come from `wp/generate.js` and are fine — it
+  is the sentence frames that need checking.

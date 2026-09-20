@@ -14,7 +14,7 @@ function isCorrect(q,given){
   return nb.length>0 && na.length===nb.length && na.every((v,i)=>Math.abs(parseFloat(v)-parseFloat(nb[i]))<1e-9);
 }
 const src=f=>fs.readFileSync(path.join(__dirname,f),'utf8');
-const bundle=['stages.js','figs.js','icons.js','bank.js','generate.js'].map(src).join('\n');
+const bundle=['stages.js','words.js','figs.js','icons.js','bank.js','generate.js'].map(src).join('\n');
 const M=new Function(bundle+'\n;return{STAGES:typeof STAGES!=="undefined"?STAGES:null,GENERATORS:typeof GENERATORS!=="undefined"?GENERATORS:null,FIGS:typeof FIGS!=="undefined"?FIGS:{},ICONS:typeof ICONS!=="undefined"?ICONS:{},CARDS:typeof CARDS!=="undefined"?CARDS:{}}')();
 const S=M.STAGES, G=M.GENERATORS, FG=M.FIGS, IC=M.ICONS, CD=M.CARDS;
 if(!S||!G){ console.log('STAGES or GENERATORS missing — route would throw on load'); process.exit(1); }
@@ -63,7 +63,7 @@ console.log('6 · ≥6 distinct level-3 items out of 10 draws, 200 trials');
   }); if(!e) ok('every stage clears the ≥6 floor'); }
 
 console.log('7 · forbidden APIs');
-{ let e=0; ['stages.js','figs.js','icons.js','bank.js','generate.js'].forEach(f=>{ const t=src(f);
+{ let e=0; ['stages.js','words.js','figs.js','icons.js','bank.js','generate.js'].forEach(f=>{ const t=src(f);
     [/\balert\s*\(/,/\bconfirm\s*\(/,/\bprompt\s*\(/,/localStorage/,/sessionStorage/,/indexedDB/,/\bfetch\s*\(/]
       .forEach(rx=>{ if(rx.test(t)){ bad(f+' uses '+rx); e++; } }); });
   if(!e) ok('no alert/confirm/prompt, no storage, no fetch'); }

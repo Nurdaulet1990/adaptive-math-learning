@@ -21,6 +21,13 @@ const clean=(x,...printed)=>x>1&&!printed.includes(x);
    starves startTest: it dedupes 10 draws and refuses to open the test below 6 distinct items. */
 const tries=(fn,n)=>{ for(let i=0;i<(n||300);i++){ const r=fn(); if(r) return r; } return null; };
 const CORES=['a+x','x+a','a-x','x-a'];
+/* level 1 is the concrete level (§6): a short situation in Kazakh and a picture you can count.
+   The wording follows wp/generate.js's reviewed register — same verbs (бар / болды / алды /
+   берді / барлығы / тең бөлінді) — with the unknown moved out of the result and into the middle,
+   which is the whole point of this route. */
+const who=()=>NAMES[Math.floor(Math.random()*NAMES.length)];
+const what=()=>ITEMS[Math.floor(Math.random()*ITEMS.length)];
+const rows=(e,...r)=>({type:'objects_rows',fp:[e,...r].join(';')});
 function coreOf(kind,a,x){
   if(kind==='a+x') return {txt:`(${a} + x)`, v:a+x, span:a+x};
   if(kind==='x+a') return {txt:`(x + ${a})`, v:a+x, span:a+x};
@@ -73,7 +80,20 @@ core_add(p,lvl){
   else { const A=a+x; ans=A; fig={type:'bar',fp:`${a};${x};?`};
     stem=`x − ${a} = ${x}. x-ті тап.`; h1='Азайғыш = айырма + азайтқыш.'; expl=`x = ${x} + ${a} = ${A}.`; }
   const q={stem,ans:String(ans),h1,expl};
-  if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a])); }
+  if(lvl===1){
+    const [,L]=who(), [it,e]=what(), A=a+x;
+    if(f==='a+x'){ q.stem=`${L} ${a} ${it} бар. Тағы неше ${it} алса, барлығы ${A} ${it} болады?`;
+      q.fig=rows(e,`Бар:${a}`,`Болады:${A}`); }
+    else if(f==='x+a'){ q.stem=`${L} бірнеше ${it} бар. Тағы ${a} ${it} алғанда барлығы ${A} ${it} болды. Басында неше ${it} болды?`;
+      q.fig=rows(e,`Алды:${a}`,`Барлығы:${A}`); }
+    else if(f==='a-x'){ q.stem=`${L} ${A} ${it} болды. Бірнеше ${it} берді, ${a} ${it} қалды. Неше ${it} берді?`;
+      q.fig=rows(e,`Болды:${A}`,`Қалды:${a}`); }
+    else { q.stem=`${L} бірнеше ${it} болды. ${a} ${it} берді, ${x} ${it} қалды. Басында неше ${it} болды?`;
+      q.fig=rows(e,`Берді:${a}`,`Қалды:${x}`); }
+    q.h1='Суреттегі заттарды сана.';
+    Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a]));
+  }
+  else if(lvl===2){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a])); }
   else { q.kind='input'; q.hfig=fig; }
   return q;
 },
@@ -99,7 +119,17 @@ core_mul(p,lvl){
   else { ans=T; fig={type:'bar_equal',fp:`?;${g};${v}`};
     stem=`x : ${g} = ${v}. x-ті тап.`; h1='Белгісіз бөлінгіш = бөлінді · бөлгіш.'; expl=`x = ${v} · ${g} = ${T}.`; }
   const q={stem,ans:String(ans),h1,expl};
-  if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+g,ans*2,Math.max(1,ans-1),g+v])); }
+  if(lvl===1){
+    const [it,e]=what();
+    if(f==='a*x')      q.stem=`${g} қорапта бірдей ${it} бар, барлығы ${T} ${it}. Бір қорапта неше ${it} бар?`;
+    else if(f==='x*a') q.stem=`Әр қорапта ${v} ${it} бар, барлығы ${T} ${it}. Неше қорап?`;
+    else if(f==='a/x') q.stem=`${T} ${it} тең бөлінді, әр бөлікте ${v} ${it}. Неше бөлік болды?`;
+    else               q.stem=`Барлық ${it} ${g} қорапқа тең бөлінді, әр қорапта ${v} ${it}. Барлығы неше ${it} болды?`;
+    q.fig={type:'array',fp:`${e};${g};${v}`};
+    q.h1='Суреттегі қатарларды сана.';
+    Object.assign(q,numChoices(ans,[ans+g,ans*2,Math.max(1,ans-1),g+v]));
+  }
+  else if(lvl===2){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+g,ans*2,Math.max(1,ans-1),g+v])); }
   else { q.kind='input'; q.hfig=fig; }
   return q;
 },
