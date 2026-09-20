@@ -50,8 +50,13 @@ function addPairs(lvl){
   if(lvl===3) for(let a=10;a<=80;a+=10) for(let x=10;a+x<=100;x+=10) push(a,x);
   return out;
 }
+/* TE-05…08 are grade 2, so every draw must be a fact a grade-2 pupil owns: the table (both
+   factors ≤ 9) plus the ×10 row. Level 3 used to allow a factor up to 20 and a product up to
+   100, which put «6 · x = 96» on a seven-year-old's screen — 96 : 6 = 16 is nowhere in the
+   table, so the stage stopped testing the equation and started testing arithmetic it has no
+   business testing. Ceilings by level are about reading load, not about leaving the table. */
 function mulPairs(lvl){
-  const out=[]; const gmax=lvl===1?4:lvl===2?6:9, vmax=lvl===1?5:lvl===2?9:20, tmax=lvl===3?100:36;
+  const out=[]; const gmax=lvl===1?4:lvl===2?6:10, vmax=lvl===1?5:lvl===2?9:10, tmax=lvl===3?100:36;
   for(let g=2;g<=gmax;g++) for(let v=2;v<=vmax;v++) if(g!==v&&g*v<=tmax) out.push([g,v]);
   return out;
 }
