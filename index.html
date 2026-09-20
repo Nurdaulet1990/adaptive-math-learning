@@ -61,7 +61,7 @@
   let html=Core.topbar()+`<div class="card"><h1>Сәлем, ${esc(student.name.split(' ')[0])}!</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
-    const total=p?p.total:(code==='PV'?48:code==='WP'?13:7);
+    const total=p?p.total:(code==='PV'?48:code==='WP'?13:code==='TE'?20:7);
     const at=p&&p.diag?p.cur:-1;
     html+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
       <div class="rt-head"><span class="rt-name">${esc(name)}</span><span class="rt-go">${live?(p&&p.diag?'жалғастыру':'бастау'):'жақында'}</span></div>

@@ -13,6 +13,7 @@
       ['FR','Бөлшектер','fr/','live','3–5'],
       ['PV','Орын мәні','pv/','live','1–4'],
       ['AR','Көбейту мен бөлу','ar/','live','2–5'],
+      ['TE','Теңдеулер','te/','live','1–4'],
     ],
   };
   /* A page without <meta name="viewport"> is laid out at 980px and then shrunk on a phone — everything
