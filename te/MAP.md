@@ -54,4 +54,4 @@ never drawn, so `'?,+3'` renders no `+3`. Hence `FIGS.wrap`.
 - **`--te` / `--te-d` do not exist in `core/ui.css`**, and `CFG.ROUTES` has no `TE` row.
   Both are owner actions (§0). `index.html` currently asks for `var(--te)` and will fall back
   to nothing until they exist.
-- Kazakh stage names and card text need a native reading pass.
+- Kazakh stage names and card text passed a native reading pass (2026-09-20). No open text work.
