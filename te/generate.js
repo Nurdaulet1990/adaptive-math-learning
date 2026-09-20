@@ -34,6 +34,10 @@ const CORES=['a+x','x+a','a-x','x-a'];
 const ASK='x = ?';
 const H_BAL='Екі табақтан бірдей шаршыларды алып таста.';
 const BAL=(l,r,cross)=>({type:'bal',l,r,cross:cross||0});
+/* the two computations of a wrapper item, written out — they are the guided steps of hint 4 and the worked solution */
+function outerExpr(w,b,c,v){ return w==='o-b'?`${c} + ${b}`:(w==='b+o'||w==='o+b')?`${c} − ${b}`:w==='b-o'?`${b+v} − ${b}`
+  :w==='o/b'?`${c} · ${b}`:(w==='b*o'||w==='o*b')?`${c} : ${b}`:`${b*v} : ${b}`; }
+function innerExpr(kind,a,x,v){ return (kind==='a+x'||kind==='x+a')?`${v} − ${a}`:kind==='a-x'?`${a+x} − ${v}`:`${v} + ${a}`; }
 function coreOf(kind,a,x){
   if(kind==='a+x') return {txt:`(${a} + x)`, v:a+x, span:a+x};
   if(kind==='x+a') return {txt:`(x + ${a})`, v:a+x, span:a+x};
@@ -155,20 +159,24 @@ wrap_add(p,lvl){
     const a=rnd(2,Math.min(9,big-3));
     const x=kind==='x-a'? a+rnd(2,big-a) : rnd(2,Math.min(big,14));
     const C=coreOf(kind,a,x); if(C.v<2) return null;
+    /* the number printed inside the bracket. For (A − x) that is A = a + x — `a` itself is the bracket's VALUE there.
+       Listing `a` as printed put it in `shown` twice (next to C.v), the duplicate check threw every such draw away,
+       and the fourth core never reached a wrapper stage: 0 of 96 000 items, while TE-14's card teaches (9 − x) · 2 = 12. */
+    const pa=kind==='a-x'?a+x:a;
     const b=rnd(2,Math.min(9,big));
     let stem,c,shownOverride=null;
     if(p.w==='o-b'){ c=C.v-b; if(c<2) return null; stem=`${C.txt} − ${b} = ${c}. x-ті тап.`; }
     else if(p.w==='b+o'){ c=b+C.v; stem=`${b} + ${C.txt} = ${c}. x-ті тап.`; }
     else if(p.w==='o+b'){ c=C.v+b; stem=`${C.txt} + ${b} = ${c}. x-ті тап.`; }
-    else { const T=b+C.v; stem=`${T} − ${C.txt} = ${b}. x-ті тап.`; c=b; shownOverride=[a,b,T,C.v]; }
-    const shown=shownOverride||[a,b,c,C.v,kind==='a-x'?a+x:null].filter(Boolean);
+    else { const T=b+C.v; stem=`${T} − ${C.txt} = ${b}. x-ті тап.`; c=b; shownOverride=[pa,b,T,C.v]; }
+    const shown=shownOverride||[pa,b,c,C.v];
     if(!clean(x,...shown)) return null;
     if(new Set(shown).size!==shown.length) return null;
     const q={stem, ans:String(x),
-      h1:'Алдымен жақшаның сыртындағы амалды қайтар — жақшаның мәнін тап. Сосын ішін аш.',
+      h1:p.w==='b-o'?'Жақша — азайтқыш: азайғыштан айырманы азайтсаң, жақшаның мәні шығады. Сосын ішін аш.':'Алдымен жақшаның сыртындағы амалды қайтар — жақшаның мәнін тап. Сосын ішін аш.',
       h2:`Жақшаның мәні = ${C.v}`,
-      steps:[{label:'Жақшаның мәні',expr:'сыртын қайтар',val:String(C.v)},{label:'x',expr:'жақшаны аш',val:String(x)}],
-      expl:`Жақшаның мәні ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${x}.`};
+      steps:[{label:'Жақшаның мәні',expr:outerExpr(p.w,b,c,C.v),val:String(C.v)},{label:'x',expr:innerExpr(kind,a,x,C.v),val:String(x)}],
+      expl:`Жақшаның мәні: ${outerExpr(p.w,b,c,C.v)} = ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${innerExpr(kind,a,x,C.v)} = ${x}.`};
     const fig={type:'wrap',core:kind,a,x,v:C.v,b,w:p.w};
     if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(x,[C.v,x+b,Math.abs(C.v-b),x+a])); }
     else { q.kind='input'; q.fig=fig; }
@@ -184,20 +192,24 @@ wrap_mul(p,lvl){
     const a=rnd(2,7);
     const x=kind==='x-a'? a+rnd(2,xmax) : rnd(2,xmax);
     const C=coreOf(kind,a,x); if(C.v<2) return null;
+    /* the number printed inside the bracket. For (A − x) that is A = a + x — `a` itself is the bracket's VALUE there.
+       Listing `a` as printed put it in `shown` twice (next to C.v), the duplicate check threw every such draw away,
+       and the fourth core never reached a wrapper stage: 0 of 96 000 items, while TE-14's card teaches (9 − x) · 2 = 12. */
+    const pa=kind==='a-x'?a+x:a;
     const b=rnd(2,gmax);
     let stem,c,shownOverride=null;
     if(p.w==='o/b'){ if(C.v%b) return null; c=C.v/b; if(c<2) return null; stem=`${C.txt} : ${b} = ${c}. x-ті тап.`; }
     else if(p.w==='b*o'){ c=b*C.v; if(c>220) return null; stem=`${b} · ${C.txt} = ${c}. x-ті тап.`; }
     else if(p.w==='o*b'){ c=b*C.v; if(c>220) return null; stem=`${C.txt} · ${b} = ${c}. x-ті тап.`; }
-    else { const T=b*C.v; if(T>220) return null; c=b; stem=`${T} : ${C.txt} = ${b}. x-ті тап.`; shownOverride=[a,b,T,C.v]; }
-    const shown=shownOverride||[a,b,c,C.v,kind==='a-x'?a+x:null].filter(Boolean);
+    else { const T=b*C.v; if(T>220) return null; c=b; stem=`${T} : ${C.txt} = ${b}. x-ті тап.`; shownOverride=[pa,b,T,C.v]; }
+    const shown=shownOverride||[pa,b,c,C.v];
     if(!clean(x,...shown)) return null;
     if(new Set(shown).size!==shown.length) return null;
     const q={stem, ans:String(x),
-      h1:'Алдымен жақшаның мәнін тап, сосын ішін аш.',
+      h1:p.w==='b/o'?'Жақша — бөлгіш: бөлінгішті бөліндіге бөлсең, жақшаның мәні шығады. Сосын ішін аш.':'Алдымен жақшаның мәнін тап, сосын ішін аш.',
       h2:`Жақшаның мәні = ${C.v}`,
-      steps:[{label:'Жақшаның мәні',expr:'сыртын қайтар',val:String(C.v)},{label:'x',expr:'жақшаны аш',val:String(x)}],
-      expl:`Жақшаның мәні ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${x}.`};
+      steps:[{label:'Жақшаның мәні',expr:outerExpr(p.w,b,c,C.v),val:String(C.v)},{label:'x',expr:innerExpr(kind,a,x,C.v),val:String(x)}],
+      expl:`Жақшаның мәні: ${outerExpr(p.w,b,c,C.v)} = ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${innerExpr(kind,a,x,C.v)} = ${x}.`};
     const fig={type:'wrap',core:kind,a,x,v:C.v,b,w:p.w};
     if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(x,[C.v,C.v*b,x+a,Math.max(1,x-1)])); }
     else { q.kind='input'; q.fig=fig; }

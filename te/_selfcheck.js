@@ -87,5 +87,23 @@ console.log('9 · index.html');
   if(h.includes('core-stub.js')){bad('loads core-stub.js');e++;}
   if(!e) ok('index.html loads the four core files, app shell, notranslate, no stub'); }
 
+console.log('10 · wrapper stages (TE-09…16): the answer solves the equation, all four cores appear, the picture is drawable, the steps compute');
+{ const ev=(txt,x)=>{ const js=txt.replace(/x-ті тап\.?/,'').replace(/−/g,'-').replace(/·/g,'*').replace(/:/g,'/').replace(/x/g,'('+x+')').split('='); return Math.abs(Function('return ('+js[0]+')')()-Function('return ('+js[1]+')')())<1e-9; };
+  const num=t=>{ try{ return Function('return ('+String(t).replace(/−/g,'-').replace(/·/g,'*').replace(/:/g,'/')+')')(); }catch(_){ return NaN; } };   // words instead of a computation → NaN → reported, not thrown
+  let e=0; S.filter(r=>/^wrap_/.test(r[2])).forEach(r=>{ const cores={}; let wrong=0,multi=0,badfig=0,badstep=0;
+    for(const lvl of [1,2,3]) for(let i=0;i<1500;i++){ const q=G[r[2]](r[3],lvl); const x=+q.ans; cores[q.fig.core]=(cores[q.fig.core]||0)+1;
+      if(!ev(q.stem,x)) wrong++;
+      for(let y=0;y<=60;y++) if(y!==x){ let okY=false; try{ okY=ev(q.stem,y); }catch(_){ } if(okY){ multi++; break; } }
+      const svg=FG.wrap(q.fig); if(/NaN|undefined|width="-|width="0"/.test(svg)) badfig++;
+      if(!(q.steps&&q.steps.length===2&&num(q.steps[0].expr)===+q.steps[0].val&&num(q.steps[1].expr)===+q.steps[1].val&&q.steps[1].val===q.ans)) badstep++; }
+    const miss=['a+x','x+a','a-x','x-a'].filter(c=>!cores[c]);
+    if(wrong||multi||badfig||badstep||miss.length){ e++; bad(`${r[0]}: wrong key ${wrong} · second solution ${multi} · undrawable figure ${badfig} · step that does not compute ${badstep} · cores never drawn: ${miss.join(', ')||'—'}`); } });
+  if(!e) ok('8 stages × 3 levels × 1500: every key solves its equation and is the only solution in 0…60; all four cores occur; no negative/zero/NaN widths; both guided steps evaluate to their value and the last one is the answer'); }
+
+console.log('11 · bar_equal with an unknown number of cells does not draw a number of cells');
+{ const vm=require('vm'), ctx={window:{},console}; vm.createContext(ctx); vm.runInContext(fs.readFileSync(path.join(root,'core','figs.js'),'utf8')+';this.renderFig=typeof renderFig!=="undefined"?renderFig:window.renderFig;',ctx);
+  const svg=ctx.renderFig('bar_equal','18;?;3'), cells=(svg.match(/<rect[^>]*fill="var\(--seg[12]\)"/g)||[]).length, known=(ctx.renderFig('bar_equal','18;6;?').match(/<rect[^>]*fill="var\(--seg[12]\)"/g)||[]).length;
+  if(cells===3&&/stroke-dasharray/.test(svg)&&known===6) ok('"18;?;3" → two cells, a dashed gap, a last cell; "18;6;?" still draws its 6 cells'); else bad(`bar_equal: unknown count drew ${cells} solid cells (dashed gap: ${/stroke-dasharray/.test(svg)}), known count drew ${known}/6`); }
+
 console.log('\n'+(fail?('FAILURES: '+fail):'0 failures')+'\n');
 process.exit(fail?1:0);

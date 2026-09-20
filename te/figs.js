@@ -133,12 +133,18 @@ const FIGS={
   wrap(f){
     const U=14, H=30, pad=10, esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
     const seg=(x,y,n,fill,lab)=>`<rect x="${x}" y="${y}" width="${n*U}" height="${H}" fill="${fill}" stroke="var(--stroke)" stroke-width="1.5"/><text x="${x+n*U/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">${esc(lab)}</text>`;
-    const x0=24, y0=34; let inner='', w=f.v;
-    /* the core, inside a tray — the tray says "all of this is one thing" */
+    const x0=24, y0=34; let inner=''; const w=f.v;
+    /* the core, inside a tray — the tray says "all of this is one thing", and it is always as wide as the
+       bracket's VALUE, so whatever is drawn after it (+b, −b) adds up to the number on the right of the equation.
+       Additive cores show their two parts. Subtractive cores are ONE block carrying their expression: the old
+       drawing for (x − a) was  a | (v − a)  with v = x − a — a negative width whenever x < 2a, a printed number
+       that is in no equation otherwise, and never an x anywhere in the picture. */
+    const one=(txt)=>`<rect x="${x0}" y="${y0}" width="${w*U}" height="${H}" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.5"/>`
+      +`<text x="${x0+w*U/2}" y="${y0+20}" text-anchor="middle" fill="var(--ink)" font-size="13">${esc(txt)}</text>`;   // on a 2-unit block the label spills a few px — into the tray's own padding, never past it
     if(f.core==='a+x')      inner+=seg(x0,y0,f.a,'var(--seg2)',f.a)+seg(x0+f.a*U,y0,f.x,'var(--seg1)','x');
     else if(f.core==='x+a') inner+=seg(x0,y0,f.x,'var(--seg1)','x')+seg(x0+f.x*U,y0,f.a,'var(--seg2)',f.a);
-    else if(f.core==='a-x') { inner+=seg(x0,y0,f.a,'var(--seg2)',f.a)+seg(x0+f.a*U,y0,f.x,'var(--card)','x'); w=f.a+f.x; }
-    else                    { inner+=seg(x0,y0,f.a,'var(--seg2)',f.a)+seg(x0+f.a*U,y0,f.v-f.a,'var(--seg1)',f.v-f.a); }
+    else if(f.core==='a-x') inner+=one(`${f.a+f.x} − x`);
+    else                    inner+=one(`x − ${f.a}`);
     const W0=w*U;
     inner+=`<path d="M${x0-pad},${y0-6} v${H+10} a6,6 0 0 0 6,6 h${W0+2*pad-12} a6,6 0 0 0 6,-6 v-${H+10}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>`;
     let x=x0+W0+pad+6, note='';
