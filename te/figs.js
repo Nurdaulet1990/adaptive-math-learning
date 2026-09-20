@@ -1,7 +1,72 @@
-/* te/figs.js — the one drawing core/figs.js cannot do: a core bar with one outer step.
+/* te/figs.js — the drawings core/figs.js cannot do:
+     bal  — a two-pan balance (level 1 of the core stages: no words at all)
+     grp  — equal groups with the count asked (level 1 where a balance cannot hold the unknown)
+     wrap — a core bar with one outer step
    Everything else (bar, bar_equal) comes from core/figs.js — see MAP.md. */
 'use strict';
+const ESC=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 const FIGS={
+
+  /* {type:'bal', l:{b,d,c}, r:{b,d,c}, cross}
+       b = solid blocks (known)   d = dashed blocks (taken out of the cup)
+       c = sealed cups (the unknown, drawn with «?»)   cross = pair off this many blocks per pan
+     A pan may hold only known blocks and a KNOWN number of whole cups — that rule is why
+     TE-06/TE-07 use grp instead. See MAP.md. */
+  bal(f){
+    const W=340, H=178, U=18, GAP=4, PER=5;
+    const BEAM=24, PAN=132, CX=[95,245];
+    const blk=(x,y,crossed)=>`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.5"/>`
+      +(crossed?`<line x1="${x+3}" y1="${y+3}" x2="${x+U-3}" y2="${y+U-3}" stroke="var(--muted)" stroke-width="2"/><line x1="${x+U-3}" y1="${y+3}" x2="${x+3}" y2="${y+U-3}" stroke="var(--muted)" stroke-width="2"/>`:'');
+    const dsh=(x,y)=>`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="var(--card)" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+    const cup=(x,y)=>`<path d="M${x-2},${y+4} h${U+4} l-3,${U-4} h-${U-2} z" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.5" stroke-linejoin="round"/>`
+      +`<rect x="${x-4}" y="${y-1}" width="${U+8}" height="6" rx="2" fill="var(--ink)"/>`
+      +`<text x="${x+U/2}" y="${y+17}" text-anchor="middle" fill="var(--ink)" font-size="14">?</text>`;
+    const pan=(cx,p,cross)=>{
+      const list=[];
+      for(let i=0;i<(p.b||0);i++) list.push(n=>blk(n.x,n.y,i<cross));
+      for(let i=0;i<(p.d||0);i++) list.push(n=>dsh(n.x,n.y));
+      for(let i=0;i<(p.c||0);i++) list.push(n=>cup(n.x,n.y));
+      const rows=[]; for(let i=0;i<list.length;i+=PER) rows.push(list.slice(i,i+PER));
+      rows.reverse();                    /* full rows sit at the bottom, the short one on top */
+      /* the hanger is drawn first so the blocks stack on top of it, not under a line */
+      let out=`<line x1="${cx}" y1="${BEAM}" x2="${cx}" y2="${PAN-6}" stroke="var(--stroke)" stroke-width="1.5"/>`;
+      rows.forEach((row,ri)=>{
+        const y=PAN-8-(rows.length-ri)*(U+GAP)+GAP, w=row.length*(U+GAP)-GAP, x0=cx-w/2;
+        row.forEach((draw,ci)=>{ out+=draw({x:x0+ci*(U+GAP), y}); });
+      });
+      return out+`<path d="M${cx-56},${PAN-6} h112 l-14,14 h-84 z" fill="var(--card)" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/>`;
+    };
+    const inner=`<line x1="${CX[0]}" y1="${BEAM}" x2="${CX[1]}" y2="${BEAM}" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>`
+      +`<line x1="170" y1="${BEAM}" x2="170" y2="164" stroke="var(--ink)" stroke-width="4"/>`
+      +`<path d="M150,172 h40 l-14,-10 h-12 z" fill="var(--ink)"/>`
+      +pan(CX[0],f.l||{},f.cross||0)+pan(CX[1],f.r||{},f.cross||0);
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
+  },
+
+  /* {type:'grp', g, v, total, ask:'g'|'v'}  — g boxes of v, brace below = total.
+     ask:'g' puts «?» on the bracket that counts the boxes; ask:'v' puts «?» inside each box. */
+  grp(f){
+    const g=f.g, v=f.v, PER=Math.min(g,4), BW=64, BH=44, GAP=10;
+    const cols=Math.min(g,PER), rows=Math.ceil(g/PER);
+    const W=Math.max(300, cols*(BW+GAP)+40), x0=(W-(cols*(BW+GAP)-GAP))/2, y0=32;
+    let inner='';
+    for(let i=0;i<g;i++){
+      const r=Math.floor(i/PER), c=i%PER, x=x0+c*(BW+GAP), y=y0+r*(BH+GAP);
+      inner+=`<rect x="${x}" y="${y}" width="${BW}" height="${BH}" rx="6" fill="var(--seg1)" stroke="var(--stroke)" stroke-width="1.5"/>`;
+      if(f.ask==='v') inner+=`<text x="${x+BW/2}" y="${y+29}" text-anchor="middle" fill="var(--ink)" font-size="17">?</text>`;
+      else { const d=Math.min(v,9), per=Math.ceil(d/3);
+        for(let k=0;k<d;k++) inner+=`<circle cx="${x+14+(k%3)*18}" cy="${y+13+Math.floor(k/3)*(per>2?12:14)}" r="5" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.2"/>`;
+        if(v>9) inner+=`<text x="${x+BW-12}" y="${y+BH-6}" text-anchor="middle" fill="var(--ink)" font-size="12">${v}</text>`; }
+    }
+    const bot=y0+rows*(BH+GAP)-GAP, R=x0+cols*(BW+GAP)-GAP;
+    inner+=`<path d="M${x0},${bot+8} v6 h${R-x0} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
+      +`<text x="${(x0+R)/2}" y="${bot+34}" text-anchor="middle" fill="var(--ink)" font-size="14">${ESC(f.total)}</text>`;
+    if(f.ask==='g') inner+=`<path d="M${x0},${y0-8} v-6 h${R-x0} v6" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`
+      +`<text x="${(x0+R)/2}" y="${y0-16}" text-anchor="middle" fill="var(--accent)" font-size="17">?</text>`;
+    const H=bot+44;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
+  },
+
   /* {type:'wrap', core:'a+x'|'x+a'|'a-x'|'x-a', a, x, v, b, w:'o-b'|'b+o'|'o+b'|'b-o'|'o/b'|'b*o'|'o*b'|'b/o'} */
   wrap(f){
     const U=14, H=30, pad=10, esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
