@@ -6,54 +6,70 @@
 <title>Есеп жолы · Мұғалім</title>
 <!-- teacher page is Kazakh only: never translated -->
 <meta name="google" content="notranslate">
-<link rel="stylesheet" href="../core/ui.css?v=8">
+<link rel="stylesheet" href="../core/ui.css?v=9">
 </head>
 <body>
 <div id="app" class="app wide"></div>
-<script src="../core/core.js?v=8"></script>
+<script src="../core/core.js?v=9"></script>
 <script>
-/* Teacher dashboard across routes. Reads students + events through Core._sb. PIN-gated (client side, trial). */
+/* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
+   the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
+   Every value that comes from the database is escaped before it touches innerHTML — pupils write those rows. */
 'use strict';
-const sb=Core._sb, esc=Core.esc, $=id=>document.getElementById(id), enc=encodeURIComponent;
+const rpc=Core._rpc, esc=Core.esc, $=id=>document.getElementById(id), enc=encodeURIComponent;
 const ROUTES=Core.config.ROUTES.map(r=>r[0]); const ROUTE_NAME=Object.fromEntries(Core.config.ROUTES.map(r=>[r[0],r[1]]));
-let T={rows:[],klass:'',route:'WP',auth:sessionStorage.getItem('esep_t')==='1',crange:null,range:null,app:$('app')};
+let T={rows:[],klass:'',route:'WP',tok:sessionStorage.getItem('esep_tt')||'',crange:null,range:null,app:$('app')};
 const pad2=n=>String(n).padStart(2,'0'); const ymd=d=>`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-const fmtDT=iso=>iso?new Date(iso).toLocaleString('kk-KZ',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const fmtDT=iso=>{ const d=new Date(iso); return !iso||isNaN(d)?'—':d.toLocaleString('kk-KZ',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); };
 function rangePreset(k){ const now=new Date(); const to=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1); let from;
   if(k==='today') from=new Date(to.getTime()-864e5); else if(k==='yest'){ from=new Date(to.getTime()-2*864e5); to.setTime(to.getTime()-864e5); }
   else if(k==='7') from=new Date(to.getTime()-7*864e5); else if(k==='30') from=new Date(to.getTime()-30*864e5); else return {from:'',to:''};
   return {from:ymd(from),to:ymd(new Date(to.getTime()-864e5))}; }
-function rangeQ(r){ let q=''; if(r.from) q+=`&t=gte.${enc(new Date(r.from+'T00:00:00').toISOString())}`; if(r.to) q+=`&t=lt.${enc(new Date(new Date(r.to+'T00:00:00').getTime()+864e5).toISOString())}`; return q; }
+async function trpc(fn,args){ try{ return await rpc(fn,Object.assign({p_token:T.tok},args||{})); }
+  catch(e){ if(/teacher session required/.test(e.message)){ T.tok=''; sessionStorage.removeItem('esep_tt'); login('Сессия аяқталды. Қайта кіріңіз.'); throw new Error('сессия аяқталды'); } throw e; } }
+function rangeISO(r){ return {p_from:r.from?new Date(r.from+'T00:00:00').toISOString():null, p_to:r.to?new Date(new Date(r.to+'T00:00:00').getTime()+864e5).toISOString():null}; }
+/* A pupil writes their own `state`, so nothing in it can be trusted to have the right TYPE: a counter may arrive as
+   a string of HTML, a stage as null. num() and clean() make every value safe before it is added up or shown. */
+const num=v=>{ v=Number(v); return Number.isFinite(v)?v:0; };
+function clean(rs){ if(!rs||typeof rs!=='object'||Array.isArray(rs)) return {};
+  const st={}; if(rs.stages&&typeof rs.stages==='object'&&!Array.isArray(rs.stages)) Object.keys(rs.stages).forEach(k=>{ const v=rs.stages[k]; if(v&&typeof v==='object') st[k]=Object.assign({},v,{level:num(v.level),streak:num(v.streak),status:String(v.status||''),tests:Array.isArray(v.tests)?v.tests:[]}); });
+  return Object.assign({},rs,{stages:st,nAns:num(rs.nAns),nOk:num(rs.nOk),nHint:num(rs.nHint),diag:rs.diag&&typeof rs.diag==='object'?rs.diag:null}); }
 /* route state of a student row (legacy WP state lived at top level) */
-const RS=(r,route)=>{ const s=r.state||{}; if(s[route]) return s[route]; if(route==='WP'&&s.stages) return s; return {}; };
+const RS=(r,route)=>{ const s=(r.state&&typeof r.state==='object')?r.state:{}; if(s[route]) return clean(s[route]); if(route==='WP'&&s.stages) return clean(s); return {}; };
 const stOf=(r,route)=>{ const st=RS(r,route).stages||{}; return Object.keys(st).find(k=>st[k].status==='current')||null; };
 const evRoute=e=>e.route||'WP';
 function verdict(n,acc,h){ if(!n||n<5) return ['—','var(--muted)']; if(acc>=0.8&&h<1) return ['Меңгерді','var(--good)']; if(acc>=0.7&&h>=2) return ['Кеңеспен','var(--gold)']; if(acc<0.5&&h<1) return ['Болжайды','var(--bad)']; if(acc<0.6&&h>=2) return ['Қиналады','var(--bad)']; return ['Үйреніп жатыр','var(--accent)']; }
 const vcell=(n,acc,h)=>{ const [t,c]=verdict(n,acc,h); return `<td style="color:${c};font-weight:800;white-space:nowrap">${t}</td>`; };
 const VLEGEND='Қорытынды: <b>Меңгерді</b> — дұрыс ≥80%, кеңес &lt;1 · <b>Кеңеспен</b> — дұрыс, бірақ кеңес ≥2 · <b>Болжайды</b> — дұрыс &lt;50%, кеңесті қолданбайды · <b>Қиналады</b> — дұрыс &lt;60%, кеңес ≥2 · <b>Үйреніп жатыр</b> — аралық · «—» 5 есептен аз.';
-function tbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>Мұғалім беті · ${esc(sub||'барлық бағыт')}</small></div><a href="../" class="muted">портал</a></div>`; }
-function login(){ T.app.innerHTML=tbar('кіру')+`<div class="card"><h2>Мұғалім PIN</h2><input class="big" id="tpin" inputmode="numeric" placeholder="PIN" autocomplete="off"><div style="height:10px"></div><button class="btn wide" id="tgo">Кіру</button><p class="note" id="pinMsg" style="margin-top:8px"></p></div>`;
-  const go=()=>{ if(($('tpin').value||'').trim()===Core.config.TEACHER_PIN){ T.auth=true; sessionStorage.setItem('esep_t','1'); showTeacher(); } else $('pinMsg').textContent='PIN дұрыс емес.'; };
+function tbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>Мұғалім беті · ${esc(sub||'барлық бағыт')}</small></div><span><a href="../" class="muted">портал</a>${T&&T.tok?' · <a href="#" class="muted" onclick="tlogout();return false">шығу</a>':''}</span></div>`; }
+async function tlogout(){ const t=T.tok; T.tok=''; sessionStorage.removeItem('esep_tt'); try{ await rpc('esep_t_logout',{p_token:t}); }catch(e){} login(); }
+function login(note){ T.app.innerHTML=tbar('кіру')+`<div class="card"><h2>Мұғалімнің құпия сөзі</h2><input class="big" id="tpin" type="password" placeholder="Құпия сөз" autocomplete="current-password"><div style="height:10px"></div><button class="btn wide" id="tgo">Кіру</button><p class="note" id="pinMsg" style="margin-top:8px">${esc(note||'')}</p></div>`;
+  const go=async()=>{ const v=($('tpin').value||'').trim(); if(!v) return; $('tgo').disabled=true; $('pinMsg').textContent='Тексерілуде…';
+    try{ const r=await rpc('esep_t_login',{p_secret:v});
+      if(r&&r.token){ T.tok=r.token; sessionStorage.setItem('esep_tt',r.token); return showTeacher(); }
+      $('pinMsg').textContent=r&&r.error==='locked'?'Тым көп қате әрекет. 10 минуттан кейін қайталаңыз.':r&&r.error==='not_configured'?'Құпия сөз әлі орнатылмаған (supabase/README).':'Құпия сөз дұрыс емес.'; }
+    catch(e){ $('pinMsg').textContent='Базаға қосылу мүмкін болмады.'; }
+    $('tgo').disabled=false; };
   $('tgo').onclick=go; $('tpin').onkeydown=e=>{ if(e.key==='Enter') go(); }; setTimeout(()=>$('tpin').focus(),50); }
 
 async function showTeacher(){
-  if(!T.auth) return login();
+  if(!T.tok) return login();
   if(!T.crange) T.crange=rangePreset('today');
   T.app.innerHTML=tbar()+`<div class="card"><p>Жүктелуде…</p></div>`;
-  try{ T.rows=await sb('students?select=id,name,klass,state,time_ms,last_seen,created_at&order=klass,name'); }
-  catch(e){ T.app.innerHTML=tbar()+`<div class="card"><p>Базаға қосылу мүмкін болмады.</p><p class="note">${esc(e.message)}</p><button class="btn" onclick="showTeacher()">Қайталау</button></div>`; return; }
+  try{ T.rows=((await trpc('esep_t_students'))||[]).filter(r=>r&&/^[0-9a-f-]{1,40}$/i.test(String(r.id))).map(r=>Object.assign(r,{time_ms:num(r.time_ms),name:String(r.name??''),klass:String(r.klass??'')})); }
+  catch(e){ if(!T.tok) return; T.app.innerHTML=tbar()+`<div class="card"><p>Базаға қосылу мүмкін болмады.</p><p class="note">${esc(e.message)}</p><button class="btn" onclick="showTeacher()">Қайталау</button></div>`; return; }
   const classes=[...new Set(T.rows.map(r=>r.klass||'—'))].sort(); const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass); const route=T.route;
   const tot={n:rows.length,min:rows.reduce((a,r)=>a+(r.time_ms||0),0)/60000,ans:rows.reduce((a,r)=>a+(RS(r,route).nAns||0),0)};
   let html=tbar(ROUTE_NAME[route])+`<div class="card"><div class="qbar"><span><b>${tot.n}</b> оқушы · <b>${Math.round(tot.min)}</b> мин · <b>${tot.ans}</b> есеп (${route})</span>
     <span>Бағыт: <select onchange="T.route=this.value;showTeacher()">${ROUTES.map(c=>`<option ${c===route?'selected':''} value="${c}">${c} ${esc(ROUTE_NAME[c])}</option>`).join('')}</select>
     &nbsp; Сынып: <select onchange="T.klass=this.value;showTeacher()"><option value="">барлығы</option>${classes.map(c=>`<option ${c===T.klass?'selected':''} value="${esc(c)}">${esc(c)}</option>`).join('')}</select></span></div>
     <div style="overflow-x:auto"><table class="t3"><tr><th>Оқушы</th><th>Сынып</th><th>Кезең</th><th>Деңгей</th><th>Мин</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th><th>Қорытынды</th><th>Соңғы кіру</th></tr>
-    ${rows.map(r=>{ const s=RS(r,route); const cur=stOf(r,route); const lv=cur?s.stages[cur].level:'—'; const a=s.nAns||0, ok=s.nOk||0; const stale=Date.now()-new Date(r.last_seen).getTime()>7*864e5;
-      return `<tr style="cursor:pointer" onclick="showStudent('${r.id}')"><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td>${cur||(s.diag?'—':'диагн. жоқ')}</td><td>${lv}</td><td>${Math.round((r.time_ms||0)/60000)}</td><td>${a}</td><td>${a?Math.round(100*ok/a)+'%':'—'}</td><td>${a?((s.nHint||0)/a).toFixed(1):'—'}</td>${vcell(a,a?ok/a:0,a?(s.nHint||0)/a:0)}<td style="${stale?'color:var(--bad)':''}">${fmtDT(r.last_seen)}</td></tr>`; }).join('')}
+    ${rows.map(r=>{ try{ const s=RS(r,route); const cur=stOf(r,route); const lv=cur?s.stages[cur].level:'—'; const a=s.nAns||0, ok=s.nOk||0; const stale=Date.now()-new Date(r.last_seen).getTime()>7*864e5;
+      return `<tr style="cursor:pointer" onclick="showStudent('${r.id}')"><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td>${esc(cur||(s.diag?'—':'диагн. жоқ'))}</td><td>${esc(lv)}</td><td>${Math.round((r.time_ms||0)/60000)}</td><td>${a}</td><td>${a?Math.round(100*ok/a)+'%':'—'}</td><td>${a?((s.nHint||0)/a).toFixed(1):'—'}</td>${vcell(a,a?ok/a:0,a?(s.nHint||0)/a:0)}<td style="${stale?'color:var(--bad)':''}">${fmtDT(r.last_seen)}</td></tr>`; }catch(e){ return `<tr><td style="text-align:left"><b>${esc(r.name)}</b></td><td colspan="9" class="muted">бұл жолды көрсету мүмкін болмады</td></tr>`; } }).join('')}
     ${rows.length?'':'<tr><td colspan="10">Әлі оқушы жоқ</td></tr>'}</table></div>
     <p class="note" style="margin-top:10px">${VLEGEND} Оқушыға басу — толық есеп. <a href="#" onclick="exportCSV();return false">CSV жүктеу (Excel)</a> · <a href="#" onclick="showTeacher();return false">жаңарту</a></p></div>`;
   const dist={}; rows.forEach(r=>{ const c=stOf(r,route)||'—'; dist[c]=(dist[c]||0)+1; });
-  html+=`<div class="card"><h2>Кезең бойынша бөлінуі · ${route}</h2><div class="kv">${Object.keys(dist).sort().map(k=>`<span>${k==='—'?'Диагностика өтпеген':k}</span><span>${dist[k]}</span>`).join('')}</div></div>`;
+  html+=`<div class="card"><h2>Кезең бойынша бөлінуі · ${route}</h2><div class="kv">${Object.keys(dist).sort().map(k=>`<span>${k==='—'?'Диагностика өтпеген':esc(k)}</span><span>${dist[k]}</span>`).join('')}</div></div>`;
   html+=`<div class="card" id="dayCard"><h2>Күн бойынша: ${esc(T.klass||'барлық сынып')} · ${route}</h2>
     <div class="row" style="margin-bottom:8px"><input type="date" id="cfrom" value="${esc(T.crange.from)}" class="big" style="font-size:1rem;padding:8px;flex:1"><input type="date" id="cto" value="${esc(T.crange.to)}" class="big" style="font-size:1rem;padding:8px;flex:1"><button class="btn ghost" onclick="T.crange={from:$('cfrom').value,to:$('cto').value};showTeacher()">Көрсету</button></div>
     <div class="row" style="margin-bottom:12px">${[['today','Бүгін'],['yest','Кеше'],['7','7 күн'],['30','30 күн']].map(([k,l])=>`<button class="btn plain" style="min-height:36px;padding:6px 10px" onclick="T.crange=rangePreset('${k}');showTeacher()">${l}</button>`).join('')}</div>
@@ -62,12 +78,12 @@ async function showTeacher(){
 }
 async function renderClassDay(rows){
   const box=$('dayBody'); if(!box) return; if(!rows.length){ box.innerHTML='<p class="note">Оқушы жоқ.</p>'; return; }
-  let ev=[]; try{ const ids=rows.map(r=>r.id); for(let i=0;i<ids.length;i+=40){ ev=ev.concat(await sb(`events?select=student_id,t,ev&student_id=in.(${ids.slice(i,i+40).join(',')})&order=t.asc&limit=10000${rangeQ(T.crange)}`)); } }
+  let ev=[]; try{ const ids=rows.map(r=>r.id); for(let i=0;i<ids.length;i+=40){ ev=ev.concat(await trpc('esep_t_events',Object.assign({p_students:ids.slice(i,i+40),p_limit:10000},rangeISO(T.crange)))); } }
   catch(e){ box.innerHTML=`<p class="note">Қате: ${esc(e.message)}</p>`; return; }
   const by={}; ev.forEach(e=>{ if(evRoute(e.ev)!==T.route) return; (by[e.student_id]=by[e.student_id]||[]).push(Object.assign({T:new Date(e.t)},e.ev)); });
   const lines=[]; let tot={n:0,ok:0,st:0};
   rows.forEach(r=>{ const evs=by[r.id]||[]; if(!evs.length) return; const ans=evs.filter(e=>e.ev==='answer'); let act=0; for(let i=1;i<evs.length;i++){ const g=evs[i].T-evs[i-1].T; if(g>0&&g<=5*60000) act+=g; }
-    const ok=ans.filter(a=>a.ok).length, h=ans.reduce((x,a)=>x+(a.hints||0),0), dk=evs.filter(e=>e.ev==='dontknow').length; const stg=[...new Set(ans.map(a=>a.stage))].join(' '); const tests=evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n).join(' ');
+    const ok=ans.filter(a=>a.ok).length, h=ans.reduce((x,a)=>x+num(a.hints),0), dk=evs.filter(e=>e.ev==='dontknow').length; const stg=[...new Set(ans.map(a=>a.stage))].join(' '); const tests=evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n).join(' ');
     const first=evs[0].T, last=evs[evs.length-1].T; const hm=d=>`${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
     tot.n+=ans.length; tot.ok+=ok; tot.st++;
     lines.push({r,act,n:ans.length,ok,h,dk,stg,tests,span:(T.crange.from===T.crange.to&&T.crange.from)?`${hm(first)}–${hm(last)}`:`${ymd(first).slice(5)} – ${ymd(last).slice(5)}`}); });
@@ -75,7 +91,7 @@ async function renderClassDay(rows){
   const idle=rows.filter(r=>!by[r.id]).map(r=>esc(r.name));
   box.innerHTML=`<div class="stat"><div><b>${tot.st}/${rows.length}</b><span>оқушы</span></div><div><b>${tot.n}</b><span>есеп</span></div><div><b>${tot.n?Math.round(100*tot.ok/tot.n):0}%</b><span>дұрыс</span></div></div>
    <div style="overflow-x:auto"><table class="t3"><tr><th>Оқушы</th><th>Уақыт</th><th>Мин</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th><th>Қорытынды</th><th>Білм.</th><th>Кезең</th><th>Тест</th></tr>
-   ${lines.map(l=>`<tr style="cursor:pointer" onclick="T.range=T.crange;showStudent('${l.r.id}')"><td style="text-align:left"><b>${esc(l.r.name)}</b></td><td>${l.span}</td><td>${Math.round(l.act/60000)}</td><td>${l.n}</td><td style="${l.n&&l.ok/l.n<0.5?'color:var(--bad)':''}">${l.n?Math.round(100*l.ok/l.n)+'%':'—'}</td><td style="${l.n&&l.h/l.n>=3?'color:var(--bad)':''}">${l.n?(l.h/l.n).toFixed(1):'—'}</td>${vcell(l.n,l.n?l.ok/l.n:0,l.n?l.h/l.n:0)}<td>${l.dk||''}</td><td>${l.stg}</td><td>${l.tests||''}</td></tr>`).join('')}</table></div>
+   ${lines.map(l=>`<tr style="cursor:pointer" onclick="T.range=T.crange;showStudent('${l.r.id}')"><td style="text-align:left"><b>${esc(l.r.name)}</b></td><td>${l.span}</td><td>${Math.round(l.act/60000)}</td><td>${l.n}</td><td style="${l.n&&l.ok/l.n<0.5?'color:var(--bad)':''}">${l.n?Math.round(100*l.ok/l.n)+'%':'—'}</td><td style="${l.n&&l.h/l.n>=3?'color:var(--bad)':''}">${l.n?(l.h/l.n).toFixed(1):'—'}</td>${vcell(l.n,l.n?l.ok/l.n:0,l.n?l.h/l.n:0)}<td>${l.dk||''}</td><td>${esc(l.stg)}</td><td>${esc(l.tests||'')}</td></tr>`).join('')}</table></div>
    ${idle.length?`<p class="note" style="margin-top:8px">Жұмыс істемеген: ${idle.join(', ')}</p>`:''}
    <p class="note" style="margin-top:6px">Оқушыға басу — сол күндердің толық есебі. Қызыл: дұрыстығы 50%-дан төмен немесе кеңес ⌀ 3-тен жоғары.</p>`;
 }
@@ -85,46 +101,50 @@ async function showStudent(id){
   const r=T.rows.find(x=>x.id===id); if(!r) return showTeacher();
   if(!T.range) T.range=rangePreset('7'); const {from,to}=T.range; const route=T.route;
   T.app.innerHTML=tbar(r.name)+`<div class="card"><p>Жүктелуде…</p></div>`;
-  let ev=[]; try{ ev=await sb(`events?select=t,ev&student_id=eq.${id}&order=t.asc&limit=3000${rangeQ(T.range)}`); }catch(e){}
+  let ev=[]; try{ ev=await trpc('esep_t_events',Object.assign({p_students:[id],p_limit:3000},rangeISO(T.range))); }catch(e){ if(!T.tok) return; }
   const s=RS(r,route); const stages=s.stages||{}; const cur=stOf(r,route);
   const evs=ev.map(e=>Object.assign({T:new Date(e.t)},e.ev)).filter(e=>evRoute(e)===route);
   const ans=evs.filter(e=>e.ev==='answer'); const per={};
-  ans.forEach(a=>{ per[a.stage]=per[a.stage]||{n:0,ok:0,h:0,ms:0}; per[a.stage].n++; if(a.ok) per[a.stage].ok++; if(a.hints) per[a.stage].h+=a.hints; per[a.stage].ms+=a.ms||0; });
+  ans.forEach(a=>{ per[a.stage]=per[a.stage]||{n:0,ok:0,h:0,ms:0}; per[a.stage].n++; if(a.ok) per[a.stage].ok++; per[a.stage].h+=num(a.hints); per[a.stage].ms+=num(a.ms); });
   let act=0; for(let i=1;i<evs.length;i++){ const g=evs[i].T-evs[i-1].T; if(g>0&&g<=5*60000) act+=g; }
-  const okN=ans.filter(a=>a.ok).length; const hintSum=ans.reduce((x,a)=>x+(a.hints||0),0);
-  const days={}; ans.forEach(a=>{ const k=ymd(a.T); days[k]=days[k]||{n:0,ok:0,h:0}; days[k].n++; if(a.ok) days[k].ok++; days[k].h+=a.hints||0; });
+  const okN=ans.filter(a=>a.ok).length; const hintSum=ans.reduce((x,a)=>x+num(a.hints),0);
+  const days={}; ans.forEach(a=>{ const k=ymd(a.T); days[k]=days[k]||{n:0,ok:0,h:0}; days[k].n++; if(a.ok) days[k].ok++; days[k].h+=num(a.hints); });
   const fmtT=d=>`${pad2(d.getHours())}:${pad2(d.getMinutes())}`; const rangeLabel=from||to?`${from||'…'} — ${to||'…'}`:'барлық уақыт';
   const otherRoutes=ROUTES.filter(c=>c!==route&&Object.keys(RS(r,c)).length).map(c=>`${c}: ${stOf(r,c)||'—'} (${RS(r,c).nAns||0} есеп)`).join(' · ');
   let html=tbar(r.name)+`<div class="card"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a><span class="chip">${esc(r.klass||'—')}</span></div><h2>${esc(r.name)} · ${route}</h2>
-    <div class="kv"><span>Диагностика</span><span>${s.diag?esc(s.diag.placed)+(s.diag.manual?' (қолмен)':'')+' · '+fmtDT(new Date(s.diag.t).toISOString()):'—'}</span><span>Қазіргі кезең</span><span>${cur?cur+' · деңгей '+stages[cur].level+' · қатарынан '+(stages[cur].streak||0):'—'}</span><span>Барлық уақыт (${route})</span><span>${s.nAns||0} есеп · ${s.nAns?Math.round(100*(s.nOk||0)/s.nAns):0}%</span><span>Соңғы кіру</span><span>${fmtDT(r.last_seen)}</span>${otherRoutes?`<span>Басқа бағыттар</span><span>${otherRoutes}</span>`:''}</div></div>
+    <div class="kv"><span>Диагностика</span><span>${s.diag?esc(s.diag.placed)+(s.diag.manual?' (қолмен)':'')+' · '+esc(fmtDT(s.diag.t)):'—'}</span><span>Қазіргі кезең</span><span>${esc(cur?cur+' · деңгей '+stages[cur].level+' · қатарынан '+(stages[cur].streak||0):'—')}</span><span>Барлық уақыт (${route})</span><span>${s.nAns||0} есеп · ${s.nAns?Math.round(100*(s.nOk||0)/s.nAns):0}%</span><span>Соңғы кіру</span><span>${fmtDT(r.last_seen)}</span>${otherRoutes?`<span>Басқа бағыттар</span><span>${esc(otherRoutes)}</span>`:''}</div></div>
   <div class="card"><h2>Кезең бойынша: ${esc(rangeLabel)}</h2>
     <div class="row" style="margin-bottom:8px"><input type="date" id="rfrom" value="${esc(from)}" class="big" style="font-size:1rem;padding:8px;flex:1"><input type="date" id="rto" value="${esc(to)}" class="big" style="font-size:1rem;padding:8px;flex:1"><button class="btn ghost" onclick="applyRange('${id}')">Көрсету</button></div>
     <div class="row" style="margin-bottom:12px">${[['today','Бүгін'],['yest','Кеше'],['7','7 күн'],['30','30 күн'],['all','Барлығы']].map(([k,l])=>`<button class="btn plain" style="min-height:36px;padding:6px 10px" onclick="setRange('${id}','${k}')">${l}</button>`).join('')}</div>
     <div class="stat"><div><b>${Math.round(act/60000)}</b><span>белсенді мин</span></div><div><b>${ans.length}</b><span>есеп</span></div><div><b>${ans.length?Math.round(100*okN/ans.length):0}%</b><span>дұрыс</span></div></div>
-    <p class="note">Кеңес ⌀ ${ans.length?(hintSum/ans.length).toFixed(1):'—'} · «Білмеймін» ${evs.filter(e=>e.ev==='dontknow').length} рет · тест: ${evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n+' '+e.stage).join(', ')||'—'}</p>
-    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td>${k}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
-    ${Object.keys(days).length>1?`<table class="t3" style="margin-top:10px"><tr><th>Күн</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${d}</td><td>${v.n}</td><td>${Math.round(100*v.ok/v.n)}%</td><td>${(v.h/v.n).toFixed(1)}</td></tr>`).join('')}</table>`:''}
+    <p class="note">Кеңес ⌀ ${ans.length?(hintSum/ans.length).toFixed(1):'—'} · «Білмеймін» ${evs.filter(e=>e.ev==='dontknow').length} рет · тест: ${esc(evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n+' '+e.stage).join(', ')||'—')}</p>
+    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td>${esc(k)}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
+    ${Object.keys(days).length>1?`<table class="t3" style="margin-top:10px"><tr><th>Күн</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${esc(d)}</td><td>${v.n}</td><td>${Math.round(100*v.ok/v.n)}%</td><td>${(v.h/v.n).toFixed(1)}</td></tr>`).join('')}</table>`:''}
   </div>`;
   if(ans.length){ html+=`<div class="card"><h2>Есептер ретімен</h2><div style="overflow-x:auto"><table class="t3" style="font-size:.85rem"><tr><th>Уақыт</th><th>Кезең</th><th>Реж.</th><th></th><th>Кеңес</th><th>с</th><th style="text-align:left">Есеп</th></tr>
-    ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${a.stage}${a.lvl?' L'+a.lvl:''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${a.hints||''}</td><td>${a.ms?Math.round(a.ms/1000):''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
+    ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${esc(a.stage)}${a.lvl?' L'+esc(a.lvl):''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${num(a.hints)||''}</td><td>${Math.round(num(a.ms)/1000)||''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
   html+=`<div class="card"><h2>Басқару · ${route}</h2>
     <p class="note">Кезеңді қолмен қою: <input class="big" id="setst" placeholder="${route}-03" style="width:140px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" onclick="setStage('${id}',$('setst').value.trim().toUpperCase())">Қою</button></p>
+    <p class="note" style="margin-top:8px">PIN-ді ұмытса — жаңасын қою: <input class="big" id="newpin" inputmode="numeric" maxlength="4" placeholder="4 сан" autocomplete="off" style="width:110px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" onclick="resetPin('${id}')">Сақтау</button></p>
     <p class="note" style="margin-top:8px"><a href="#" onclick="resetDiag('${id}');return false">Диагностиканы қайта ашу</a> · <a href="#" onclick="$('delc').style.display='block';return false">Оқушыны өшіру</a></p>
     <div id="delc" style="display:none;margin-top:6px"><p class="note">Барлық бағыттағы барлық деректері өшеді. Сенімдісің бе?</p><button class="btn plain" onclick="delStudent('${id}')">Иә, өшіру</button></div>
     <p class="note" id="tmsg" style="margin-top:8px"></p></div>`;
   T.app.innerHTML=html;
 }
-async function patchRoute(id,fn){ const r=T.rows.find(x=>x.id===id); const state=Object.assign({},r.state||{}); const route=T.route;
+async function patchRoute(id,fn){ const fresh=((await trpc('esep_t_students'))||[]).find(x=>String(x.id)===String(id)); const r=T.rows.find(x=>x.id===id); if(fresh) r.state=fresh.state;
+  const state=Object.assign({},(r.state&&typeof r.state==='object')?r.state:{}); const route=T.route;
   let rs=state[route]; if(!rs&&route==='WP'&&state.stages){ rs={diag:state.diag,stages:state.stages,nAns:state.nAns,nOk:state.nOk,nHint:state.nHint}; }
-  rs=rs||{}; rs.stages=rs.stages||{}; fn(rs); state[route]=rs;
-  await sb(`students?id=eq.${id}`,{method:'PATCH',prefer:'return=minimal',body:{state}}); r.state=state; }
+  rs=clean(rs||{}); fn(rs); state[route]=rs;
+  await trpc('esep_t_set_state',{p_student:id,p_state:state}); r.state=state; }
 async function setStage(id,stId){ if(!/^[A-Z]{2}-\d{2}$/.test(stId)||!stId.startsWith(T.route+'-')) { $('tmsg').textContent='Кезең коды: '+T.route+'-01 түрінде.'; return; }
   try{ await patchRoute(id,rs=>{ const ids=Object.keys(rs.stages).sort(); if(!ids.includes(stId)) ids.push(stId); ids.sort(); ids.forEach(k=>{ rs.stages[k]=rs.stages[k]||{status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; rs.stages[k].status=k<stId?'passed':(k===stId?'current':'locked'); }); if(!rs.diag) rs.diag={t:Date.now(),placed:stId,results:{},n:0,manual:true}; }); showStudent(id); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 async function resetDiag(id){ try{ await patchRoute(id,rs=>{ rs.diag=null; Object.keys(rs.stages).forEach(k=>{ rs.stages[k].status='locked'; }); }); showStudent(id); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
-async function delStudent(id){ try{ await sb(`students?id=eq.${id}`,{method:'DELETE',prefer:'return=minimal'}); T.rows=T.rows.filter(x=>x.id!==id); showTeacher(); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
+async function resetPin(id){ const v=($('newpin').value||'').trim(); if(!/^\d{4}$/.test(v)){ $('tmsg').textContent='PIN — 4 сан.'; return; }
+  try{ await trpc('esep_t_reset_pin',{p_student:id,p_pin:v}); $('newpin').value=''; $('tmsg').textContent='Жаңа PIN сақталды. Оқушы барлық құрылғыда қайта кіреді.'; }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
+async function delStudent(id){ try{ await trpc('esep_t_delete',{p_student:id}); T.rows=T.rows.filter(x=>x.id!==id); showTeacher(); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 function exportCSV(){ const route=T.route; const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass);
   const head=['Оқушы','Сынып','Бағыт','Кезең','Деңгей','Минут','Есеп','Дұрыс %','Кеңес ⌀','Қорытынды','Соңғы кіру','Тіркелген']; const lines=[head.join(';')];
-  rows.forEach(r=>{ const s=RS(r,route); const cur=stOf(r,route); const a=s.nAns||0; lines.push([r.name,r.klass||'',route,cur||'',cur?s.stages[cur].level:'',Math.round((r.time_ms||0)/60000),a,a?Math.round(100*(s.nOk||0)/a):'',a?((s.nHint||0)/a).toFixed(1):'',verdict(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)[0],fmtDT(r.last_seen),fmtDT(r.created_at)].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')); });
+  rows.forEach(r=>{ const s=RS(r,route); const cur=stOf(r,route); const a=s.nAns||0; lines.push([r.name,r.klass||'',route,cur||'',cur?s.stages[cur].level:'',Math.round((r.time_ms||0)/60000),a,a?Math.round(100*(s.nOk||0)/a):'',a?((s.nHint||0)/a).toFixed(1):'',verdict(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)[0],fmtDT(r.last_seen),fmtDT(r.created_at)].map(v=>{ v=String(v); if(/^[=+\-@\t\r]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; }).join(';')); });
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`esep_${route}_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); }
 showTeacher();
 </script>

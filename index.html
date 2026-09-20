@@ -7,7 +7,7 @@
 <!-- Kazakh is locked: the browser may not translate this page. The ҚАЗ/РУС switch removes this meta for pupils who need Russian. -->
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="core/ui.css?v=8">
+<link rel="stylesheet" href="core/ui.css?v=9">
 <style>
 /* portal: one landscape strip per route */
 .rt{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:block;text-decoration:none;color:inherit;margin-bottom:10px}
@@ -45,12 +45,24 @@
 .week .now i{border:3px solid var(--gold);background:var(--gold-soft)}
 .week .now.done i{border:3px solid var(--good);background:var(--good-soft)}
 .week .miss i{border-style:solid;opacity:.55}
+.brd-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--fig);border-radius:14px;padding:4px;margin:10px 0}
+.brd-tabs button{min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--muted);font:inherit;font-weight:800;font-size:.88rem;cursor:pointer}
+.brd-tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.brd-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums}
+.brd-row:last-child{border-bottom:0}
+.brd-row i{width:22px;font-style:normal;font-family:var(--disp);font-weight:600;color:var(--muted)}
+.brd-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brd-me{margin-top:8px;padding:11px 12px;border-radius:14px;background:var(--accent-soft);border-bottom:0}
+.brd-me small{display:block;font-size:.8rem;font-weight:800;color:var(--good)}
+.brd-bar{height:14px;border-radius:999px;background:var(--fig);overflow:hidden;margin:4px 0 12px}
+.brd-bar b{display:block;height:100%;border-radius:999px;background:var(--muted);opacity:.55}
+.brd-bar b.mine{background:var(--accent);opacity:1}
 .sec{font-family:var(--disp);font-weight:600;font-size:1.15rem;margin:16px 2px 8px}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
-<script src="core/core.js?v=8"></script>
+<script src="core/core.js?v=9"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
 (async function(){
@@ -128,6 +140,7 @@
       <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
   else html+=`<div class="card"><h1>${hello}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   html+=goalCard();
+  html+=`<div id="board"></div>`;   // filled after the first paint: the board is one extra request and must never hold the page up
   if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
@@ -140,6 +153,25 @@
   });
   html+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
   app.innerHTML=html;
+
+  /* ── this week's class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the
+     per-pupil average of each class in my grade. Score = right first time, no hints, outside the placement test.
+     Nothing is drawn when offline, when the pupil has no class, or when nobody has scored yet. ── */
+  Core.board().then(b=>{ const box=document.getElementById('board'); if(!box||!b||!b.klass||!b.me) return;
+    const top=b.top||[], cls=(b.classes||[]), max=Math.max(1,...cls.map(c=>c.avg));
+    if(!top.length&&!cls.length) return;
+    const inTop=top.some(x=>x.me), d=b.me.n-(b.me.prev_same_point||0);
+    const mine=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i><span>Сен${d>0&&b.me.prev_same_point?`<small>өткен аптаның осы күнінен +${d}</small>`:''}</span><b>${b.me.n}</b></div>`;
+    const tabMine=(top.length?top.map(x=>`<div class="brd-row"><i>${x.rank}</i><span>${x.me?'Сен':esc(x.name)}</span><b>${x.n}</b></div>`).join(''):`<p class="note">Бұл аптада әлі ешкім ұпай жинаған жоқ. Бірінші бол!</p>`)+(inTop?'':mine);
+    const tabCls=cls.length>1?cls.map(c=>`<div class="brd-row" style="border:0;padding:0"><span>${esc(c.klass)}${c.mine?' · сенің сыныбың':''}</span><b>${c.avg}</b></div><div class="brd-bar"><b class="${c.mine?'mine':''}" style="width:${Math.round(100*c.avg/max)}%"></b></div>`).join('')
+      +`<p class="note" style="margin:0">Бір оқушыға шаққандағы орташа. Сенің ${b.me.n} есебің ${esc(b.klass)} нәтижесіне қосылды.</p>`:'';
+    let tab='mine';
+    const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">осы апта</span></div>
+      ${tabCls?`<div class="brd-tabs"><button type="button" data-t="mine" aria-pressed="${tab==='mine'}">Менің сыныбым</button><button type="button" data-t="cls" aria-pressed="${tab==='cls'}">Сыныптар</button></div>`:'<div style="height:8px"></div>'}
+      ${tab==='mine'?`<p class="note" style="margin:0 0 4px">Кеңессіз, бірінші реттен дұрыс шешілген есептер</p>${tabMine}`:tabCls}
+      <p class="note" style="margin:10px 0 0">Дүйсенбі күні тақта нөлден басталады.</p></div>`;
+      box.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{ tab=x.dataset.t; draw(); }); };
+    draw(); });
 })();
 </script>
 </body>
