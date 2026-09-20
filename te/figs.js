@@ -48,22 +48,26 @@ const FIGS={
      `total` on the brace: a number = the whole is known (the lid mark), '?' = the whole itself
      is the unknown (the empty label). Level-1 form of `bar`; level 2 keeps the proportional one. */
   ubar(f){
-    const U=18, GAP=4, PER=12, x0=20, y0=26;
+    const U=18, GAP=4, PER=12, y0=26;
     const cells=[];
     (f.segs||[f.a,f.b]).forEach((n,si)=>{ if(n==='?') cells.push('?'); else for(let i=0;i<n;i++) cells.push(si?'b':'a'); });
     const cols=Math.min(cells.length,PER), rows=Math.ceil(cells.length/PER);
+    /* width first, then centre: a four-square bar left-aligned in a 300-wide box looks like a
+       mistake next to the balance, which fills its box. */
+    const contentW=(cells.indexOf('?')>=0?(cols-1)*(U+GAP)+U*3:cols*(U+GAP)-GAP);
+    const W=Math.max(300,contentW+40), x0=(W-contentW)/2;
     let inner='';
     cells.forEach((c,i)=>{
       const x=x0+(i%PER)*(U+GAP), y=y0+Math.floor(i/PER)*(U+GAP);
       if(c==='?') inner+=`<rect x="${x}" y="${y+4}" width="${U*3}" height="${U-4}" rx="3" fill="var(--seg2)" stroke="var(--stroke)" stroke-width="1.5"/>`
         +`<rect x="${x-2}" y="${y-1}" width="${U*3+4}" height="6" rx="2" fill="var(--ink)"/>`
-        +`<text x="${x+U*1.5}" y="${y+17}" text-anchor="middle" fill="var(--ink)" font-size="14">?</text>`;
+        +`<text x="${x+U*1.5}" y="${y+18}" text-anchor="middle" fill="var(--ink)" font-size="17">?</text>`;
       else inner+=`<rect x="${x}" y="${y}" width="${U}" height="${U}" rx="3" fill="${c==='a'?'var(--seg1)':'var(--seg2)'}" stroke="var(--stroke)" stroke-width="1.5"/>`;
     });
-    const R=x0+(cells.indexOf('?')>=0?(cols-1)*(U+GAP)+U*3:cols*(U+GAP)-GAP), bot=y0+rows*(U+GAP)-GAP;
-    inner+=`<path d="M${x0},${bot+8} v6 h${R-x0} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
-      +`<text x="${(x0+R)/2}" y="${bot+34}" text-anchor="middle" fill="var(--ink)" font-size="15">${ESC(f.total)}</text>`;
-    const W=Math.max(300,R+20), H=bot+44;
+    const R=x0+contentW, bot=y0+rows*(U+GAP)-GAP;
+    inner+=`<path d="M${x0},${bot+8} v6 h${contentW} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
+      +`<text x="${(x0+R)/2}" y="${bot+38}" text-anchor="middle" fill="var(--ink)" font-size="21">${ESC(f.total)}</text>`;
+    const H=bot+48;
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
   },
 
@@ -72,7 +76,7 @@ const FIGS={
   grp(f){
     const g=f.g, v=f.v, PER=Math.min(g,4), BW=64, BH=44, GAP=10;
     const cols=Math.min(g,PER), rows=Math.ceil(g/PER);
-    const W=Math.max(300, cols*(BW+GAP)+40), x0=(W-(cols*(BW+GAP)-GAP))/2, y0=32;
+    const W=Math.max(300, cols*(BW+GAP)+40), x0=(W-(cols*(BW+GAP)-GAP))/2, y0=36;
     let inner='';
     for(let i=0;i<g;i++){
       const r=Math.floor(i/PER), c=i%PER, x=x0+c*(BW+GAP), y=y0+r*(BH+GAP);
@@ -84,10 +88,10 @@ const FIGS={
     }
     const bot=y0+rows*(BH+GAP)-GAP, R=x0+cols*(BW+GAP)-GAP;
     inner+=`<path d="M${x0},${bot+8} v6 h${R-x0} v-6 M${(x0+R)/2},${bot+14} v5" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`
-      +`<text x="${(x0+R)/2}" y="${bot+34}" text-anchor="middle" fill="var(--ink)" font-size="14">${ESC(f.total)}</text>`;
-    if(f.ask==='g') inner+=`<path d="M${x0},${y0-8} v-6 h${R-x0} v6" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`
-      +`<text x="${(x0+R)/2}" y="${y0-16}" text-anchor="middle" fill="var(--accent)" font-size="17">?</text>`;
-    const H=bot+44;
+      +`<text x="${(x0+R)/2}" y="${bot+38}" text-anchor="middle" fill="var(--ink)" font-size="21">${ESC(f.total)}</text>`;
+    if(f.ask==='g') inner+=`<path d="M${x0},${y0-10} v-6 h${R-x0} v6" fill="none" stroke="var(--accent)" stroke-width="1.5"/>`
+      +`<text x="${(x0+R)/2}" y="${y0-18}" text-anchor="middle" fill="var(--accent)" font-size="21">?</text>`;
+    const H=bot+48;
     return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,sans-serif" font-weight="800">${inner}</svg>`;
   },
 
