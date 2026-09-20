@@ -37,6 +37,7 @@ const _save=saveProgress; saveProgress=function(){ try{ _save(); }catch(e){} if(
 const _gen=generateQuestion; generateQuestion=function(){ qT0=Date.now(); qHints=0; return _gen.apply(this,arguments); };
 const _hint=showVisualHint; showVisualHint=function(){ qHints=Math.min(5,qHints+1); if(R&&state.level) Core.event({ev:'hint',n:qHints,stage:stageId(state.level)}); return _hint.apply(this,arguments); };
 const _fb=showFeedback; showFeedback=function(correct,hint){
+  if(state.fbShown) return;   // a repeated tap on «Тексеру»: the app ignores it (pv/index.html showFeedback) — so must the log
   if(R&&state.level){ const ws=document.getElementById('workspace'); const stem=ws?(ws.querySelector('.question,.q-text,h2,h3,p')||ws).textContent.trim().replace(/\s+/g,' ').slice(0,160):'';
     const ansM=hint?String(hint).replace(/^Дұрыс( жауап)?:\s*/,''):'';
     Core.answer({stage:stageId(state.level),lvl:3,ok:!!correct,mode:'practice',hints:qHints,ms:Date.now()-qT0,type:state.level,stem:levelName(state.level)+(stem?' — '+stem:''),ans:correct?undefined:ansM,given:undefined}); }

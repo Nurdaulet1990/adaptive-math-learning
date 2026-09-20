@@ -1030,6 +1030,7 @@ function renderMain() {
 }
 
 function generateQuestion() {
+  state.fbShown=false;   // one verdict per question — see showFeedback
   const ws=document.getElementById('workspace');
   if(state.questionNum>=state.questionsPerLevel) {
     showLevelComplete(ws);
@@ -2360,6 +2361,11 @@ window.checkExpanded = function(ch,ct,co) {
 };
 
 function showFeedback(correct, hint) {
+  /* The check buttons stay enabled after a verdict, so every further tap on «Тексеру» used to count the SAME
+     answer again: one right answer tapped ten times was 10/10, the level passed, +20 stars and ten logged answers
+     (and a double-tap on a wrong answer burnt two of the ten questions). One question, one verdict. */
+  if(state.fbShown) return;
+  state.fbShown=true;
   const fb=document.getElementById('fb');
   if(correct) {
     state.score++;
@@ -2432,7 +2438,7 @@ function genPlacementQ(levelId) {
   // Generate a text-only question {q, sub, answer} for any level
   const lv=levelId;
   if(lv==='c1') { const n=rand(1,9); return {q:`${n} — бұл қандай сан?`, sub:'Count the ones', answer:n}; }
-  if(lv==='c20') { const n=rand(11,20); return {q:`1 ондық және ${n%10} бірлік = ?`, sub:'1 ten and ? ones', answer:n}; }
+  if(lv==='c20') { const n=rand(11,19);   /* was rand(11,20): n=20 printed «1 ондық және 0 бірлік = ?» with 20 as the key */ return {q:`1 ондық және ${n%10} бірлік = ?`, sub:'1 ten and ? ones', answer:n}; }
   if(lv==='ct10') { const t=rand(1,9); return {q:`${t} ондық = ?`, sub:'Count by tens', answer:t*10}; }
   if(lv==='c2') { const t=rand(1,9),o=rand(0,9); return {q:`${t} ондық ${o} бірлік = ?`, sub:'Tens and ones', answer:t*10+o}; }
   if(lv==='c3') { const h=rand(1,9),t=rand(0,9),o=rand(0,9); return {q:`${h} жүздік ${t} ондық ${o} бірлік = ?`, sub:'Hundreds, tens, ones', answer:h*100+t*10+o}; }

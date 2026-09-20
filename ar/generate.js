@@ -506,7 +506,12 @@
         inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') answer(); });
         el.querySelector('.sp-ok').addEventListener('click', answer);
         go.addEventListener('click', function () {
-          if (over) return;
+          /* A failed round ends with finish() → over = true and shows this button as «Қайта бастау». It used to
+             return right here, so the button was dead: the runner had just granted the free second try and was
+             waiting for a new submit that could never come — the only ways out were ✕ or burning all five hints.
+             Once the runner closes the question it disables every button inside the widget, so a restart after
+             the final verdict is still impossible. */
+          over = false;
           q = []; for (var n2 = 0; n2 < ROUND; n2++) q.push(fact());
           i = 0; fixes = 0; combo = 0; msg.textContent = '';
           row.style.display = ''; go.style.display = 'none';
