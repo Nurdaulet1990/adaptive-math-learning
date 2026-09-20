@@ -116,6 +116,13 @@
   setInterval(()=>{ const now=Date.now(); if(session&&document.visibilityState==='visible'&&now-lastTick<20000){ cache.time+=now-lastTick; if(ROUTE&&STATE){ const rs=routeState(); rs.time=(rs.time||0)+(now-lastTick); } } lastTick=now; },5000);
   setInterval(()=>{ if(session&&STATE){ dirty=true; schedule(10); } },60000);
 
+  /* ── answers per calendar day (device-local date) — feeds the portal's daily goal and day streak.
+     Lives in STATE._days = {'2026-09-21': 14, …}, so it follows the pupil across devices like the rest
+     of the state. Only the last 60 days are kept. Skipped items ("Білмеймін" in the placement test) don't count. */
+  const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  function bumpDay(){ if(!STATE) return; const D=STATE._days||(STATE._days={}); const k=ymd(new Date()); D[k]=(D[k]||0)+1;
+    const ks=Object.keys(D).sort(); while(ks.length>60) delete D[ks.shift()]; }
+
   /* ── login (rendered by core so routes never do it) ── */
   const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
   function loginUI(host,route){
@@ -190,6 +197,7 @@
       const miss=['stage','lvl','ok'].filter(k=>a[k]===undefined); if(miss.length) console.warn('Core.answer missing:',miss.join(','),a);
       const rs=routeState(); rs.nAns=(rs.nAns||0)+1; if(a.ok) rs.nOk=(rs.nOk||0)+1; rs.nHint=(rs.nHint||0)+(a.hints||0); rs.last=Date.now();
       if(a.stem) a.stem=String(a.stem).slice(0,200);
+      if(!a.skip) bumpDay();
       pushEvent(Object.assign({ev:'answer',route:ROUTE},a)); Core.save();
     },
     event(e){ if(!ROUTE) return console.warn('Core.event before start'); pushEvent(Object.assign({route:ROUTE},e)); },
@@ -197,6 +205,8 @@
     /** Portal/teacher helpers (not for routes) */
     _sb:sb, _session:()=>session, _allState:()=>STATE,
     async _loadStateOnly(){ if(!session) return null; const rows=await sb(`students?select=state,time_ms&id=eq.${session.id}`); return rows[0]||null; },
+    /** Answers per day, {'YYYY-MM-DD': n} (a copy). For the portal. */
+    days(){ return Object.assign({},(STATE&&STATE._days)||{}); }, ymd,
     lang, setLang, avatar, setAvatar, AVATARS, sound, isMuted, toggleMute,
     topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<span class="avachip">${avatar()}</span>`:''}</div>`; },
     /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */
