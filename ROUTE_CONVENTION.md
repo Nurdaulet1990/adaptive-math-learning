@@ -271,6 +271,14 @@ A useful pattern (`fr/generate.js`): compute the numbers once, then branch only 
 `if(lvl<3){ q.fig=…; q.choices=… } else { q.kind='input'; q.hfig=…; }`. Moving a picture from `fig`
 to `hfig` keeps it available as hint step 2 without giving it away.
 
+**A route may keep the picture at level 3 instead** (owner decision, 2026-09-20). Hiding it assumes
+the abstract form is the goal and the picture a crutch to be earned. For a route whose whole point
+is joining the two — TE is the case that raised this — that is backwards: a bare `6 · x = 96` with
+nothing beside it is symbol drilling, and a seven-year-old has nothing to think with. There, the
+equation and its bar stand side by side at level 3, and what the level tests is the join. Either
+choice is legitimate; a route that takes this one says so in its `MAP.md` and inverts the §14 check,
+because the self-check enforces the default.
+
 ---
 
 ## §7 · Practice — what the runner does with the answer
@@ -516,7 +524,8 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 
 ## Version history
 
-**v1.2 · 2026-09-20** — the re-diagnostic and the tester account (§10). A pupil who rushed the placement test could only
+**v1.2 · 2026-09-20** — the re-diagnostic and the tester account (§10); §6 gained the option of
+keeping the picture at level 3. A pupil who rushed the placement test could only
 grind forward through stages they already owned; the home screen now offers a second run, which may
 raise their placement and may never lower it. Implemented in `core/runner.js` (FR, AR, TE), mirrored
 in `wp/diag_test.js` (WP keeps its own copy of the runner) and guarded in `pv/bridge.js`
