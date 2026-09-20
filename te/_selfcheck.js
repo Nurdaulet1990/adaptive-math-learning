@@ -47,7 +47,10 @@ console.log('3–5 · 400 draws per stage per level');
             if(isCorrect({ans:q.choices[m]},q.choices[n])) dup=true;
           if(dup){ bad(id+' lvl'+lvl+' two choices compare equal: '+q.choices.join('/')); e++; break; }
         }
-        if(lvl===3&&q.fig){ bad(id+' lvl3 must not carry fig (use hfig)'); e++; break; }
+        /* Deliberate deviation from §6, owner decision 2026-09-20: this route KEEPS the picture
+           at level 3 instead of hiding it in `hfig`. A bare «6 · x = 96» is the symbol drilling
+           the route exists to avoid, so the check is inverted — the picture must be there. */
+        if(lvl===3&&!q.fig&&type!=='notation'){ bad(id+' lvl3 has no fig — level 3 keeps the picture on the item'); e++; break; }
       }
       if(got<40){ bad(id+' lvl'+lvl+' produced only '+got+'/400 questions'); e++; }
     }});
