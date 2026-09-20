@@ -2,7 +2,12 @@
    GENERATORS[type](params, lvl) → question. Pure: no DOM, no Core, no state.
    lvl 1 = concrete (bar you can read off, small numbers, choices)
    lvl 2 = pictorial (bar, bigger numbers, choices)
-   lvl 3 = abstract (numbers live IN THE STEM — startTest dedupes by stem+ans, see fr/generate.js FR-02) */
+   lvl 3 = abstract: the equation is written out and the numbers live IN THE STEM (startTest
+           dedupes by stem+ans — see fr/generate.js FR-02), but THE PICTURE STAYS ON THE ITEM.
+           §6 would move it to `hfig`, where it only appears if the pupil asks for a hint; a bare
+           `6 · x = 96` then gives a seven-year-old nothing to think with, which is the symbol
+           drilling this route exists to avoid. Equation and picture side by side IS the level:
+           connecting the two is the thing being learnt, not a crutch to be earned. */
 'use strict';
 const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const shuffle=a=>a.slice().sort(()=>Math.random()-.5);
@@ -97,7 +102,7 @@ core_add(p,lvl){
     Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a]));
   }
   else if(lvl===2){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+a,Math.abs(ans-a),ans+1,a])); }
-  else { q.kind='input'; q.hfig=fig; }
+  else { q.kind='input'; q.fig=fig; }
   return q;
 },
 
@@ -133,7 +138,7 @@ core_mul(p,lvl){
     Object.assign(q,numChoices(ans,[ans+g,ans*2,Math.max(1,ans-1),g+v]));
   }
   else if(lvl===2){ q.fig=fig; Object.assign(q,numChoices(ans,[ans+g,ans*2,Math.max(1,ans-1),g+v])); }
-  else { q.kind='input'; q.hfig=fig; }
+  else { q.kind='input'; q.fig=fig; }
   return q;
 },
 
@@ -161,7 +166,7 @@ wrap_add(p,lvl){
       expl:`Жақшаның мәні ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${x}.`};
     const fig={type:'wrap',core:kind,a,x,v:C.v,b,w:p.w};
     if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(x,[C.v,x+b,Math.abs(C.v-b),x+a])); }
-    else { q.kind='input'; q.hfig=fig; }
+    else { q.kind='input'; q.fig=fig; }
     return q;
   });
 },
@@ -190,7 +195,7 @@ wrap_mul(p,lvl){
       expl:`Жақшаның мәні ${C.v}. ${C.txt.replace(/[()]/g,'')} = ${C.v} → x = ${x}.`};
     const fig={type:'wrap',core:kind,a,x,v:C.v,b,w:p.w};
     if(lvl<3){ q.fig=fig; Object.assign(q,numChoices(x,[C.v,C.v*b,x+a,Math.max(1,x-1)])); }
-    else { q.kind='input'; q.hfig=fig; }
+    else { q.kind='input'; q.fig=fig; }
     return q;
   });
 },
@@ -234,7 +239,8 @@ like_terms(p,lvl){
         h2:`${m}x + ${n}x = ${m+n}x`,
         steps:[{label:'Барлық бөлік',expr:`${m} + ${n}`,val:String(m+n)},{label:'x',expr:`(${c} − ${k}) : ${m+n}`,val:String(x)}],
         expl:`${m}x + ${n}x = ${m+n}x. ${m+n}x = ${c} − ${k} = ${(m+n)*x}. x = ${x}.`};
-      if(lvl<3){ q.fig={type:'bar_equal',fp:`${(m+n)*x};${m+n};?`}; Object.assign(q,numChoices(x,[m+n,x+1,c-k,Math.max(1,x-1)])); }
+      q.fig={type:'bar_equal',fp:`${(m+n)*x};${m+n};?`};   /* level 3 keeps it too — see the header */
+      if(lvl<3) Object.assign(q,numChoices(x,[m+n,x+1,c-k,Math.max(1,x-1)]));
       else q.kind='input';
       return q;
     }
@@ -248,7 +254,8 @@ like_terms(p,lvl){
       h2:`${mm}x − x = ${d}x`,
       steps:[{label:'Жақшаны бірікті',expr:`${mm} − 1`,val:String(d)},{label:'Жақшаның мәні',expr:`${T} : ${c}`,val:String(d*x)},{label:'x',expr:`${d*x} : ${d}`,val:String(x)}],
       expl:`${mm}x − x = ${d}x. ${T} : ${d}x = ${c} → ${d}x = ${d*x} → x = ${x}.`};
-    if(lvl<3){ q.fig={type:'bar_equal',fp:`${d*x};${d};?`}; Object.assign(q,numChoices(x,[d,c,d*x,x+1])); }
+    q.fig={type:'bar_equal',fp:`${d*x};${d};?`};
+    if(lvl<3) Object.assign(q,numChoices(x,[d,c,d*x,x+1]));
     else q.kind='input';
     return q;
   });
@@ -271,7 +278,7 @@ dbl_wrap(p,lvl){
       steps:[{label:'Ортаңғы мән',expr:`${e} : ${d}`,val:String(q0)},{label:'Жақшаның мәні',expr:`${q0} · ${b}`,val:String(inner)},{label:'x',expr:`${inner} − ${a}`,val:String(x)}],
       expl:`${e} : ${d} = ${q0}. ${q0} · ${b} = ${inner}. x = ${inner} − ${a} = ${x}.`};
     if(lvl<3){ qq.fig={type:'bar',fp:`?;${a};${inner}`}; Object.assign(qq,numChoices(x,[inner,q0,x+a,Math.max(1,x-1)])); }
-    else { qq.kind='input'; qq.hfig={type:'bar',fp:`?;${a};${inner}`}; }
+    else { qq.kind='input'; qq.fig={type:'bar',fp:`?;${a};${inner}`}; }
     return qq;
   });
 },

@@ -92,7 +92,13 @@ never drawn, so `'?,+3'` renders no `+3`. Hence `FIGS.wrap`.
    and then means the same at level 3, where the equation itself shows up. The equation itself first appears at level 2. (Constant stems are safe
    here: `startTest` dedupes by `stem + ans`, and the stage test draws level 3, which keeps its
    numbers in the stem.)
-3. **No `fig` at level 3** — the bar moves to `hfig` so it stays available as hint step 2.
+3. **Level 3 KEEPS the picture** — a deliberate inversion of §6's default (owner decision,
+   2026-09-20), and `_selfcheck.js` check 5 is inverted to match. §6 would move the bar to `hfig`,
+   where it appears only if the pupil asks for a hint. On this route that turns level 3 into a bare
+   `6 · x = 96` with nothing beside it — the symbol drilling the route exists to avoid. Equation
+   and picture side by side *is* the level: joining them is what is being learnt, not a crutch to
+   be earned. `notation` (TE-17) is the exception, having no picture at any level: it is about the
+   notation itself.
 4. **The answer is never a number printed in the stem**, and never 1. Otherwise a pupil can
    copy a number off the screen and be right.
 5. **Distractors differ by value.** `Core.isCorrect` compares the numbers in an answer, so
