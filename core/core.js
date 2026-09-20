@@ -240,6 +240,9 @@
     /** Portal/teacher helpers (not for routes) */
     _rpc:rpc, _session:()=>session, _allState:()=>STATE,
     async _loadStateOnly(){ if(!session) return null; return await rpc('esep_resume',{p_token:session.token}); },
+    /** Call one of the esep_* server functions as the logged-in pupil (the session token is added here). For core-owned pages
+        such as the portal and challenge/ — routes keep to start/save/answer/event. Throws when offline or not logged in. */
+    async call(fn,args){ if(!session) throw new Error('not logged in'); if(!/^esep_[a-z_]+$/.test(fn)) throw new Error('Core.call: esep_* only'); return rpc(fn,Object.assign({p_token:session.token},args||{})); },
     /** This week's class board (top five of my class, my place, class averages). null when offline / not logged in. */
     async board(){ if(!session) return null; try{ return await rpc('esep_board',{p_token:session.token}); }catch(e){ return null; } },
     /** Answers per day, {'YYYY-MM-DD': n} (a copy). For the portal. */

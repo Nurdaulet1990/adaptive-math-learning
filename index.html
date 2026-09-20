@@ -83,7 +83,7 @@
     const W=320,H=62,x0=10,x1=W-10, N=Math.min(n,9), step=(x1-x0)/(N-1||1);
     const pts=[]; for(let i=0;i<N;i++) pts.push({x:x0+i*step, y:44+Math.sin(i*1.15)*8});
     let d=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<N;i++){ const p=pts[i-1],q=pts[i]; d+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; }
-    const atS=at<0?-1:Math.round(at*(N-1)/Math.max(n-1,1));
+    const atS=at<0?-1:Math.min(N-1,Math.round(at*(N-1)/Math.max(n-1,1)));   // a finished route has at = n (no 'current' left): without the clamp pts[atS] was undefined and the whole portal crashed
     let done=''; if(atS>0){ done=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<=atS;i++){ const p=pts[i-1],q=pts[i]; done+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; } }
     let dots=''; pts.forEach((p,i)=>{ if(i===atS) return;
       dots+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${i<atS?color:'var(--road-edge)'}"/>`; });
@@ -140,6 +140,7 @@
       <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
   else html+=`<div class="card"><h1>${hello}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   html+=goalCard();
+  html+=`<div id="duel"></div>`;    // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
   html+=`<div id="board"></div>`;   // filled after the first paint: the board is one extra request and must never hold the page up
   if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
@@ -153,6 +154,18 @@
   });
   html+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
   app.innerHTML=html;
+
+  /* ── classmate challenges: what is waiting for me, results of the ones I started, and the way in ── */
+  const tbl=n=>(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
+  Core.call('esep_ch_list',{p_mark_seen:true}).then(l=>{ const box=document.getElementById('duel'); if(!box||!l) return; let h='';
+    (l.incoming||[]).slice(0,3).forEach(c=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${esc(String(c.from_name).split(' ')[0])} сені жарысқа шақырды</h2>
+      <p style="margin:0 0 4px;font-weight:700">${esc(tbl(c.table))} · 10 есеп · екеуіңе бірдей</p><p class="note" style="margin:0 0 12px">Оның нәтижесі сен ойнап болғанша жасырын тұрады.</p>
+      <a class="btn gold wide" href="challenge/?id=${+c.id}">Қабылдау</a></div>`; });
+    (l.results||[]).filter(r=>r.new).forEach(r=>{ const nm=esc(String(r.opp_name).split(' ')[0]);
+      h+=`<div class="card"><h2 style="margin:0 0 2px">${r.outcome==='win'?`${nm} жауап берді — сен жеңдің!`:r.outcome==='tie'?`${nm} жауап берді — тең!`:`${nm} жауап берді — бұл жолы ол озды`}</h2>
+      <p style="margin:0;font-weight:700">${esc(tbl(r.table))}: сен ${+r.my_ok}/10, ${nm} ${+r.opp_ok}/10 · ★ +${+r.stars}</p></div>`; });
+    h+=`<p class="note center" style="margin:0 0 12px"><a href="challenge/">Сыныптасты жарысқа шақыру</a>${l.stars?` · жарыс жұлдыздары ★ ${+l.stars}`:''}</p>`;
+    box.innerHTML=h; }).catch(()=>{});
 
   /* ── this week's class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the
      per-pupil average of each class in my grade. Score = right first time, no hints, outside the placement test.

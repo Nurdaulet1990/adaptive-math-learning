@@ -81,12 +81,26 @@ curl -s "https://<project>.supabase.co/rest/v1/students?select=name,pin&limit=1"
 
 ---
 
+## 之后随时 · `04_challenges.sql`（同学挑战「жарыс»，只增不删，可重复跑）
+
+第 1 步之后任何时候都能跑；没跑之前首页只是不显示挑战卡片，别的不受影响。规则全部在服务端：
+
+- 异步：A 先打，B 下次打开 app 再打，不需要同时在线；同一组 10 道题由服务端生成并存下来；**答案由服务端判分**，浏览器不上报分数。
+- B 打完之前，任何函数都不会返回 A 的成绩。
+- 只能选**双方都已通过**的乘法表站（`AR-04/05/06/09/10/13–16` ↔ ×2,5,10,3,4,6–9；映射写在 `esep_private.ch_stage`，必须与 `ar/stages.js` 一致）——比赛是巩固已会的内容，不是赶新课。
+- 只限同班；每人每天最多发起 3 场；同一对手有未完成的挑战时不能再发；7 天没人应战自动失效；`tester` 不参与。
+- 赢 3 星、输 1 星、完全打平各 2 星；用时取浏览器上报值与服务端实际经过时间的较小者。
+
+页面：`challenge/`（选人 → 选表 → 作答 → 结果），首页显示「收到的挑战」和「我发起的挑战出结果了」。
+
 ## 自己演练（不碰线上）
 
 ```bash
 # 本地起一个一次性的 Postgres 16（trust 认证，端口 54329，socket 在 /tmp），然后：
 npm i pg playwright
 node supabase/test/run.js    # 56 项：迁移可重复跑（含第 3 步之后）、每个函数以 anon 角色测、限流、口令、11 万条事件下周榜 <10 ms、上锁后直接读写全部被拒、回滚
+node supabase/test/run_challenges.js   # 21 项：挑战函数（资格、保密、服务端判分、平局、每日上限、过期）
+node supabase/test/e2e_challenge.js   # 11 项：两个浏览器各扮一个学生，走完一整场
 node supabase/test/e2e.js    # 22 项：真页面 → 拦截所有 supabase 请求 → 以 anon 角色打到本地库；含恶意 state / 事件、离线、教师页
 ```
 
