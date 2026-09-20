@@ -140,6 +140,54 @@ Confirmed correct and left alone: `бөлінгіш` (dividend) · `бөлгіш
 
 **Two defects found while splitting the column stages.** `div_long2` — the generator for both multi-digit-divisor stations — was referenced by `stages.js` but had never been written; the route would have thrown on reaching AR-36. It is written now, framed on the толымсыз бөлінгіш like `div_long`, carrying the helper table in from AR-31 as the scaffold and withdrawing it by lvl 3, and holding a zero *inside* the quotient back until lvl 3 because writing that digit is its own trap. Separately, `G.speed` picked a focus group from a fixed list and then filtered it against the stage's tables, so AR-07 could head a round "× 6, 7" while drilling 2, 5 and 10. Focus groups are now built from the stage's own tables, and a second axis (small multipliers 2–5 vs large 6–10, the way fact-fluency programmes split a table) both fixes the label and widens the drill stages past the runner's 6-distinct floor.
 
+**AR-32 was a ceiling nobody could get past.** Reported as "however I test it, it only reaches 31",
+and reproduced on the real runner by answering **every single question correctly**:
+
+```
+12 probes: AR-01 AR-01 AR-03 AR-03 AR-07 AR-07 AR-15 AR-15 AR-31 AR-31 AR-41 AR-41
+verdicts:  AR-01 ✓  AR-03 ✓  AR-07 ✓  AR-15 ✓  AR-31 ✓        ← AR-41 has NO verdict
+placed:    stage 32
+```
+
+AR-41 was asked twice, answered correctly twice, and **never scored**. `nextDiag()` checks the
+12-question cap at the top of the function and settles a finished stage further down, so when the
+last allowed question is also a stage's last item, the settle branch never runs: the pupil answers
+it, it is logged, and the result is thrown away. `lo` stays at 31 and `finishDiag` places at 32.
+On a 41-stage route that is a hard ceiling — no amount of correct answering can beat it.
+
+This is a `core/` bug, not a route one, and it is in `owner-patch/runner-diag.patch` together with
+the climb-budget fix. Note the honest caveat on that patch: the climb half is gated on `DG.climb`
+and cannot touch WP/FR/PV, but the discarded-verdict half is deliberately **not** gated, because the
+bug is universal — it is simply rarely hit on a short route. Across 84 route-length × true-level
+combinations without `climb`, 75 are unchanged and 9 change, all of them to a more accurate
+placement. (The evidence script first reported those 9 as regressions because it scored against the
+wrong target; the correct placement is the first stage the pupil has *not* mastered.)
+
+**A stopwatch had got into the placement test.** Reported as "the diagnostic is wrong", reproduced
+by driving the real runner: `placement:'climb'` probes AR-01, AR-03, **AR-07**, AR-15, AR-31 … so a
+⚡ station is the THIRD thing every single pupil meets. Its level-3 item was timed, and the
+diagnostic shows no teaching card and no hints — the countdown bar simply started draining in front
+of a child who had no idea what the screen was. Measured: a pupil who genuinely knew through AR-16
+but took longer than 8 s on that unfamiliar screen was placed at **AR-07, nine stages low**, and the
+test then ended early so nothing later could rescue it. One slow-but-correct answer on probe three
+capped the entire placement.
+
+The cause is structural: a generator is called as `(params, lvl)` and **cannot tell the stage test
+from the diagnostic**, so an item that is right for one can be wrong for the other. The level-3 ⚡
+item is now a plain untimed `kind:'input'` fact. Automaticity did not disappear — it moved to level
+2, which is the better home for it anyway: ten facts, six seconds each, at most two corrections,
+with a teaching card, unlimited retries and no placement consequences, and a child only reaches
+level 3 by clearing it. That split is closer to Rocket Math than the old one, where the standard was
+set in the written test; in Rocket Math the hesitation rule lives in the partner practice and the
+test that follows is a confirmation.
+
+**The other half of the same complaint is still the `core/` patch.** With the clock gone, placement
+is exact for a pupil at AR-16 — but one at AR-28 still lands at AR-16, and one who knows everything
+lands at AR-32, because `nextDiag` asks 2 items per stage against a 12-question cap. Applying
+`owner-patch/runner-diag.patch` to a copy of the runner and re-running the same four pupils places
+all four exactly right, and the pupil who knows everything finishes in 6 questions instead of 12.
+The patch is one line and gated on `DG.climb`, so only AR is affected.
+
 **The ⚡ stations were an exam repeated thirteen times.** Play-tested verdict: "a bit hard, and I
 was bored" — from an adult. Both halves had one cause. A level-3 item was a whole two-phase timed
 test (8 s copy + 12 s compute), but `core/runner.js` needs **3 counted-correct in a row at level 3**

@@ -295,12 +295,12 @@
    * ⚡ stations. That is why it felt both hard and boring: the unit of work was
    * an exam, repeated thirteen times.
    *
-   * Now ONE level-3 item is ONE FACT with an 8-second clock. The runner's ten
-   * draws then add up to exactly the thing this stage is for — a ten-fact timed
-   * test, ~90 seconds, which is Rocket Math's one-minute written test.
-   * The personal-hand-speed baseline goes away with the copy phase; an 8 s
-   * ceiling per fact is generous enough for a slow typist that the trade is
-   * worth it, and lvl 1–2 carry no clock or a visible 6 s one.
+   * Now ONE level-3 item is ONE FACT. The runner's ten draws then add up to a
+   * ten-fact test rather than ten exams. It carried an 8-second clock at first;
+   * that had to go, because the same item is what the PLACEMENT DIAGNOSTIC asks
+   * and a generator cannot tell the two apart — see the note on the lvl-3 branch.
+   * The fluency standard lives at lvl 2 (six seconds a fact, with a teaching
+   * card and no placement consequences), which a child must clear to reach 3.
    *
    * Levels 1–2 are where the child actually spends time, so that is where the
    * engagement lives: a combo counter, a best-of-session line, the whole fact
@@ -336,66 +336,39 @@
       return p.op === 'div' ? { a: t * m, b: t, v: m } : { a: t, b: m, v: t * m };
     }
 
-    /* ── lvl 3 · ONE fact against the clock. This is what the stage test runs. ── */
+    /* ── lvl 3 · ONE fact, no clock. Used by BOTH the stage test and the
+     *    placement diagnostic — and that is exactly why it must not be timed.
+     *
+     * A generator is called as (params, lvl) and cannot tell which of the two is
+     * asking. When this item carried an 8-second countdown, the diagnostic put a
+     * stopwatch in front of a child who had seen no teaching card and no
+     * explanation: the bar simply started draining. AR-07 is the THIRD probe for
+     * every pupil under `placement:'climb'`, so one slow-but-correct answer there
+     * closed the bracket and capped the whole placement. Measured on the real
+     * runner: a pupil who genuinely knew through AR-16, but took longer than 8 s
+     * on that unfamiliar screen, was placed at AR-07 — NINE stages too low, with
+     * the test ending early so nothing later could rescue it.
+     *
+     * Automaticity has not been given up; it moved to where it belongs. Level 2
+     * is the fluency gate — ten facts, six seconds each, at most two corrections,
+     * with a teaching card, unlimited retries and no placement consequences — and
+     * a child only reaches level 3 by clearing it. This level-3 item then
+     * confirms the facts stick across a fresh draw, which is what the stage test
+     * is for. That split is also closer to Rocket Math than the old one: their
+     * hesitation rule lives in the partner practice, and the written test that
+     * follows is a confirmation, not the place the standard is set. */
     if (lvl === 3) {
-      var LIM = 8000;
       var f3 = fact();
       return {
         stem: f3.a + ' ' + OP + ' ' + f3.b + ' = ?',
-        kind: 'custom',
+        kind: 'input',
         ans: String(f3.v),
-        h1: 'Мұнда дұрыс жауап жеткіліксіз — ' + (LIM / 1000) + ' секунд ішінде үлгеру керек.',
-        h2: 'Есептеп отырсаң — кесте әлі автоматты емес. Жаттығу деңгейіне қайт.',
-        expl: f3.a + ' ' + OP + ' ' + f3.b + ' = ' + f3.v + '. Бұл кезеңде мақсат — ойланбай айту.',
-        mount: function (el, submit) {
-          var left = LIM, timer = null, answered = false;
-          el.innerHTML =
-            '<div style="display:flex;flex-direction:column;gap:10px;align-items:center">' +
-            '<div class="sp-head note" style="font-weight:800">' + fname + ' · ' +
-            (LIM / 1000) + ' с</div>' +
-            '<div class="sp-q" style="font-family:var(--disp);font-size:2.2rem;font-weight:600">' +
-            f3.a + ' ' + OP + ' ' + f3.b + ' = ?</div>' +
-            '<div style="display:flex;gap:8px;align-items:center">' +
-            '<input class="big sp-in" inputmode="numeric" style="max-width:140px;text-align:center">' +
-            '<button class="btn sp-ok" type="button">Қою</button></div>' +
-            '<div class="sp-msg" style="min-height:1.5em;font-weight:800"></div>' +
-            '<div class="sp-bar" style="width:100%;max-width:240px;height:8px;border-radius:5px;' +
-            'background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:100%;' +
-            'background:var(--accent);border-radius:5px"></i></div></div>';
-          var inp = el.querySelector('.sp-in'), bar = el.querySelector('.sp-bar i'),
-            msg = el.querySelector('.sp-msg'), head = el.querySelector('.sp-head');
-          inp.focus();
-          timer = setInterval(function () {
-            left -= 100;
-            bar.style.width = Math.max(0, left / LIM * 100) + '%';
-            head.textContent = fname + ' · ' + Math.max(0, Math.ceil(left / 1000)) + ' с';
-            if (left <= LIM * 0.35) bar.style.background = 'var(--gold)';
-            if (left <= 0) {
-              clearInterval(timer); timer = null;
-              bar.style.background = 'var(--bad)';
-              if (!answered) {
-                msg.textContent = 'Уақыт бітті';
-                msg.style.color = 'var(--bad)';
-                head.textContent = 'Жауап: ' + f3.v;
-                answered = true;
-                submit('—');            // a sentinel that cannot grade correct
-              }
-            }
-          }, 100);
-          function send() {
-            var v = parseInt(inp.value, 10);
-            if (isNaN(v)) return;
-            if (timer) { clearInterval(timer); timer = null; }
-            answered = true;
-            // the runner owns grading and the one retry; just report the value
-            submit(String(v));
-          }
-          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(); });
-          el.querySelector('.sp-ok').addEventListener('click', send);
-        }
+        h1: 'Бұл кестені жаттығу деңгейінде уақытпен пысықтадың — мұнда есіңде қалғанын тексереміз.',
+        h2: f3.a + ' ' + OP + ' ' + f3.b,
+        expl: f3.a + ' ' + OP + ' ' + f3.b + ' = ' + f3.v +
+          '. Жылдамдық 2-деңгейде өлшенді; бұл жерде дұрыстығы маңызды.'
       };
     }
-
     /* ── lvl 1–2 · the practice round, where the child spends their time ── */
     var LIMIT = lvl === 2 ? 6000 : 0;          // lvl 2: a hesitation is an error
     var ROUND = 10, ALLOW = lvl === 2 ? 2 : 3;
