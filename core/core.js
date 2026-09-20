@@ -162,6 +162,12 @@
       if(session){ try{ const rows=await sb(`students?select=id,name,klass,state,time_ms&id=eq.${session.id}`); row=rows[0]||null; if(!row){ session=null; ls.del(SESSION_KEY); } }catch(e){ /* offline: use cache */ } }
       if(!session){ const host=document.getElementById('app')||document.body; row=await loginUI(host); host.innerHTML=''; }
       Core.student=session;
+      /* The tester account. A pupil named "tester" (any PIN, any class) gets every stage of
+         every route unlocked and the placement test skipped, so the route can be inspected
+         station by station without playing through it. It is a name, not a role in the
+         database, so nothing else in the system has to know about it — and the name is shown
+         in the top bar, so nobody mistakes a tester's full map for a child's progress. */
+      Core.tester=/^\s*tester\s*$/i.test((session&&session.name)||'');
       STATE=(row&&row.state)||cache.state||{}; if(row) cache.time=row.time_ms||0;
       // migration: legacy WP state stored at top level (first trial version)
       if(!STATE.WP&&STATE.stages){ STATE.WP={diag:STATE.diag,stages:STATE.stages,nAns:STATE.nAns,nOk:STATE.nOk,nHint:STATE.nHint}; }

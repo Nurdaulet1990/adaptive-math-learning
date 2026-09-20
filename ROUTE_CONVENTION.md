@@ -369,6 +369,15 @@ second bad run could cost them stages, the way out would itself be a trap. The r
 its own app's, gets the same ceiling in the `finishPlacement` wrapper in `pv/bridge.js`.
 A route inherits all of this — there is nothing to implement.
 
+**The tester account — NEW in v1.2.** Sign in with the name **`tester`** (any PIN, any class)
+and every stage of every route is unlocked and the placement test is skipped, so a route can be
+inspected station by station without playing through it. Tapping a station also moves the tester
+there, so the card under the map — and its stage-test button — follows what is being looked at.
+It is a *name*, not a role in the database: nothing else in the system has to know about it, and
+the name sits in the top bar, so a full map is never mistaken for a child's progress. Implemented
+once in `core/core.js` (`Core.tester`) and honoured by `core/runner.js`, `wp/state.js` and
+`pv/bridge.js` — a route inherits it.
+
 **How it probes.** The runner builds the list of stages that have a generator, then:
 
 - **2 items per probed stage**, both at level 3;
@@ -507,12 +516,13 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 
 ## Version history
 
-**v1.2 · 2026-09-20** — the re-diagnostic (§10). A pupil who rushed the placement test could only
+**v1.2 · 2026-09-20** — the re-diagnostic and the tester account (§10). A pupil who rushed the placement test could only
 grind forward through stages they already owned; the home screen now offers a second run, which may
 raise their placement and may never lower it. Implemented in `core/runner.js` (FR, AR, TE), mirrored
 in `wp/diag_test.js` (WP keeps its own copy of the runner) and guarded in `pv/bridge.js`
 (PV places with its own app's code). Every route's `index.html` had its `?v=` bumped — without that,
 a returning pupil's browser serves the cached runner and the button never appears.
+Same release: the `tester` account, which unlocks every station of every route.
 
 **v1.1 · 2026-09-14** — audited line by line against live code.
 

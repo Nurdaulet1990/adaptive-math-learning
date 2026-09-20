@@ -9,7 +9,15 @@ const app=()=>$('app');
 let R=null;
 
 function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; }); return st; }
-function initState(state){ R=state; R.stages=freshStages(R.stages); R.diag=R.diag||null; return R; }
+function initState(state){ R=state; R.stages=freshStages(R.stages); R.diag=R.diag||null;
+  if(Core.tester) testerUnlock(); return R; }
+/* the tester account — see Core.tester in core/core.js. WP keeps its own copy of the runner,
+   so it needs its own copy of this too. */
+function testerUnlock(stId){
+  const at=stId||STAGES[0][0];
+  STAGES.forEach(([id])=>{ R.stages[id].status=id===at?'current':'passed'; });
+  R.diag=R.diag||{t:Date.now(),placed:at,results:{},n:0,tester:true};
+}
 function persist(){ if(R) Core.save(R); }
 function log(ev){ if(!R) return; if(ev.ev==='answer'){ const a=Object.assign({},ev); delete a.ev; Core.answer(a); } else Core.event(ev); }
 function qinfo(q){ return {stem:String(q.stem||'').slice(0,200),ans:q.ans,given:(window._Q&&window._Q.given!==undefined)?String(window._Q.given).slice(0,30):undefined}; }

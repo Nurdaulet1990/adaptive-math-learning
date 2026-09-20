@@ -22,6 +22,12 @@ function figHTML(f){ if(!f) return ''; if(typeof f==='string') return f; const R
 function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; }); return st; }
 const persist=()=>Core.save(R);
 function log(ev){ if(ev.ev==='answer'){ const a=Object.assign({},ev); delete a.ev; Core.answer(a); } else Core.event(ev); }
+/* every station tappable, no placement test — see Core.tester in core/core.js */
+function testerUnlock(stId){
+  const at=stId||STAGES[0][0];
+  STAGES.forEach(([id])=>{ R.stages[id].status=id===at?'current':'passed'; });
+  R.diag=R.diag||{t:Date.now(),placed:at,results:{},n:0,tester:true};
+}
 function currentStage(){ for(const [id] of STAGES){ if(R.stages[id].status==='current') return id; } return STAGES[0][0]; }
 const acc=()=>R.nAns?Math.round(100*(R.nOk||0)/R.nAns):0;
 function qinfo(q){ return {stem:String(q.stem||'').slice(0,200),ans:String(q.ans),given:(window._Q&&window._Q.given!==undefined)?String(window._Q.given).slice(0,30):undefined}; }
@@ -61,7 +67,9 @@ function showHome(){
   const br=$('b_rediag'); if(br) br.onclick=askRediag;
   app().querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>startPractice(b.dataset.pr));
   app().querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>startTest(b.dataset.test));
-  if(Core.mapBind) Core.mapBind(id=>startPractice(id));
+  /* for a tester, tapping a station also MOVES there, so the card under the map — and its
+     stage-test button — follows the station being inspected. */
+  if(Core.mapBind) Core.mapBind(id=>{ if(Core.tester) testerUnlock(id); startPractice(id); });
 }
 
 /* ── question view ──
@@ -262,6 +270,7 @@ function finishTest(){
 /* ── entry ── */
 window.Runner={
   async start(cfg){ CFG=cfg; R=await Core.start(cfg.route); R.stages=freshStages(R.stages); R.diag=R.diag||null;
+    if(Core.tester) testerUnlock();
     const pv=new URLSearchParams(location.search).get('preview'); // ?preview=FR-03&lvl=2 → show one generated item (for authors)
     if(pv&&R.stages[pv]){ const lvl=+(new URLSearchParams(location.search).get('lvl')||2); PR={stId:pv,hints:0,step:0}; const q=makeItem(pv,lvl); PR.q=q; PR.t0=Date.now(); renderQuestion(q,{mode:'practice',title:`Алдын ала қарау · ${pv} · L${lvl}`,sub:'preview',onAnswer:()=>{},ladder:true}); $('nextBtn')&&($('nextBtn').onclick=()=>location.reload()); return; }
     showHome(); },

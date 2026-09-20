@@ -26,7 +26,10 @@ function mirror(){
   LEVEL_ORDER.forEach((e,i)=>{ const id='PV-'+String(i+1).padStart(2,'0'); const s=R.stages[id]||(R.stages[id]={level:3,streak:0,wrong:0,l3streak:0,testUnlocked:true,tests:[],seenCard:true}); s.status=R.completed[e.levelId]?'passed':(i===cur&&R.started?'current':'locked'); s.level=3; });
   if(R.started&&!R.diag) R.diag={t:Date.now(),placed:'PV-'+String(cur+1).padStart(2,'0'),results:{},n:0,manual:true};
 }
-function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.unlockedUpTo=R.unlockedUpTo!==undefined?R.unlockedUpTo:0; state.started=!!R.started; }
+function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.unlockedUpTo=R.unlockedUpTo!==undefined?R.unlockedUpTo:0; state.started=!!R.started;
+  /* the tester account — see Core.tester in core/core.js. PV counts unlocked levels rather than
+     marking each one, so here it is one number. */
+  if(Core.tester){ state.unlockedUpTo=LEVEL_ORDER.length-1; state.started=true; } }
 function push(){ R.completed=state.completed; R.stars=state.stars; R.unlockedUpTo=state.unlockedUpTo; R.started=state.started; mirror(); Core.save(R); }
 
 /* wrap app functions (function declarations are global bindings → reassignable) */
