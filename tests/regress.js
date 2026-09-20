@@ -81,6 +81,11 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
     const bad = await page.evaluate(() => { let bad = 0; for (let i = 0; i < 3000; i++) { const q = genPlacementQ('c20'); const ones = +q.q.match(/және (\d+) бірлік/)[1]; if (q.answer !== 10 + ones) bad++; } return bad; });
     T('PV: «1 ондық және N бірлік» is always keyed 10 + N (n = 20 used to print N = 0 with key 20)', bad === 0, bad); await ctx.close(); }
 
+  // ── 4b · portal: a pupil who has FINISHED a short route must still be able to open the portal ──
+  for (const [pre, n] of [['FR', 7], ['WP', 13]]) { const st = stages(pre, n, n + 1); const { page, ctx, errs } = await open('', { [pre]: { diag: { placed: pre + '-01', t: 1 }, stages: st } });
+    await page.waitForTimeout(1200); const strips = await page.locator('.rt').count();
+    T(`portal: all ${n} ${pre} stations passed → the portal still renders (it used to crash on the road marker)`, strips >= 4 && errs.length === 0, { strips, errs }); await ctx.close(); }
+
   // ── 5 · WP-12-P01 answer key ──
   { const ctx = { window: {}, console }; vm.createContext(ctx); const core = fs.readFileSync(path.join(ROOT, 'core/core.js'), 'utf8');
     vm.runInContext(core.slice(core.indexOf('const norm='), core.indexOf('/* ── session & state')) + ';this.isCorrect=isCorrect;', ctx);

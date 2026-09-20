@@ -43,7 +43,7 @@
     const W=320,H=62,x0=10,x1=W-10, N=Math.min(n,9), step=(x1-x0)/(N-1||1);
     const pts=[]; for(let i=0;i<N;i++) pts.push({x:x0+i*step, y:44+Math.sin(i*1.15)*8});
     let d=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<N;i++){ const p=pts[i-1],q=pts[i]; d+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; }
-    const atS=at<0?-1:Math.round(at*(N-1)/Math.max(n-1,1));
+    const atS=at<0?-1:Math.min(N-1,Math.round(at*(N-1)/Math.max(n-1,1)));   // a finished route has at = n (no 'current' left): without the clamp pts[atS] was undefined and the whole portal crashed
     let done=''; if(atS>0){ done=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<=atS;i++){ const p=pts[i-1],q=pts[i]; done+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; } }
     let dots=''; pts.forEach((p,i)=>{ if(i===atS) return;
       dots+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${i<atS?color:'var(--road-edge)'}"/>`; });
