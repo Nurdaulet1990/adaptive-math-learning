@@ -26,7 +26,7 @@ const CORES=['a+x','x+a','a-x','x-a'];
    balance. The stem is the same two tokens on every level-1 item — read once, then recognised.
    `stem` is a required field and startTest dedupes by stem+ans, but that only bites at level 3,
    which keeps its numbers in the stem. */
-const ASK='«?» — қанша?';
+const ASK='x = ?';
 const H_BAL='Екі табақтан бірдей шаршыларды алып таста.';
 const BAL=(l,r,cross)=>({type:'bal',l,r,cross:cross||0});
 function coreOf(kind,a,x){

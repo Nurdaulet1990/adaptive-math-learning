@@ -75,8 +75,9 @@ never drawn, so `'?,+3'` renders no `+3`. Hence `FIGS.wrap`.
    the level test refuses to open. (This is the FR-02 bug, documented in `fr/generate.js`.)
 2. **Level 1 of a core stage is wordless.** §6 calls level 1 concrete; for a grade-1 pupil who
    cannot yet read a word problem, a sentence is not concrete — a balance is. `stem` is a
-   required field, so every level-1 item carries the same two tokens, `«?» — қанша?`, read once
-   and then recognised. The equation itself first appears at level 2. (Constant stems are safe
+   required field, so every level-1 item carries the same three characters, `x = ?` — nothing to
+   read, and it is the first time the letter appears. It names the covered thing in the picture
+   and then means the same at level 3, where the equation itself shows up. The equation itself first appears at level 2. (Constant stems are safe
    here: `startTest` dedupes by `stem + ans`, and the stage test draws level 3, which keeps its
    numbers in the stem.)
 3. **No `fig` at level 3** — the bar moves to `hfig` so it stays available as hint step 2.
