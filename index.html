@@ -213,8 +213,11 @@
      A pupil whose class is empty cannot be ranked against classmates, so esep_board returns nothing and
      the card above never appears. Sixteen children were in that state on 2026-09-21 and saw only blank
      space. They may place themselves, once; moving between classes stays the teacher's. ── */
-  if(!(student.klass||'').trim() && typeof Core.call==='function'){
-    Core.call('esep_classes',{}).then(list=>{ const box=document.getElementById('noclass');
+  if(!(student.klass||'').trim() && typeof Core._rpc==='function'){
+    /* _rpc, not Core.call: Core.call prepends p_token, and esep_classes() takes no arguments — PostgREST
+       then finds no function of that shape and answers PGRST202 instead of the list. The class names are
+       not secret (the login card shows the same list before anyone is logged in). ── */
+    Core._rpc('esep_classes',{}).then(list=>{ const box=document.getElementById('noclass');
       if(!box||!Array.isArray(list)||!list.length) return;
       box.innerHTML=`<div class="card"><h2 style="margin:0 0 2px">Сыныбың көрсетілмеген</h2>
         <p class="note" style="margin:0 0 10px">Сыныбыңды таңда — сонда сынып тақтасынан өз орныңды көресің.</p>

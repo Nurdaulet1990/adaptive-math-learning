@@ -135,6 +135,22 @@ const out = []; const T = (name, ok, extra) => { out.push(ok); console.log(ok ? 
   T('the teacher may still move anyone, placed or not',
     (await tcl('esep_t_set_class', { p_student: await one(`select id::text v from students where name='Малика'`).then(r => r.v), p_klass: '5' })) === true);
 
+  // ── the 405: a public esep_* function must be VOLATILE ──────────────────
+  // PostgREST serves a STABLE or IMMUTABLE function over GET only and answers a POST with 405, before the
+  // function runs. core.js posts everything. On 2026-09-21 this took the class board and the star purse off
+  // the air with a perfectly correct database underneath — the two dead functions were precisely the two
+  // marked `stable`. Nothing in SQL can see this, so it is checked here, on the catalog.
+  const nonVolatile = async () => (await pg.query(`select p.oid::regprocedure::text as sig,
+        case p.provolatile when 's' then 'stable' else 'immutable' end as vol
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname='public' and p.proname like 'esep\\_%' and p.provolatile <> 'v'`)).rows;
+  T('every public esep_* function is volatile — a stable one is a 405 in the browser',
+    (await nonVolatile()).length === 0, await nonVolatile());
+  await pg.query(`alter function public.esep_classes() stable`);          // break it on purpose…
+  T('…and the check really would catch one', (await nonVolatile()).length === 1);
+  await file('12_volatile.sql'); await file('12_volatile.sql');     // …and 12 heals it, twice over
+  T('12 turns them all back, and running it again is a no-op', (await nonVolatile()).length === 0, await nonVolatile());
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   await pg.end();

@@ -28,7 +28,7 @@ on conflict (name) do nothing;
 -- The login card needs this BEFORE anyone is logged in, so it takes no token. It gives away the class names
 -- of a school — «3А», «5Б» — and nothing else: no pupil, no count, no progress.
 create or replace function public.esep_classes() returns jsonb
-language sql stable security definer set search_path = extensions, pg_temp as $$
+language sql security definer set search_path = extensions, pg_temp as $$
   select coalesce(jsonb_agg(name order by
            coalesce(nullif(substring(name from '^\d+'),'')::int, 99), name), '[]'::jsonb)
     from esep_private.classes $$;
@@ -91,7 +91,7 @@ end $$;
 -- every class, with how many pupils are in it — including classes nobody is in yet, so a new one can be made
 -- before the first lesson, and including values still on pupils that are not on the list (marked stray).
 create or replace function public.esep_t_classes(p_token text) returns jsonb
-language plpgsql stable security definer set search_path = extensions, pg_temp as $$
+language plpgsql security definer set search_path = extensions, pg_temp as $$
 begin
   if not esep_private.is_teacher(p_token) then raise exception 'esep: teacher session required' using errcode = '28000'; end if;
   return (select coalesce(jsonb_agg(jsonb_build_object('name', k, 'pupils', n, 'listed', listed)

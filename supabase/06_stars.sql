@@ -18,6 +18,11 @@
 -- own browser reads. No cache, no second copy that can drift, and nothing to backfill. Both numbers come out of one
 -- pass (esep_private.route_stars2); measured below on 300 pupils each holding a finished 41-stage route.
 --
+-- ⚠ A function the browser calls must be VOLATILE (the default). PostgREST serves STABLE and IMMUTABLE
+--   functions over GET only and answers a POST with 405 — and core.js posts everything. Marking esep_board
+--   `stable` here (it is, logically) took the class board off the air for a day. Private helpers may be
+--   stable; anything in `public` that the client calls may not.
+--
 -- Install: run this whole file in the SQL editor. Re-running is safe. To go back, re-run the esep_board block from
 -- 01_additive.sql — no table or column here to undo, because this script creates none.
 
@@ -121,7 +126,7 @@ end $$;
 -- longer resets, so the useful companion is what was added since Monday. An old portal reads it as undefined and
 -- simply shows nothing extra.
 create or replace function public.esep_board(p_token text) returns jsonb
-language plpgsql stable security definer set search_path = extensions, pg_temp as $$
+language plpgsql security definer set search_path = extensions, pg_temp as $$
 declare
   v_sid text := esep_private.student_of(p_token);
   v_klass text; v_grade text; d0 date; v_today date := esep_private.kz_day(now());

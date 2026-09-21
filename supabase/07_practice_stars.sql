@@ -94,7 +94,7 @@ language sql stable security definer set search_path = extensions, pg_temp as $$
 -- ═════════════════════ the board, now with all five sources ═════════════════════
 -- 06 built this out of route + challenge + room stars; practice and the daily goal join them here.
 create or replace function public.esep_board(p_token text) returns jsonb
-language plpgsql stable security definer set search_path = extensions, pg_temp as $$
+language plpgsql security definer set search_path = extensions, pg_temp as $$
 declare
   v_sid text := esep_private.student_of(p_token);
   v_klass text; v_grade text; d0 date; v_today date := esep_private.kz_day(now());

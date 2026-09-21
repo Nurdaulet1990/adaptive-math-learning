@@ -12,7 +12,7 @@
 -- argument about a total answerable without opening the database.
 
 create or replace function public.esep_stars(p_token text) returns jsonb
-language plpgsql stable security definer set search_path = extensions, pg_temp as $$
+language plpgsql security definer set search_path = extensions, pg_temp as $$
 declare
   v_sid text := esep_private.student_of(p_token);
   v_state jsonb; d0 date; w0 timestamptz; m0 bigint;
