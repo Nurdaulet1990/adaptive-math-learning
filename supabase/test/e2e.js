@@ -99,6 +99,17 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('table.t3');
   await tp.waitForTimeout(600);
   T('teacher: list loads with a hostile pupil state in it (HTML counter, null stage) — page alive, nothing executed', (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0 && (await tp.locator('tr', { hasText: 'Ерасыл Т.' }).count()) >= 1);
+  // «барлық бағыт» is the default view: the day table adds up every route; choosing one route narrows it
+  { const two = (await pg.query(`select id from students where name='Ерасыл Т.'`)).rows[0].id;
+    const cell = async () => { const r = tp.locator('#dayBody tr', { hasText: 'Ерасыл Т.' }); return (await r.count()) ? +(await r.locator('td').nth(3).innerText()) : 0; };
+    await tp.waitForFunction(() => !/Жүктелуде/.test(document.getElementById('dayBody').textContent)); const before = await cell();
+    await pg.query(`insert into events(student_id,t,ev) select $1, now(), jsonb_build_object('ev','answer','route',r,'stage',r||'-01','ok',true,'hints',0) from unnest(array['WP','WP','WP','AR','AR']) r`, [two]);
+    await tp.evaluate(() => showTeacher()); await tp.waitForSelector('#dayBody table'); await tp.waitForTimeout(300);
+    const all = await cell() - before;
+    await tp.selectOption('select >> nth=0', 'AR'); await tp.waitForSelector('#dayBody table'); await tp.waitForTimeout(300); const ar = await cell();
+    T('teacher: «барлық бағыт» counts a pupil\'s answers in every route (3 WP + 2 AR = 5); picking AR shows 2', all === 5 && ar === 2, { before, all, ar });
+    T('teacher: the all-routes view is the default and still executes nothing from hostile rows', (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0);
+    await tp.selectOption('select >> nth=0', 'ALL'); await tp.waitForSelector('#dayBody table'); await tp.waitForTimeout(300); }
   const csv = await tp.evaluate(() => new Promise(res => { const o = URL.createObjectURL; URL.createObjectURL = b => { b.text().then(res); return o.call(URL, b); }; exportCSV(); }));
   T('teacher: CSV export neutralises a name that starts like a formula', /"'=HYPERLINK/.test(csv) && !/;"=HYPERLINK|^"=HYPERLINK/m.test(csv), csv.slice(0, 300));
   await tp.selectOption('select >> nth=0', 'FR'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(800);
