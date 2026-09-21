@@ -7,7 +7,7 @@
 <!-- Kazakh is locked: the browser may not translate this page. The ҚАЗ/РУС switch removes this meta for pupils who need Russian. -->
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="core/ui.css?v=5">
+<link rel="stylesheet" href="core/ui.css?v=9">
 <style>
 /* portal: one landscape strip per route */
 .rt{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:block;text-decoration:none;color:inherit;margin-bottom:10px}
@@ -18,11 +18,51 @@
 .rt-go{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--rc);background:var(--fig);border-radius:999px;padding:3px 10px}
 .rt svg{width:100%;height:auto;display:block}
 .rt-foot{display:flex;justify-content:space-between;padding:7px 13px 10px;font-size:.76rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+/* "continue" card: the whole card is one link back to the station the pupil touched last */
+.go{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px 18px;margin-bottom:12px}
+.go small{display:block;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--rc)}
+.go b{display:block;font-family:var(--disp);font-weight:600;font-size:1.5rem;line-height:1.2;margin:2px 0}
+.go .go-sub{font-size:.88rem;font-weight:700;color:var(--muted)}
+.go-bar{display:flex;align-items:center;gap:10px;margin:10px 0 14px;font-size:.8rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.go-bar div{flex:1;height:12px;border-radius:999px;background:var(--line);overflow:hidden}
+.go-bar i{display:block;height:100%;border-radius:999px;background:var(--rc)}
+.go .btn{color:var(--accent-ink)}   /* dark theme: route colours are light there, white text on them is ~2.5:1 */
+.go:active .btn{transform:translateY(4px);box-shadow:0 0 0 var(--rc-d)}
+/* daily goal: ring + day streak + this week's dots */
+.goal{display:flex;align-items:center;gap:16px}
+.ring{flex:none;width:92px;height:92px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--ringc) var(--deg),var(--line) 0deg)}
+.ring>div{width:68px;height:68px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.ring b{font-family:var(--disp);font-weight:600;font-size:1.5rem;line-height:1}
+.ring span{font-size:.75rem;font-weight:800;color:var(--muted)}
+.goal h2{margin:0 0 2px}
+.goal p{margin:0;font-size:.95rem;font-weight:700;color:var(--muted)}
+.goal p.hit{color:var(--good);font-weight:800}
+.goal .fire{margin-top:5px;font-weight:800;color:var(--ink)}
+.week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:14px;text-align:center;font-size:.75rem;font-weight:800;color:var(--muted)}
+.week i{display:block;width:30px;height:30px;margin:0 auto 4px;border-radius:50%;border:2px dashed var(--line)}
+.week .done i{border:2px solid var(--good);background:var(--good-soft)}
+.week .now{color:var(--ink)}
+.week .now i{border:3px solid var(--gold);background:var(--gold-soft)}
+.week .now.done i{border:3px solid var(--good);background:var(--good-soft)}
+.week .miss i{border-style:solid;opacity:.55}
+.brd-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--fig);border-radius:14px;padding:4px;margin:10px 0}
+.brd-tabs button{min-height:44px;border:0;border-radius:11px;background:transparent;color:var(--muted);font:inherit;font-weight:800;font-size:.88rem;cursor:pointer}
+.brd-tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.brd-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-weight:800;font-size:.95rem;font-variant-numeric:tabular-nums}
+.brd-row:last-child{border-bottom:0}
+.brd-row i{width:22px;font-style:normal;font-family:var(--disp);font-weight:600;color:var(--muted)}
+.brd-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brd-me{margin-top:8px;padding:11px 12px;border-radius:14px;background:var(--accent-soft);border-bottom:0}
+.brd-me small{display:block;font-size:.8rem;font-weight:800;color:var(--good)}
+.brd-bar{height:14px;border-radius:999px;background:var(--fig);overflow:hidden;margin:4px 0 12px}
+.brd-bar b{display:block;height:100%;border-radius:999px;background:var(--muted);opacity:.55}
+.brd-bar b.mine{background:var(--accent);opacity:1}
+.sec{font-family:var(--disp);font-weight:600;font-size:1.15rem;margin:16px 2px 8px}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
-<script src="core/core.js?v=5"></script>
+<script src="core/core.js?v=9"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
 (async function(){
@@ -58,7 +98,50 @@
       ${dots}${me}</svg>`;
   }
 
-  let html=Core.topbar()+`<div class="card"><h1>Сәлем, ${esc(student.name.split(' ')[0])}!</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
+  /* ── "continue": the live route the pupil answered in last (state[code].last), once it has a placement ── */
+  function resume(){
+    let best=null;
+    Core.config.ROUTES.forEach(([code,name,url,status])=>{ const s=state[code]; if(status!=='live'||!s||!s.diag||!s.stages) return;
+      if(!best||(s.last||0)>(best.s.last||0)) best={code,name,url,s}; });
+    if(!best) return null;
+    const ids=Object.keys(best.s.stages).sort(); if(!ids.length) return null;
+    const passed=ids.filter(k=>best.s.stages[k].status==='passed').length;
+    let ci=ids.findIndex(k=>best.s.stages[k].status==='current'); if(ci<0) ci=Math.min(passed,ids.length-1);   // PV may have no 'current'
+    const st=best.s.stages[ids[ci]]||{};
+    return {code:best.code,name:best.name,url:best.url,n:ci+1,total:ids.length,passed,level:st.level||1,streak:st.streak||0,allDone:passed>=ids.length};
+  }
+  /* ── daily goal and day streak, from Core.days() ──
+     GOAL fills the ring. A day counts for the streak from DAY_MIN answers, so a slow pupil keeps the streak
+     without reaching the goal. Saturday and Sunday never break a streak (school devices), but they count if used. */
+  const GOAL=15, DAY_MIN=5;
+  const days=Core.days(), today=new Date(), cnt=d=>days[Core.ymd(d)]||0;
+  function dayStreak(){ let n=cnt(today)>=DAY_MIN?1:0; const d=new Date(today);
+    for(let i=0;i<60;i++){ d.setDate(d.getDate()-1); if(cnt(d)>=DAY_MIN) n++; else if(d.getDay()===0||d.getDay()===6) continue; else break; }
+    return n; }
+  function goalCard(){
+    const done=cnt(today), hit=done>=GOAL, deg=Math.round(Math.min(1,done/GOAL)*360), fire=dayStreak();
+    const mon=new Date(today); mon.setDate(mon.getDate()-((mon.getDay()+6)%7));
+    const week=['Дс','Сс','Ср','Бс','Жм','Сн','Жк'].map((lb,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i);
+      const isNow=Core.ymd(d)===Core.ymd(today), ok=cnt(d)>=DAY_MIN, past=d<today&&!isNow;
+      return `<span class="${ok?'done':''}${isNow?' now':''}${past&&!ok&&i<5?' miss':''}"><i></i>${lb}</span>`; }).join('');
+    return `<div class="card"><div class="goal"><div class="ring" style="--deg:${deg}deg;--ringc:var(--${hit?'good':'accent'})"><div><b>${done}</b><span>/ ${GOAL}</span></div></div>
+      <div><h2>Бүгінгі мақсат</h2><p class="${hit?'hit':''}">${hit?'Мақсат орындалды!':`Тағы ${GOAL-done} есеп қалды`}</p>${fire>=2?`<p class="fire">🔥 ${fire} күн қатарынан</p>`:''}</div></div>
+      <div class="week">${week}</div></div>`;
+  }
+
+  const r=resume(), hello=`Сәлем, ${esc(student.name.split(' ')[0])}!`;
+  let html=Core.topbar();
+  if(r){ const rc=r.code.toLowerCase();
+    html+=`<h1 style="margin:4px 2px 12px">${hello}</h1>
+    <a class="go" href="${r.url}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
+      <small>${esc(r.name)}</small><b>${r.allDone?'Барлық станция өтілді':r.n+'-станция'}</b>
+      ${r.allDone||r.code==='PV'?'':`<span class="go-sub">Деңгей ${r.level}/3 · қатарынан ${r.streak}/3</span>`}
+      <div class="go-bar"><div><i style="width:${Math.round(100*r.passed/r.total)}%"></i></div><span>${r.passed} / ${r.total}</span></div>
+      <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
+  else html+=`<div class="card"><h1>${hello}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
+  html+=goalCard();
+  html+=`<div id="board"></div>`;   // filled after the first paint: the board is one extra request and must never hold the page up
+  if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
     const total=p?p.total:(code==='PV'?48:code==='WP'?13:code==='TE'?20:7);
@@ -70,6 +153,25 @@
   });
   html+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
   app.innerHTML=html;
+
+  /* ── this week's class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the
+     per-pupil average of each class in my grade. Score = right first time, no hints, outside the placement test.
+     Nothing is drawn when offline, when the pupil has no class, or when nobody has scored yet. ── */
+  Core.board().then(b=>{ const box=document.getElementById('board'); if(!box||!b||!b.klass||!b.me) return;
+    const top=b.top||[], cls=(b.classes||[]), max=Math.max(1,...cls.map(c=>c.avg));
+    if(!top.length&&!cls.length) return;
+    const inTop=top.some(x=>x.me), d=b.me.n-(b.me.prev_same_point||0);
+    const mine=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i><span>Сен${d>0&&b.me.prev_same_point?`<small>өткен аптаның осы күнінен +${d}</small>`:''}</span><b>${b.me.n}</b></div>`;
+    const tabMine=(top.length?top.map(x=>`<div class="brd-row"><i>${x.rank}</i><span>${x.me?'Сен':esc(x.name)}</span><b>${x.n}</b></div>`).join(''):`<p class="note">Бұл аптада әлі ешкім ұпай жинаған жоқ. Бірінші бол!</p>`)+(inTop?'':mine);
+    const tabCls=cls.length>1?cls.map(c=>`<div class="brd-row" style="border:0;padding:0"><span>${esc(c.klass)}${c.mine?' · сенің сыныбың':''}</span><b>${c.avg}</b></div><div class="brd-bar"><b class="${c.mine?'mine':''}" style="width:${Math.round(100*c.avg/max)}%"></b></div>`).join('')
+      +`<p class="note" style="margin:0">Бір оқушыға шаққандағы орташа. Сенің ${b.me.n} есебің ${esc(b.klass)} нәтижесіне қосылды.</p>`:'';
+    let tab='mine';
+    const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">осы апта</span></div>
+      ${tabCls?`<div class="brd-tabs"><button type="button" data-t="mine" aria-pressed="${tab==='mine'}">Менің сыныбым</button><button type="button" data-t="cls" aria-pressed="${tab==='cls'}">Сыныптар</button></div>`:'<div style="height:8px"></div>'}
+      ${tab==='mine'?`<p class="note" style="margin:0 0 4px">Кеңессіз, бірінші реттен дұрыс шешілген есептер</p>${tabMine}`:tabCls}
+      <p class="note" style="margin:10px 0 0">Дүйсенбі күні тақта нөлден басталады.</p></div>`;
+      box.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{ tab=x.dataset.t; draw(); }); };
+    draw(); });
 })();
 </script>
 </body>
