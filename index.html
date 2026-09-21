@@ -132,7 +132,7 @@
       const isNow=Core.ymd(d)===Core.ymd(today), ok=cnt(d)>=DAY_MIN, past=d<today&&!isNow;
       return `<span class="${ok?'done':''}${isNow?' now':''}${past&&!ok&&i<5?' miss':''}"><i></i>${lb}</span>`; }).join('');
     return `<div class="card"><div class="goal"><div class="ring" style="--deg:${deg}deg;--ringc:var(--${hit?'good':'accent'})"><div><b>${done}</b><span>/ ${GOAL}</span></div></div>
-      <div><h2>Бүгінгі мақсат</h2><p class="${hit?'hit':''}">${hit?'Мақсат орындалды!':`Тағы ${GOAL-done} есеп қалды`}</p>${fire>=2?`<p class="fire">🔥 ${fire} күн қатарынан</p>`:''}</div></div>
+      <div><h2>Бүгінгі мақсат</h2><p class="${hit?'hit':''}">${hit?'Мақсат орындалды! ★ +1':`Тағы ${GOAL-done} есеп қалды`}</p>${fire>=2?`<p class="fire">🔥 ${fire} күн қатарынан</p>`:''}</div></div>
       <div class="week">${week}</div></div>`;
   }
 
@@ -141,6 +141,9 @@
      and #starTot is quietly corrected. A pupil with no class gets no board — the route total stands. */
   const routeStars=Core.config.ROUTES.reduce((a,[code])=>a+((progress(code)||{}).stars||0),0);
   const purse=`<a class="purse" href="#board" title="Жұлдыздар"><b id="starTot">${routeStars}</b><i>★</i></a>`;
+  /* routeStars is what this device can work out on its own (stage tests, which live in the state). Practice,
+     the daily goal, challenges and rooms are counted on the server, so the first paint is an undercount and
+     the board's answer replaces it a moment later. Better a number that grows than a spinner. */
 
   const r=resume(), hello=`Сәлем, ${esc(student.name.split(' ')[0])}!`;
   let html=Core.topbar();
@@ -224,7 +227,7 @@
     const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">${stars?'★ жұлдыз':'осы апта'}</span></div>
       ${tabCls?`<div class="brd-tabs"><button type="button" data-t="mine" aria-pressed="${tab==='mine'}">Менің сыныбым</button><button type="button" data-t="cls" aria-pressed="${tab==='cls'}">Сыныптар</button></div>`:'<div style="height:8px"></div>'}
       ${tab==='mine'?`<p class="note" style="margin:0 0 4px">${stars?'Кезең тесті, жарыс және бөлме — бәрі қосылады':'Кеңессіз, бірінші реттен дұрыс шешілген есептер'}</p>${tabMine}`:tabCls}
-      <p class="note" style="margin:10px 0 0">${stars?'Жұлдыз кезең тестінен алынады: 10/10 — үш, 9/10 — екі, 8/10 — бір. Жиналған жұлдыз ешқашан жоғалмайды.':'Дүйсенбі күні тақта нөлден басталады.'}</p></div>`;
+      <p class="note" style="margin:10px 0 0">${stars?'Жұлдыз: кеңессіз, бірден дұрыс 5 есеп — 1 · бүгінгі мақсат — 1 · кезең тесті 10/10 — 3, 9/10 — 2, 8/10 — 1 · жарыс пен бөлме — 3/2/1. Жиналған жұлдыз ешқашан жоғалмайды.':'Дүйсенбі күні тақта нөлден басталады.'}</p></div>`;
       box.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{ tab=x.dataset.t; draw(); }); };
     draw(); });
 })();

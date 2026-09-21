@@ -1,6 +1,6 @@
 # ROUTE_CONVENTION.md — how to build a route for Есеп жолы
 
-**v1.3 · 2026-09-21.** Every checkable statement below was verified against the code that is live in
+**v1.4 · 2026-09-21.** Every checkable statement below was verified against the code that is live in
 this repository (`core/core.js`, `core/runner.js`, `core/map.js`, `core/map.css`, `core/ui.css`,
 `core/figs.js`) and against the five routes running on it: `wp/`, `fr/`, `pv/`, `ar/`, `te/`.
 
@@ -361,9 +361,18 @@ Automatic; the route only has to make sure enough distinct level-3 items exist (
   ratio — 7/7 is three stars, 6/7 is 0.857 and so one — which means a thin stage can never award two.
   One more reason to reach 10 distinct items.
 
-**Stars are the pupil's score — NEW in v1.3.** The class board, the total in the portal header and the
-route cards are all the same number: stars, earned only by passing a stage test (plus challenges and
-rooms, which the platform awards itself). A station handed out by the diagnostic, or set by the
+**Stars are the pupil's score — NEW in v1.3, extended in v1.4.** The class board, the total in the
+portal header and the route cards are all the same number. Five ways to earn one, all of them the
+platform's own — a route implements none of them:
+
+| | |
+|---|---|
+| five answers with no hint, right the first time | 1 |
+| the daily goal met (15 answers in a day) | 1 |
+| a stage test | 10/10 → 3 · 9/10 → 2 · 8/10 → 1 |
+| a classmate challenge | win 3 · draw 2 · loss 1 |
+| a challenge room | 1st 3 · 2nd–3rd 2 (≥4 played) · handed in 1 |
+ A station handed out by the diagnostic, or set by the
 teacher, carries no test and is therefore worth nothing — deliberately: a star means *it was shown*.
 For a route author this is one more reason §5's six-distinct-items floor matters — a stage whose test
 cannot open is a stage that can never be worth a star. Nothing to implement; `core/runner.js` records
@@ -536,6 +545,11 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 ---
 
 ## Version history
+
+**v1.4 · 2026-09-21** — practice earns stars again. The first app gave one per correct answer; the
+platform layer never picked that up, so a child could practise a whole lesson and watch the number
+not move. Now five hint-free first-try answers make a star and meeting the day's goal makes one,
+counted server-side from `day_stats` (`supabase/07_practice_stars.sql`). A route implements nothing.
 
 **v1.3 · 2026-09-21** — stars became the pupil's score. The class board ranks by the star total
 (stage tests + challenges + rooms) with this week's gain beside it, the portal shows the total in its
