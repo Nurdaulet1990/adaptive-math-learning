@@ -114,6 +114,24 @@ const out = []; const T = (name, ok, extra) => { out.push(ok); console.log(ok ? 
   await pg.query(`update students set klass = '3А' where name = 'Айгүл С.'`);
   T('a dead token gets nothing', (await rpc('esep_stars', { p_token: 'nope' })) === null);
 
+  // ── 11: the practice stars a child already earned, before day_stats existed ──
+  // 01 backfilled only fifteen days, so everything older sat in public.events uncounted.
+  const OLD = await val(`select (now() - interval '90 days')::text v`);
+  const oldEv = (o, i) => pg.query(`insert into public.events(student_id, t, ev) values ($1, $2::timestamptz, $3::jsonb)`,
+    [D, OLD, JSON.stringify(Object.assign({ u: 'old' + i }, o))]);
+  for (let i = 0; i < 12; i++) await oldEv({ ev: 'answer', ok: true, hints: 0, mode: 'practice', stage: 'AR-01', id: 'q' + i }, i);
+  await oldEv({ ev: 'answer', ok: true, hints: 2, mode: 'practice', stage: 'AR-01', id: 'h1' }, 90);   // hinted: never scores
+  await oldEv({ ev: 'attempt', ok: false, id: 'q0' }, 91);                                             // q0 needed a retry
+  const before = (await stars(D)).practice;
+  await file('11_backfill_days.sql'); await file('11_backfill_days.sql');
+  const after = await stars(D);
+  T('11 counts the days that were never aggregated: 11 perfect answers → two more stars',
+    after.practice === before + 2, { before, after });
+  T('…and applies the same rules — a hinted answer and a retried one still score nothing',
+    (await one(`select score, answers from esep_private.day_stats where student_id=$1 and day = esep_private.kz_day($2::timestamptz)`, [D, OLD])).score === 11);
+  T('running it twice changes nothing (it recomputes, it does not add)',
+    (await stars(D)).practice === after.practice);
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   await pg.end();

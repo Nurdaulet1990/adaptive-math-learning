@@ -221,6 +221,29 @@ node supabase/test/e2e_stars.js    # 12 项：端到端 —— 真的 core/core.
 
 演练：`run_classes.js` 多了 5 项。
 
+## 之后随时 · `11_backfill_days.sql`（把孩子早就挣到的练习星补上，可重复跑）
+
+需要 01 + 07。**不建表不加列**，只是把 `esep_private.day_stats` 按 `public.events` 重算一遍。
+
+**为什么**：三种星能回溯到的距离不一样，只有一种是完整的。
+
+| | 回溯到哪 |
+|---|---|
+| 关卡星 | **全部历史** —— 它们在学生自己的 `state.stages[].tests` 里，从 runner 存在的第一天起就在记 |
+| 每日任务星 | **全部历史** —— 07 加 `answers` 列时就是从整张事件表填的 |
+| 练习星 | **只有 15 天** —— 它数的是 `day_stats.score`，而 01 安装时只回填了 15 天，更早的还躺在 `events` 里没算 |
+
+本脚本补的就是第三行。规则跟线上完全一致（01 的 `scores()`：一次答对、没用提示、不在诊断里、且不是用掉免费重试那次；07 的答题数口径）。**是重算不是累加**，跑两遍第二遍什么都不变；没有事件的日子不碰，所以星星只会涨不会掉。
+
+跑完想看变化：
+
+```sql
+select count(*) as days, sum(score) as perfect_answers, sum(score)/5 as practice_stars_total
+  from esep_private.day_stats;
+```
+
+演练：`run_practice_stars.js` 多了 3 项（90 天前的旧事件被数进来、带提示和重试过的仍然不算分、重复跑幂等）。
+
 ## 周榜规则（`esep_board`）
 
 - 分数 = 本周一（UTC+5）以来，**一次答对、没用提示、不在定位测里**的题数。重试后答对的不算（runner 会先记一条 `attempt`）。

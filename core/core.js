@@ -194,7 +194,12 @@
     async login(){
       let row=null;
       let offline=false;
-      if(session){ try{ row=await rpc('esep_resume',{p_token:session.token}); if(!row){ session=null; ls.del(SESSION_KEY); } }catch(e){ offline=true; /* use cache */ } }
+      if(session){ try{ row=await rpc('esep_resume',{p_token:session.token}); if(!row){ session=null; ls.del(SESSION_KEY); }
+        /* The cached session was written at login and never refreshed, so a pupil placed in a class afterwards —
+           by the teacher, or by esep_my_class — kept looking classless to this device until she logged out. The
+           server's row is the truth about who she is; only the token is ours. */
+        else if(row.klass!==session.klass||row.name!==session.name){ session=Object.assign({},session,{name:row.name,klass:row.klass||''}); ls.set(SESSION_KEY,session); }
+      }catch(e){ offline=true; /* use cache */ } }
       if(!session){ const host=document.getElementById('app')||document.body; row=await loginUI(host); host.innerHTML=''; }
       Core.student=session;
       /* The tester account. A pupil named "tester" (any PIN, any class) gets every stage of
