@@ -121,6 +121,11 @@ the single `Runner.start({…})` options object. Everything else — charset, vi
 **Cache-busting.** Every `<script>` and `<link>` in `index.html` carries `?v=N`. Bump `N` on every
 release, or pupils keep running yesterday's file for as long as the CDN cache lives.
 
+This applies to `core/` too, and it is the rule most easily forgotten: four releases of `core/core.js`
+went out in one day while every page still asked for `core.js?v=10`, so devices holding that file kept
+the old one — including the fix that was meant to repair them. **If you changed a file, bump the query
+string of every page that loads it, in the same commit.**
+
 ---
 
 ## §3 · `STAGES`
