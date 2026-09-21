@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Есеп жолы · Жарыс</title>
+<meta name="google" content="notranslate">
+<script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
+<link rel="stylesheet" href="../core/ui.css?v=9">
+<style>
+/* challenge/ — a classmate challenge («жарыс»). Owner: platform owner. All rules live on the server
+   (supabase/04_challenges.sql); this page only shows what the functions return and collects ten answers. */
+.duo{display:flex;align-items:center;justify-content:center;gap:16px;margin:4px 0 12px}
+.duo div{display:flex;flex-direction:column;align-items:center;gap:4px;font-weight:900;font-size:.9rem}
+.duo i{font-style:normal;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:1.6rem;background:var(--accent);color:var(--accent-ink)}
+.duo i.me{font-size:2rem;background:var(--fig)}
+.duo span{font-family:var(--disp);font-weight:600;color:var(--muted)}
+.rule{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-weight:700;font-size:.95rem}
+.rule:last-child{border-bottom:0}.rule b{flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--disp)}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pick button,.tb button{min-height:54px;border-radius:15px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;cursor:pointer;text-align:left;padding:0 14px}
+.pick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.tb{display:flex;flex-direction:column;gap:8px}
+.pick button small{display:block;font-weight:600;font-size:.8rem;color:var(--muted)}
+.pick button{padding:8px 14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px;padding:4px;border-radius:16px;background:var(--line)}
+.seg button{min-height:44px;font-size:.9rem;padding:0 6px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.marks{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}.marks i{height:12px;border-radius:999px;background:var(--line)}
+.marks i.ok{background:var(--good)}.marks i.no{background:var(--bad)}.marks i.on{background:var(--gold)}
+.fact{display:flex;align-items:center;justify-content:center;gap:12px;font-family:var(--disp);font-weight:600;font-size:2.9rem;font-variant-numeric:tabular-nums;margin:28px 0}
+.fact output{min-width:108px;height:76px;padding:0 12px;border-radius:16px;border:3px solid var(--gold);background:var(--card);display:flex;align-items:center;justify-content:center}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kp button{min-height:62px;border:0;border-radius:15px;background:var(--card);color:var(--ink);box-shadow:0 4px 0 var(--line);font-family:var(--disp);font-weight:600;font-size:1.6rem;cursor:pointer}
+.kp button:active{transform:translateY(4px);box-shadow:none}.kp button.go{background:var(--gold);color:#1B2733;box-shadow:0 4px 0 var(--gold-d)}
+.res{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.res:last-child{border-bottom:0}
+.res span{flex:1;font-weight:900}.res small{display:block;font-weight:700;color:var(--muted)}.res b{font-family:var(--disp);font-size:1.6rem;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script src="../core/core.js?v=9"></script>
+<script>
+(async function(){
+  'use strict';
+  const app=document.getElementById('app'), esc=Core.esc;
+  await Core.login();
+  const first=s=>String(s||'').split(' ')[0];
+  const tbl=n=>(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
+  const top=()=>Core.topbar('Сыныптаспен жарыс');
+  const home=`<p class="note" style="margin:0 0 10px"><a href="../">← Басты бет</a></p>`;
+  const WHY={classmate:'Тек өз сыныптасыңды шақыра аласың.',not_passed:'Бұл кестені екеуің де өтуің керек.',daily_limit:'Бүгінге 3 жарыс жеткілікті. Ертең тағы шақыр.',
+    already_open:'Бұл сыныптасың алдыңғы шақыруыңа әлі жауап берген жоқ.',expired:'Бұл шақырудың уақыты өтіп кетті.',done:'Бұл жарысты ойнап қойғансың.',not_found:'Мұндай шақыру жоқ.',session:'Қайта кіру керек.'};
+  const fail=(code)=>{ app.innerHTML=top()+`<div class="card"><h2>${esc(WHY[code]||'Жарыс қазір қолжетімсіз.')}</h2><a class="btn wide" href="./">Жарыстар</a></div>`; };
+  let G=null, tick=null;
+
+  /* ── hub: what is waiting for me · what I am waiting for · last results ── */
+  async function hub(){ let l; try{ l=await Core.call('esep_ch_list',{p_mark_seen:true}); }catch(e){ return fail(); } if(!l) return fail('session');
+    let h=top()+home+`<div class="card"><div class="rt-head" style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="margin:0">Жарыс</h1><span class="chip gold">★ ${+l.stars||0}</span></div>
+      <p class="note" style="margin:6px 0 12px">Сыныптасыңды өзің өткен көбейту кестесі бойынша шақыр. Екеуіңе бірдей 10 есеп беріледі; ол қолы тигенде ойнайды.</p>
+      <button class="btn gold wide" id="newBtn" ${l.today>=l.limit?'disabled':''}>Жаңа жарыс</button><p class="note center" style="margin:8px 0 0">Бүгін: ${+l.today} / ${+l.limit}</p></div>`;
+    if(l.incoming.length) h+=`<div class="card"><h2>Сені шақырды</h2>${l.incoming.map(c=>`<div class="res"><span>${esc(c.from_name)}<small>${esc(tbl(c.table))}</small></span><a class="btn gold sm" href="?id=${+c.id}">Қабылдау</a></div>`).join('')}</div>`;
+    if(l.waiting.length) h+=`<div class="card"><h2>Жауап күтіп тұр</h2>${l.waiting.map(c=>`<div class="res"><span>${esc(c.to_name)}<small>${esc(tbl(c.table))} · әлі ойнаған жоқ</small></span></div>`).join('')}</div>`;
+    if(l.results.length) h+=`<div class="card"><h2>Соңғы жарыстар</h2>${l.results.map(r=>`<div class="res"><span>${esc(r.opp_name)}<small>${esc(tbl(r.table))} · ${r.outcome==='win'?'жеңдің':r.outcome==='tie'?'тең':'ол озды'} · ★ +${+r.stars}</small></span><b>${+r.my_ok} : ${+r.opp_ok}</b></div>`).join('')}</div>`;
+    app.innerHTML=h; document.getElementById('newBtn').onclick=pick; }
+
+  /* ── new challenge: by classmate or by table — either way only a table both have passed ── */
+  async function pick(){ let o; try{ o=await Core.call('esep_ch_options'); }catch(e){ return fail(); } if(!o) return fail('session');
+    if(!o.klass||!o.mine.length||!o.classmates.length){ app.innerHTML=top()+home+`<div class="card"><h2>${!o.klass?'Алдымен сыныбыңды көрсет':!o.mine.length?'Алдымен бір көбейту кестесін өт':'Әзірге шақыратын сыныптас жоқ'}</h2>
+      <p>${!o.klass?'Шығып, қайта кіргенде «Сынып» өрісін толтыр (мысалы 3А).':!o.mine.length?'«Көбейту мен бөлу» бағытында кез келген кесте станциясының тестінен өт — сонда сол кесте бойынша жарыса аласың.':'Сыныптастарың сен өткен кестелердің бірін өткенде осында шығады.'}</p><a class="btn wide" href="../">Басты бет</a></div>`; return; }
+    /* two ways in: pick a classmate, then a table you have both passed — or pick a table, then see who can be challenged on it */
+    let mode='who', who=null, tab=null;
+    const shared=o.mine.filter(t=>o.classmates.some(c=>c.tables.includes(t)));   // my tables that at least one classmate has passed too
+    const create=async(toId,t)=>{ app.querySelectorAll('[data-go]').forEach(x=>x.disabled=true);
+      let c; try{ c=await Core.call('esep_ch_create',{p_to:toId,p_table:+t}); }catch(e){ return fail(); }
+      if(c.error){ document.getElementById('pmsg').textContent=WHY[c.error]||'Болмады.'; app.querySelectorAll('[data-go]').forEach(x=>x.disabled=false); return; }
+      G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:false}; ready(); };
+    const draw=()=>{ const can=tab==null?[]:o.classmates.filter(c=>c.tables.includes(tab));
+      app.innerHTML=top()+home+`<div class="seg"><button type="button" data-mode="who" aria-pressed="${mode==='who'}">Сыныптас бойынша</button><button type="button" data-mode="tbl" aria-pressed="${mode==='tbl'}">Кесте бойынша</button></div>`
+      +(mode==='who'
+        ?`<div class="card"><h1>Кімді шақырасың?</h1><p class="note">Деңгейі саған жақын сыныптастар</p>
+          <div class="pick">${o.classmates.map(c=>`<button type="button" data-id="${esc(c.id)}" aria-pressed="${!!(who&&who.id===c.id)}">${esc(c.name)}<small>${c.tables.length} кесте</small></button>`).join('')}</div></div>
+          ${who?`<div class="card"><h2>Қай кесте?</h2><p class="note">Тек екеуің де өткен кестелер</p><div class="tb">${who.tables.map(t=>`<button type="button" data-go data-to="${esc(who.id)}" data-t="${+t}">${esc(tbl(t))}</button>`).join('')}</div><p class="note" id="pmsg" style="margin:10px 0 0"></p></div>`:''}`
+        :`<div class="card"><h1>Қай кесте?</h1><p class="note">Өзің өткен кестелер</p>
+          <div class="pick">${shared.map(t=>`<button type="button" data-tab="${+t}" aria-pressed="${tab===t}">${esc(tbl(t))}<small>${o.classmates.filter(c=>c.tables.includes(t)).length} сыныптас</small></button>`).join('')}</div></div>
+          ${tab!=null?`<div class="card"><h2>Кімді шақырасың?</h2><p class="note">Осы кестені өткен сыныптастар</p><div class="tb">${can.map(c=>`<button type="button" data-go data-to="${esc(c.id)}" data-t="${+tab}">${esc(c.name)}</button>`).join('')}</div><p class="note" id="pmsg" style="margin:10px 0 0"></p></div>`:''}`);
+      app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ mode=b.dataset.mode; draw(); });
+      app.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{ who=o.classmates.find(c=>c.id===b.dataset.id); draw(); });
+      app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=+b.dataset.tab; draw(); });
+      app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>create(b.dataset.to,b.dataset.t)); };
+    draw(); }
+
+  /* ── accept: ?id= ── */
+  async function accept(id){ let c; try{ c=await Core.call('esep_ch_open',{p_id:id}); }catch(e){ return fail(); } if(!c||c.error) return fail(c&&c.error);
+    G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:true}; ready(); }
+
+  function ready(){ app.innerHTML=top()+`<div class="card"><div class="duo"><div><i class="me">${Core.avatar()}</i>Сен</div><span>пен</span><div><i>${esc(first(G.opp).charAt(0))}</i>${esc(first(G.opp))}</div></div>
+      <h1 class="center" style="margin:0">${esc(tbl(G.table))}</h1><p class="note center" style="margin:2px 0 0">Екеуің де өткен станция</p></div>
+    <div class="card" style="padding-top:6px;padding-bottom:6px"><div class="rule"><b>10</b>10 есеп. Екеуіңе де дәл осы есептер беріледі.</div><div class="rule"><b>1</b>Алдымен дұрыс жауап саны, тең болса — уақыт.</div><div class="rule"><b>★</b>Жеңген 3 жұлдыз, жеңілген 1 жұлдыз алады.</div></div>
+    <button class="btn gold wide" id="goBtn">Бастау</button>`; document.getElementById('goBtn').onclick=play; }
+
+  function play(){ G.i=0; G.ans=[]; G.input=''; G.t0=Date.now();
+    app.innerHTML=`<div class="quiz" style="padding-bottom:20px"><div class="qtop"><div class="marks" id="marks">${G.items.map(()=>'<i></i>').join('')}</div><span class="qmeta" id="clock">0:00</span></div>
+      <p class="note center" id="qn" style="margin:0;font-weight:800;letter-spacing:.06em"></p><div class="fact"><span id="qt"></span><span>=</span><output id="out" aria-live="polite"></output></div>
+      <div class="kp">${['1','2','3','4','5','6','7','8','9','←','0','OK'].map(k=>`<button type="button" data-k="${k}" class="${k==='OK'?'go':''}" aria-label="${k==='←'?'Өшіру':k==='OK'?'Тексеру':k}">${k}</button>`).join('')}</div></div>`;
+    const show=()=>{ const [a,b]=G.items[G.i]; document.getElementById('qt').textContent=`${a} × ${b}`; document.getElementById('qn').textContent=`${G.i+1} / ${G.items.length}`; document.getElementById('out').textContent=G.input||' ';
+      document.querySelectorAll('#marks i').forEach((m,j)=>{ m.className=j<G.ans.length?(G.ans[j]===G.items[j][0]*G.items[j][1]?'ok':'no'):j===G.i?'on':''; }); };
+    const press=k=>{ if(!G||G.over) return;
+      if(k==='←') G.input=G.input.slice(0,-1); else if(k==='OK'){ if(!G.input) return; G.ans.push(+G.input); G.input=''; G.i++; if(G.i>=G.items.length) return finish(); }
+      else G.input=(G.input+k).slice(0,3); show(); };
+    app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>press(b.dataset.k));
+    document.onkeydown=e=>{ if(/^\d$/.test(e.key)) press(e.key); else if(e.key==='Backspace') press('←'); else if(e.key==='Enter') press('OK'); };
+    tick=setInterval(()=>{ const s=Math.round((Date.now()-G.t0)/1000), el=document.getElementById('clock'); if(el) el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); },500);
+    show(); }
+
+  async function finish(){ G.over=true; clearInterval(tick); document.onkeydown=null; const ms=Date.now()-G.t0;
+    app.innerHTML=top()+`<div class="card"><p>Жіберілуде…</p></div>`;
+    let r=null; for(let k=0;k<3&&!r;k++){ try{ r=await Core.call('esep_ch_submit',{p_id:G.id,p_answers:G.ans,p_ms:ms}); }catch(e){ await new Promise(z=>setTimeout(z,1500)); } }
+    if(!r){ app.innerHTML=top()+`<div class="card"><h2>Интернет жоқ</h2><p>Жауаптарың сақтаулы тұр. Байланыс шыққанда батырманы бас.</p><button class="btn wide" id="again">Қайта жіберу</button></div>`; document.getElementById('again').onclick=()=>{ G.over=false; finish(); }; return; }
+    if(r.error) return fail(r.error);
+    const miss=G.items.map(([a,b],j)=>G.ans[j]===a*b?null:`${a} × ${b} = ${a*b}`).filter(Boolean);
+    const myOk=r.waiting?r.my_ok:r.my_ok, mySec=Math.round((r.my_ms||ms)/1000), nm=esc(first(G.opp));
+    app.innerHTML=top()+`<div class="card center"><h1 style="margin:6px 0 2px">${r.waiting?'Шақыру жіберілді':r.outcome==='win'?'Жеңдің!':r.outcome==='tie'?'Тең түстіңдер!':`Бұл жолы ${nm} озды`}</h1><p class="note" style="margin:0">${esc(tbl(G.table))}</p></div>
+      <div class="card" style="padding-top:4px;padding-bottom:4px"><div class="res"><span>Сен<small>${mySec} секунд</small></span><b>${+myOk} / 10</b></div>
+        <div class="res"><span>${esc(G.opp)}<small>${r.waiting?'әлі ойнаған жоқ':Math.round(r.opp_ms/1000)+' секунд'}</small></span><b>${r.waiting?'?':(+r.opp_ok)+' / 10'}</b></div></div>
+      <div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><b>${r.waiting?`${nm} ойнап болғанда нәтижені басты беттен көресің.`:`★ Саған ${+r.stars} жұлдыз, ${nm} ${r.outcome==='tie'?2:4-r.stars} жұлдыз алды.`}</b></div>
+      ${miss.length?`<div class="card"><h2>Қайталап ал</h2><p style="font-family:var(--disp);font-size:1.15rem;margin:0;font-variant-numeric:tabular-nums">${miss.map(esc).join(' &nbsp;·&nbsp; ')}</p></div>`:''}
+      <a class="btn wide" href="../">Басты бетке</a><div style="height:10px"></div><a class="btn plain wide" href="./">Жарыстар</a>`;
+    G=null; }
+
+  const id=+new URLSearchParams(location.search).get('id'); if(id>0) accept(id); else hub();
+})();
+</script>
+</body>
+</html>
