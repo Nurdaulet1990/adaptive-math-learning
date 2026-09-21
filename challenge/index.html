@@ -21,6 +21,11 @@
 .pick button,.tb button{min-height:54px;border-radius:15px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;cursor:pointer;text-align:left;padding:0 14px}
 .pick button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .tb{display:flex;flex-direction:column;gap:8px}
+.pick button small{display:block;font-weight:600;font-size:.8rem;color:var(--muted)}
+.pick button{padding:8px 14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 12px;padding:4px;border-radius:16px;background:var(--line)}
+.seg button{min-height:44px;font-size:.9rem;padding:0 6px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
 .marks{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}.marks i{height:12px;border-radius:999px;background:var(--line)}
 .marks i.ok{background:var(--good)}.marks i.no{background:var(--bad)}.marks i.on{background:var(--gold)}
 .fact{display:flex;align-items:center;justify-content:center;gap:12px;font-family:var(--disp);font-weight:600;font-size:2.9rem;font-variant-numeric:tabular-nums;margin:28px 0}
@@ -59,19 +64,30 @@
     if(l.results.length) h+=`<div class="card"><h2>Соңғы жарыстар</h2>${l.results.map(r=>`<div class="res"><span>${esc(r.opp_name)}<small>${esc(tbl(r.table))} · ${r.outcome==='win'?'жеңдің':r.outcome==='tie'?'тең':'ол озды'} · ★ +${+r.stars}</small></span><b>${+r.my_ok} : ${+r.opp_ok}</b></div>`).join('')}</div>`;
     app.innerHTML=h; document.getElementById('newBtn').onclick=pick; }
 
-  /* ── new challenge: classmate, then a table both have passed ── */
+  /* ── new challenge: by classmate or by table — either way only a table both have passed ── */
   async function pick(){ let o; try{ o=await Core.call('esep_ch_options'); }catch(e){ return fail(); } if(!o) return fail('session');
     if(!o.klass||!o.mine.length||!o.classmates.length){ app.innerHTML=top()+home+`<div class="card"><h2>${!o.klass?'Алдымен сыныбыңды көрсет':!o.mine.length?'Алдымен бір көбейту кестесін өт':'Әзірге шақыратын сыныптас жоқ'}</h2>
       <p>${!o.klass?'Шығып, қайта кіргенде «Сынып» өрісін толтыр (мысалы 3А).':!o.mine.length?'«Көбейту мен бөлу» бағытында кез келген кесте станциясының тестінен өт — сонда сол кесте бойынша жарыса аласың.':'Сыныптастарың сен өткен кестелердің бірін өткенде осында шығады.'}</p><a class="btn wide" href="../">Басты бет</a></div>`; return; }
-    let who=null;
-    const draw=()=>{ app.innerHTML=top()+home+`<div class="card"><h1>Кімді шақырасың?</h1><p class="note">Деңгейі саған жақын сыныптастар</p>
-      <div class="pick">${o.classmates.map(c=>`<button type="button" data-id="${esc(c.id)}" aria-pressed="${who&&who.id===c.id}">${esc(c.name)}</button>`).join('')}</div></div>
-      ${who?`<div class="card"><h2>Қай кесте?</h2><p class="note">Тек екеуің де өткен кестелер</p><div class="tb">${who.tables.map(t=>`<button type="button" data-t="${+t}">${esc(tbl(t))}</button>`).join('')}</div><p class="note" id="pmsg" style="margin:10px 0 0"></p></div>`:''}`;
+    /* two ways in: pick a classmate, then a table you have both passed — or pick a table, then see who can be challenged on it */
+    let mode='who', who=null, tab=null;
+    const shared=o.mine.filter(t=>o.classmates.some(c=>c.tables.includes(t)));   // my tables that at least one classmate has passed too
+    const create=async(toId,t)=>{ app.querySelectorAll('[data-go]').forEach(x=>x.disabled=true);
+      let c; try{ c=await Core.call('esep_ch_create',{p_to:toId,p_table:+t}); }catch(e){ return fail(); }
+      if(c.error){ document.getElementById('pmsg').textContent=WHY[c.error]||'Болмады.'; app.querySelectorAll('[data-go]').forEach(x=>x.disabled=false); return; }
+      G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:false}; ready(); };
+    const draw=()=>{ const can=tab==null?[]:o.classmates.filter(c=>c.tables.includes(tab));
+      app.innerHTML=top()+home+`<div class="seg"><button type="button" data-mode="who" aria-pressed="${mode==='who'}">Сыныптас бойынша</button><button type="button" data-mode="tbl" aria-pressed="${mode==='tbl'}">Кесте бойынша</button></div>`
+      +(mode==='who'
+        ?`<div class="card"><h1>Кімді шақырасың?</h1><p class="note">Деңгейі саған жақын сыныптастар</p>
+          <div class="pick">${o.classmates.map(c=>`<button type="button" data-id="${esc(c.id)}" aria-pressed="${!!(who&&who.id===c.id)}">${esc(c.name)}<small>${c.tables.length} кесте</small></button>`).join('')}</div></div>
+          ${who?`<div class="card"><h2>Қай кесте?</h2><p class="note">Тек екеуің де өткен кестелер</p><div class="tb">${who.tables.map(t=>`<button type="button" data-go data-to="${esc(who.id)}" data-t="${+t}">${esc(tbl(t))}</button>`).join('')}</div><p class="note" id="pmsg" style="margin:10px 0 0"></p></div>`:''}`
+        :`<div class="card"><h1>Қай кесте?</h1><p class="note">Өзің өткен кестелер</p>
+          <div class="pick">${shared.map(t=>`<button type="button" data-tab="${+t}" aria-pressed="${tab===t}">${esc(tbl(t))}<small>${o.classmates.filter(c=>c.tables.includes(t)).length} сыныптас</small></button>`).join('')}</div></div>
+          ${tab!=null?`<div class="card"><h2>Кімді шақырасың?</h2><p class="note">Осы кестені өткен сыныптастар</p><div class="tb">${can.map(c=>`<button type="button" data-go data-to="${esc(c.id)}" data-t="${+tab}">${esc(c.name)}</button>`).join('')}</div><p class="note" id="pmsg" style="margin:10px 0 0"></p></div>`:''}`);
+      app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ mode=b.dataset.mode; draw(); });
       app.querySelectorAll('[data-id]').forEach(b=>b.onclick=()=>{ who=o.classmates.find(c=>c.id===b.dataset.id); draw(); });
-      app.querySelectorAll('[data-t]').forEach(b=>b.onclick=async()=>{ app.querySelectorAll('[data-t]').forEach(x=>x.disabled=true);
-        let c; try{ c=await Core.call('esep_ch_create',{p_to:who.id,p_table:+b.dataset.t}); }catch(e){ return fail(); }
-        if(c.error){ document.getElementById('pmsg').textContent=WHY[c.error]||'Болмады.'; return; }
-        G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:false}; ready(); }); };
+      app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=+b.dataset.tab; draw(); });
+      app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>create(b.dataset.to,b.dataset.t)); };
     draw(); }
 
   /* ── accept: ?id= ── */

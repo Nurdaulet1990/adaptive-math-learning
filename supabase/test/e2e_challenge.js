@@ -32,7 +32,14 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   await file('04_challenges.sql');
 
   // A starts a challenge and plays 8 of 10
-  await A.goto(B + 'challenge/'); await A.click('#newBtn'); await A.getByRole('button', { name: 'Ерасыл Т.' }).click();
+  await A.goto(B + 'challenge/'); await A.click('#newBtn');
+  // the other way in: pick a table first, then see who can be challenged on it
+  await A.click('[data-mode="tbl"]');
+  T('by table: only MY tables that a classmate has passed too (2, 5, 10 — nobody else has 3)', JSON.stringify(await A.locator('[data-tab]').evaluateAll(b => b.map(x => +x.dataset.tab))) === '[2,5,10]');
+  await A.locator('[data-tab="5"]').click();
+  T('by table: the classmates who can be challenged on ×5 are listed', JSON.stringify(await A.locator('[data-go]').evaluateAll(b => b.map(x => x.textContent.trim()))) === '["Ерасыл Т."]');
+  await A.screenshot({ path: path.join(__dirname, 'challenge-bytable.png'), fullPage: true });
+  await A.click('[data-mode="who"]'); await A.getByRole('button', { name: 'Ерасыл Т.' }).click();
   T('pick: only tables BOTH have passed are offered (2, 5, 10 — not Айгүл\'s 3)', JSON.stringify(await A.locator('[data-t]').evaluateAll(b => b.map(x => +x.dataset.t))) === '[2,5,10]');
   await A.locator('[data-t="5"]').click(); await A.click('#goBtn');
   const tap = async (p, n) => { for (const d of String(n)) await p.locator(`[data-k="${d}"]`).click(); await p.locator('[data-k="OK"]').click(); };
