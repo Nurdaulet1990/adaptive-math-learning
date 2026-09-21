@@ -68,9 +68,17 @@ function figDiffBar(fp){ // "2-қорап:?;1-қорап:?,+2;Барлығы:10"
   return SVG(W,H,inner);
 }
 function figBarEqual(fp){ // "18;6;?"  or "18;?;3"
-  const [total,n,each]=fp.split(';'); const N=isNaN(+n)?4:+n; const W=320,x0=20,w=(W-40)/N; let inner='';
-  for(let i=0;i<N;i++) inner+=`<rect x="${x0+i*w}" y="20" width="${w}" height="30" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/><text x="${x0+i*w+w/2}" y="41" text-anchor="middle" fill="var(--ink)" font-size="13">${esc(each)}</text>`;
-  inner+=brace(x0,W-20,52,total); if(isNaN(+n)) inner+=`<text x="${W/2}" y="14" text-anchor="middle" fill="var(--muted)" font-size="13">? қорап</text>`;
+  const [total,n,each]=fp.split(';'); const W=320,x0=20; let inner='';
+  const cell=(x,w,i)=>`<rect x="${x}" y="20" width="${w}" height="30" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/><text x="${x+w/2}" y="41" text-anchor="middle" fill="var(--ink)" font-size="13">${esc(each)}</text>`;
+  if(isNaN(+n)){
+    /* HOW MANY cells is the question. This used to draw exactly four — so "18 ; ? ; 3" showed 4 cells of 3 under a
+       brace of 18 (a picture of 12), the drawn count matched the answer only when the answer happened to be 4, and
+       "4" sat among the choices as a decoy the picture voted for. Now: two cells, a dashed gap of unknown length, a last cell. */
+    const w=56; inner+=cell(x0,w,0)+cell(x0+w,w,1)+cell(W-20-w,w,0)
+      +`<rect x="${x0+2*w}" y="20" width="${W-40-3*w}" height="30" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W/2}" y="41" text-anchor="middle" fill="var(--muted)" font-size="16">…</text>`
+      +`<text x="${W/2}" y="14" text-anchor="middle" fill="var(--muted)" font-size="13">? қорап</text>`;
+  } else { const N=+n, w=(W-40)/N; for(let i=0;i<N;i++) inner+=cell(x0+i*w,w,i); }
+  inner+=brace(x0,W-20,52,total);
   return SVG(W,92,inner);
 }
 function figBarCompare(fp){ const [a,n]=fp.split(';'); return figUnitBar(`Кішісі:1;Үлкені:${n};Барлығы:`).replace('Барлығы:','') + '<div class="note center">1 бөлік = '+esc(a)+'</div>'; }
