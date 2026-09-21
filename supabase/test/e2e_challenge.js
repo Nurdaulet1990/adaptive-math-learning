@@ -50,7 +50,7 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   // B sees it on the portal, accepts, plays 10 of 10 with the keyboard
   await E.goto(B); await E.waitForSelector('#duel .card'); const card = (await E.locator('#duel').innerText()).replace(/\n/g, ' ');
   T('challenged: portal card «Айгүл сені жарысқа шақырды · 5-ке көбейту», no score on it', /Айгүл сені жарысқа шақырды/.test(card) && /5-ке көбейту/.test(card) && !/\d \/ 10|8\/10/.test(card), card);
-  await E.locator('#duel a.btn').first().click(); await E.waitForSelector('#goBtn'); await E.click('#goBtn');
+  await E.locator('#duel .card:not(#duelGo) a.btn').first().click(); await E.waitForSelector('#goBtn'); await E.click('#goBtn');
   const seen = []; for (let i = 0; i < 10; i++) { const t = await E.locator('#qt').innerText(); seen.push(t); const [a, b] = t.split('×').map(Number); if (i === 3) { await E.keyboard.type('2'); await E.screenshot({ path: path.join(__dirname, 'challenge-play.png') }); await E.keyboard.press('Backspace'); } await E.keyboard.type(String(a * b)); await E.keyboard.press('Enter'); }
   await E.waitForSelector('text=Жеңдің!'); const eText = (await E.locator('#app').innerText()).replace(/\n/g, ' ');
   T('challenged: 10/10 → «Жеңдің!», NOW sees Айгүл\'s 8/10, 3 stars vs 1', /10 \/ 10/.test(eText) && /8 \/ 10/.test(eText) && /Саған 3 жұлдыз, Айгүл 1 жұлдыз/.test(eText), eText);
@@ -61,7 +61,8 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   await A.goto(B); await A.waitForSelector('#duel .card'); const res = (await A.locator('#duel').innerText()).replace(/\n/g, ' ');
   T('challenger: portal shows the result + challenge stars', /Ерасыл жауап берді — бұл жолы ол озды/.test(res) && /сен 8\/10, Ерасыл 10\/10/.test(res) && /★ 1/.test(res), res);
   await A.screenshot({ path: path.join(__dirname, 'challenge-portal.png'), fullPage: true });
-  await A.reload(); await A.waitForSelector('#duel a'); T('…and only once', (await A.locator('#duel .card').count()) === 0);
+  await A.reload(); await A.waitForSelector('#duel a'); T('…and only once', (await A.locator('#duel .card:not(#duelGo)').count()) === 0);
+  T('the way in is a card of its own with a button, there even when nothing is waiting', (await A.locator('#duelGo a.btn').count()) === 1 && /Сыныптаспен жарыс/.test(await A.locator('#duelGo').innerText()));
   await E.goto(B + 'challenge/'); await E.waitForSelector('#newBtn'); await E.screenshot({ path: path.join(__dirname, 'challenge-hub.png'), fullPage: true });
   T('hub lists the finished challenge 10 : 8', /10 : 8/.test(await E.locator('#app').innerText()));
   await E.goto(B + 'challenge/?id=1'); await E.waitForSelector('.card h2'); T('re-opening a played challenge is refused politely', /ойнап қойғансың/.test(await E.locator('#app').innerText()));
