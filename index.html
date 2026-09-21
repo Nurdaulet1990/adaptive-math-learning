@@ -143,7 +143,12 @@
   const purse=`<a class="purse" href="#board" title="Жұлдыздар"><b id="starTot">${routeStars}</b><i>★</i></a>`;
   /* routeStars is what this device can work out on its own (stage tests, which live in the state). Practice,
      the daily goal, challenges and rooms are counted on the server, so the first paint is an undercount and
-     the board's answer replaces it a moment later. Better a number that grows than a spinner. */
+     esep_stars replaces it a moment later. Better a number that grows than a spinner.
+     It asks for the pupil's OWN total, not the board's: the board begins «no class, no board», which used to
+     leave a classless child staring at 0 ★ while the room card beside it said 11. */
+  if(typeof Core.call==='function') Core.call('esep_stars',{}).then(v=>{
+    const el=document.getElementById('starTot'); if(el&&v&&v.n!=null){ el.textContent=v.n; el.dataset.sure='1'; }
+  }).catch(()=>{});
 
   const r=resume(), hello=`Сәлем, ${esc(student.name.split(' ')[0])}!`;
   let html=Core.topbar();
@@ -214,7 +219,7 @@
        already has and the card keeps its old wording — a page that ships before the migration must not
        relabel someone's answer count as stars. */
     const stars=b.me.week!==undefined;
-    const tot=document.getElementById('starTot'); if(stars&&tot&&b.me.n!=null) tot.textContent=b.me.n;
+    const tot=document.getElementById('starTot'); if(stars&&tot&&b.me.n!=null&&tot.dataset.sure!=='1') tot.textContent=b.me.n;
     const top=b.top||[], cls=(b.classes||[]), max=Math.max(1,...cls.map(c=>c.avg));
     if(!top.length&&!cls.length) return;
     const wk=x=>stars&&x.week>0?`<small>осы аптада +${x.week}</small>`:'';

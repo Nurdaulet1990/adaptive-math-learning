@@ -99,6 +99,21 @@ const out = []; const T = (name, ok, extra) => { out.push(ok); console.log(ok ? 
   T('it counted 4 events, 2 answers (the skipped placement item excluded) and 1 perfect one',
     row.events === 4 && row.answers === 2 && row.score === 1, row);
 
+  // ── 09: a pupil's own total, which must not depend on having a class ────
+  await file('09_my_stars.sql'); await file('09_my_stars.sql');
+  const mine = async (n, p) => rpc('esep_stars', { p_token: await tok(n, p) });
+  let my = await mine('Айгүл С.', '1111');
+  T('esep_stars gives the same total the board does, and breaks it down',
+    my.n === 8 && my.parts.route === 3 && my.parts.practice === 3 && my.parts.goal === 2, my);
+  await pg.query(`update students set klass = '' where name = 'Айгүл С.'`);
+  my = await mine('Айгүл С.', '1111');
+  T('a pupil with NO class still gets her total — the bug that showed 0 ★ beside a room card saying 11',
+    my.n === 8, my);
+  T('…while the board still, rightly, has nothing to rank her against',
+    (await board('Айгүл С.', '1111')).klass === null);
+  await pg.query(`update students set klass = '3А' where name = 'Айгүл С.'`);
+  T('a dead token gets nothing', (await rpc('esep_stars', { p_token: 'nope' })) === null);
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   await pg.end();

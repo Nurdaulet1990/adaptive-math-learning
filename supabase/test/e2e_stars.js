@@ -25,8 +25,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const pg = conn(DB); await pg.connect();
   await pg.query(SQL('test/00_baseline_guess.sql'));
   await pg.query(`insert into students(name,pin,klass) values ('Айгүл С.','1111','3А'),('Дана К.','3333','3А'),('Ерасыл Т.','2222','3А')`);
-  for (const f of ['01_additive.sql','04_challenges.sql','05_rooms.sql','06_stars.sql']) await pg.query(SQL(f));
-  console.log('database ready: 01 + 04 + 05 + 06\n');
+  for (const f of ['01_additive.sql','04_challenges.sql','05_rooms.sql','06_stars.sql','07_practice_stars.sql','09_my_stars.sql']) await pg.query(SQL(f));
+  console.log('database ready: 01 + 04 + 05 + 06 + 07 + 09\n');
 
   let lock = Promise.resolve();                       // pg: one query at a time (the portal fires three RPCs at once)
   const serial = fn => (lock = lock.then(fn, fn));
@@ -143,6 +143,18 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   T('the board card is in stars and shows the week gain', /★ жұлдыз/.test(brd) && /осы аптада \+7/.test(brd), txt(brd).slice(0,220));
   const feet = [...app.matchAll(/<div class="rt-foot">[\s\S]*?<\/div>/g)].map(m=>txt(m[0]));
   T('the PV route card carries its four stars', feet.some(s=>/★ 4/.test(s)), feet);
+
+  // ── 5 · the purse must not depend on having a class ────────────────────
+  console.log('\n5 · a pupil with no class still sees her stars');
+  await pg.query(`update students set klass = '' where name = 'Дана К.'`);
+  const b4 = browser(await login('Дана К.','3333'));
+  b4.RoomRoutes = { stageNames: async () => ({}) };
+  vm.runInContext(portal, b4, { filename:'portal.js' });
+  await sleep(1800);
+  T('the purse is filled from her own total, not from the board she cannot be on',
+    String(b4.els.starTot.textContent) === '7', b4.els.starTot.textContent);
+  T('and the board card stays empty, which is correct — there is no class to rank her in',
+    !/Сынып тақтасы/.test(b4.els.board.innerHTML), txt(b4.els.board.innerHTML).slice(0,80));
 
   console.log(`\n(${calls} RPC calls went to the database)`);
   const failed = out.filter(x=>!x).length;
