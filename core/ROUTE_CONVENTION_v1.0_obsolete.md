@@ -1,3 +1,14 @@
+> ⚠️ **已作废 · OBSOLETE.** 这是 2026-09 之前的 v1.0，保留只为查阅历史。
+> 现行版本是仓库根目录的 [`ROUTE_CONVENTION.md`](../ROUTE_CONVENTION.md)（v1.2）。
+> 本文件有三处与代码不符，当初坑过路线作者：§5 说 `bank.js` 里可以放固定题（**没有这个机制**，
+> 诊断和关卡测都走 `GENERATORS`）；§8 小数用逗号（**已改为小数点**）；§3 的示例编号 `FR-09` / `AR-06`
+> 是虚构的，却被当成已占用的真编号。**给助理或 AI 的永远是根目录那份。**
+>
+> ⚠️ **OBSOLETE.** Superseded by [`/ROUTE_CONVENTION.md`](../ROUTE_CONVENTION.md) (v1.2).
+> Kept for history only. Three of its statements contradict the code — see the v1.2 version history.
+
+---
+
 # Есеп жолы · 路线开发约定 (Route Development Convention) · v1.0
 
 > 这份文件给两类读者：做路线的人，和他用的 AI。让 AI 写或改路线代码时，**把这份文件和 `core-stub.js` 一起交给它**，并说"按 ROUTE_CONVENTION.md 做"。
