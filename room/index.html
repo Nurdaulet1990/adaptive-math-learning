@@ -9,12 +9,19 @@
 <link rel="stylesheet" href="../core/ui.css?v=9">
 <style>
 /* room/ — a challenge room («жарыс бөлмесі»): one pupil or the teacher opens it, anyone with the code comes in,
-   everybody gets the same ten facts at the same moment. Owner: platform owner. All rules live on the server
-   (supabase/05_rooms.sql); this page only shows what the functions return and collects ten answers. */
+   everybody gets the same sheet at the same moment — on ANY station of the routes AR, FR, TE, WP. Owner: platform owner.
+   Who is in, when it starts and the time live on the server (supabase/05_rooms.sql); the questions are built here, by the
+   route's own generator from the room's seed (room/routes.js), and marked by the same Core.isCorrect as practice. */
 .code{font-family:var(--disp);font-weight:600;font-size:3.4rem;letter-spacing:.18em;text-align:center;font-variant-numeric:tabular-nums;margin:6px 0 2px;padding-left:.18em}
 .plist{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.plist span{padding:6px 12px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:800;font-size:.9rem}
 .plist span.done{background:var(--good-soft,#DDF2E3);color:var(--good)}
-.pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pick{display:flex;flex-direction:column;gap:8px}
+.pick button small{display:block;font-weight:600;font-size:.8rem;color:var(--muted)}
+.seg{display:flex;gap:6px;margin:0 0 10px;padding:4px;border-radius:16px;background:var(--line);overflow-x:auto}
+.seg button{flex:1;min-height:40px;white-space:nowrap;font-size:.85rem;padding:0 10px;border:0;border-radius:12px;background:transparent;color:var(--muted);font:inherit;font-weight:800;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.expr{font-family:var(--disp);font-size:1.5rem;text-align:center;margin:0 0 14px}
+.mexpr{display:inline-block;vertical-align:middle;font-family:var(--disp);margin:0 4px}
 .pick button{min-height:54px;border-radius:15px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;cursor:pointer;text-align:left;padding:8px 14px}
 .joinrow{display:flex;gap:8px}.joinrow input{flex:1;min-width:0;font-family:var(--disp);font-size:1.6rem;letter-spacing:.2em;text-align:center;font-variant-numeric:tabular-nums}
 .open{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.open:last-child{border-bottom:0}
@@ -23,11 +30,6 @@
 .count{font-family:var(--disp);font-weight:600;font-size:7rem;text-align:center;margin:60px 0 10px;font-variant-numeric:tabular-nums}
 .marks{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}.marks i{height:12px;border-radius:999px;background:var(--line)}
 .marks i.ok{background:var(--good)}.marks i.no{background:var(--bad)}.marks i.on{background:var(--gold)}
-.fact{display:flex;align-items:center;justify-content:center;gap:12px;font-family:var(--disp);font-weight:600;font-size:2.9rem;font-variant-numeric:tabular-nums;margin:28px 0}
-.fact output{min-width:108px;height:76px;padding:0 12px;border-radius:16px;border:3px solid var(--gold);background:var(--card);display:flex;align-items:center;justify-content:center}
-.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.kp button{min-height:62px;border:0;border-radius:15px;background:var(--card);color:var(--ink);box-shadow:0 4px 0 var(--line);font-family:var(--disp);font-weight:600;font-size:1.6rem;cursor:pointer}
-.kp button:active{transform:translateY(4px);box-shadow:none}.kp button.go{background:var(--gold);color:#1B2733;box-shadow:0 4px 0 var(--gold-d)}
 .res{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}.res:last-child{border-bottom:0}
 .res i{flex:none;font-style:normal;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;background:var(--gold-soft);color:var(--gold-d)}
 .res span{flex:1;min-width:0;font-weight:900}.res small{display:block;font-weight:700;color:var(--muted)}.res b{font-family:var(--disp);font-size:1.5rem;font-variant-numeric:tabular-nums}
@@ -37,133 +39,161 @@
 <body>
 <div id="app" class="app"></div>
 <script src="../core/core.js?v=10"></script>
+<script src="../core/figs.js?v=7"></script>
+<script src="routes.js?v=1"></script>
 <script>
 (async function(){
   'use strict';
-  const app=document.getElementById('app'), esc=Core.esc, $=id=>document.getElementById(id);
+  const app=document.getElementById('app'), esc=Core.esc, $=id=>document.getElementById(id), RR=window.RoomRoutes;
   await Core.login();
+  if(!RR){ app.innerHTML=Core.topbar('Жарыс бөлмесі')+`<div class="card"><h2>Бет толық жүктелмеді</h2><p class="note">Интернетті тексеріп, бетті қайта аш.</p><a class="btn wide" href="./">Қайталау</a></div>`; return; }
   const first=s=>String(s||'').split(' ')[0];
-  const tbl=n=>+n===0?'Аралас кестелер':(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
+  const RNAME=Object.fromEntries((Core.config.ROUTES||[]).map(r=>[r[0],r[1]]));
   const top=()=>Core.topbar('Жарыс бөлмесі');
   const home=`<p class="note" style="margin:0 0 10px"><a href="../">← Басты бет</a></p>`;
   const WHY={not_found:'Мұндай бөлме жоқ немесе ол жабылып қалған.',started:'Бұл жарыс басталып кетті — келесісіне үлгер.',hosting:'Алдымен өз бөлмеңді жап.',playing:'Сен қазір басқа жарыста ойнап жатырсың.',
-    full:'Бөлме толы.',not_passed:'Бөлмені тек өзің өткен кесте бойынша аша аласың.',daily_limit:'Бүгінге 5 бөлме жеткілікті. Ертең тағы аш.',alone:'Кемінде екі ойыншы керек.',closed:'Уақыт бітіп қалды.',
-    busy:'Қазір бос код жоқ. Сәлден соң қайтала.',locked:'Тым көп қате код. 10 минуттан кейін қайтала.',table:'Мұндай кесте жоқ.',session:'Қайта кіру керек.'};
+    full:'Бөлме толы.',not_passed:'Бөлмені тек өзің өткен станция бойынша аша аласың.',daily_limit:'Бүгінге 10 бөлме жеткілікті. Ертең тағы аш.',alone:'Кемінде екі ойыншы керек.',closed:'Уақыт бітіп қалды.',
+    busy:'Қазір бос код жоқ. Сәлден соң қайтала.',locked:'Тым көп қате код. 10 минуттан кейін қайтала.',stage:'Бұл станция бойынша жарыс өткізуге болмайды.',thin:'Бұл станцияда жарысқа есеп жеткіліксіз.',session:'Қайта кіру керек.'};
   const fail=code=>{ stop(); app.innerHTML=top()+`<div class="card"><h2>${esc(WHY[code]||'Бөлме қазір қолжетімсіз.')}</h2><a class="btn wide" href="./">Бөлмелер</a></div>`; };
   const mmss=ms=>{ const s=Math.max(0,Math.round(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
   let poll=null, tick=null, watch=null, G=null, seq=0;
   /* every view change bumps `seq`: a reply that was already on its way when the view changed is dropped, not drawn */
-  const stop=()=>{ seq++; clearTimeout(poll); clearInterval(tick); clearInterval(watch); poll=tick=watch=null; document.onkeydown=null; };
+  const stop=()=>{ seq++; clearTimeout(poll); clearInterval(tick); clearInterval(watch); poll=tick=watch=null; };
   /* school wifi hangs more often than it fails: no call may wait longer than 8 s */
   const call=(fn,a)=>Promise.race([Core.call(fn,a),new Promise((_,no)=>setTimeout(()=>no(new Error('timeout')),8000))]);
-  const SS={get:k=>{ try{ return JSON.parse(sessionStorage.getItem(k)); }catch(e){ return null; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del:k=>{ try{ sessionStorage.removeItem(k); }catch(e){} }};
+  /* what the teacher (and «Қайталап ал») sees of a question: the stem, plus the expression when the stem alone says nothing */
+  const qText=q=>(String(q.stem||'')+(q.exprHTML?' '+String(q.exprHTML).replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim():'')).slice(0,160);
+  const ME=String(((Core._session&&Core._session())||{}).id||'');   // storage keys carry the pupil: a shared tablet must not hand one child's answers to the next
+  const SS={get:k=>{ try{ return JSON.parse(sessionStorage.getItem(k+'_'+ME)); }catch(e){ return null; } }, set:(k,v)=>{ try{ sessionStorage.setItem(k+'_'+ME,JSON.stringify(v)); }catch(e){} }, del:k=>{ try{ sessionStorage.removeItem(k+'_'+ME); }catch(e){} }};
+  /* the name of a station comes from the route's own stage table — never from another pupil's browser */
+  const NAMES={}; const namesOf=async r=>{ if(NAMES[r]) return NAMES[r]; try{ NAMES[r]=await RR.stageNames(r); }catch(e){ return {}; } return NAMES[r]; };   // a failed download is not remembered
+  const title=(route,stage)=>{ const n=(NAMES[route]||{})[stage]; return n?n.name:stage; };
 
   /* ── the way in: my live room · come in by code · my class's open rooms · open one · my record ── */
   async function hub(msg){ stop(); let l; try{ l=await call('esep_room_list'); }catch(e){ return fail(); } if(!l) return fail('session');
-    const rec=l.record||{}, can=l.can_host||[];
-    let h=top()+home;
-    if(l.mine) h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен бөлмедесің'}</h2>
-      <p style="margin:0 0 12px;font-weight:700">${esc(tbl(l.mine.table))} · код ${esc(l.mine.code)}</p><a class="btn gold wide" href="./?id=${+l.mine.id}">Бөлмеге кіру</a></div>`;
-    h+=`<div class="card"><h1 style="margin:0 0 4px">Кодпен кіру</h1><p class="note" style="margin:0 0 10px">Бөлмені ашқан адам айтқан 4 санды жаз.</p>
-      <div class="joinrow"><input class="big" id="jcode" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" aria-label="Бөлме коды"><button class="btn gold" id="jgo">Кіру</button></div>
-      <p class="note" id="jmsg" style="margin:8px 0 0;color:var(--bad)">${esc(msg||'')}</p></div>`;
-    if((l.open||[]).length) h+=`<div class="card" style="padding-top:6px;padding-bottom:6px"><h2 style="margin:10px 0 0">Сыныбыңдағы ашық бөлмелер</h2>${l.open.map(o=>`<div class="open"><span>${esc(o.by_teacher?'Мұғалім':first(o.host_name))}<small>${esc(tbl(o.table))} · ${+o.n} ойыншы</small></span><button class="btn" data-code="${esc(o.code)}">Қосылу</button></div>`).join('')}</div>`;
-    if(!l.mine) h+=`<div class="card"><h2 style="margin:0 0 4px">Бөлме ашу</h2>${can.length?`<p class="note" style="margin:0 0 10px">Өзің өткен кестені таңда. Саған код беріледі — оны сыныптастарыңа айт.</p>
-        <div class="pick">${can.map(t=>`<button type="button" data-new="${+t}">${esc(tbl(t))}</button>`).join('')}${can.length>=2?`<button type="button" data-new="0">Аралас кестелер</button>`:''}</div><p class="note" id="nmsg" style="margin:8px 0 0;color:var(--bad)"></p>`
-        :`<p class="note" style="margin:0">Бөлме ашу үшін алдымен «Көбейту мен бөлу» бағытында бір кесте станциясынан өт. Оған дейін кодпен басқаның бөлмесіне кіре аласың.</p>`}</div>`;
-    if(rec.played) h+=`<div class="card"><h2 style="margin:0 0 10px">Менің жарыстарым</h2><div class="rec"><div><b>${+rec.played}</b><span>жарыс</span></div><div><b>${+rec.wins}</b><span>1-орын</span></div><div><b>${+rec.podium}</b><span>үздік үштік</span></div><div><b>${+rec.beaten}</b><span>озған адам</span></div></div>
-      ${(l.last||[]).length?`<p class="note" style="margin:12px 0 0">Соңғылары: ${l.last.map(x=>`${esc(tbl(x.table))} — ${+x.place}-орын (${+x.n} ішінен)`).join(' · ')}</p>`:''}</div>`;
-    h+=`<p class="note center"><a href="../challenge/">Бір сыныптаспен жекпе-жек жарыс →</a></p>`;
-    app.innerHTML=h;
-    const join=async code=>{ const m=$('jmsg'); if(!/^\d{4}$/.test(code)){ m.textContent='Код — 4 сан.'; return; } m.textContent='';
-      let r; try{ r=await call('esep_room_join',{p_code:code}); }catch(e){ m.textContent='Байланыс жоқ. Қайтала.'; return; }
-      if(!r||r.error){ m.textContent=WHY[r&&r.error]||'Болмады.'; return; }
-      try{ if(r.not_passed) sessionStorage.setItem('esep_room_np',String(r.id)); }catch(e){}
-      location.href='./?id='+(+r.id); };
-    $('jgo').onclick=()=>join(($('jcode').value||'').trim()); $('jcode').onkeydown=e=>{ if(e.key==='Enter') $('jgo').click(); };
-    app.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>join(b.dataset.code));
-    app.querySelectorAll('[data-new]').forEach(b=>b.onclick=async()=>{ app.querySelectorAll('[data-new]').forEach(x=>x.disabled=true);
-      let r; try{ r=await call('esep_room_create',{p_table:+b.dataset.new}); }catch(e){ r=null; }
-      if(!r||r.error){ $('nmsg').textContent=WHY[r&&r.error]||'Байланыс жоқ. Қайтала.'; app.querySelectorAll('[data-new]').forEach(x=>x.disabled=false); return; }
-      location.href='./?id='+(+r.id); }); }
+    const rec=l.record||{}; const need=new Set([...(l.can_host||[]).map(c=>c.route),...(l.open||[]).map(o=>o.route),...(l.last||[]).map(o=>o.route),...(l.mine?[l.mine.route]:[])]);
+    await Promise.all([...need].map(namesOf));
+    const can=(l.can_host||[]).filter(c=>{ const n=(NAMES[c.route]||{})[c.stage]; return n&&RR.usable(c.route,n.type); });
+    const routes=RR.ROUTES.filter(r=>can.some(c=>c.route===r)); let tab=routes.includes(SS.get('esep_room_tab'))?SS.get('esep_room_tab'):routes[0];
+    const draw=()=>{ let h=top()+home;
+      if(l.mine) h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен бөлмедесің'}</h2>
+        <p style="margin:0 0 12px;font-weight:700">${esc(title(l.mine.route,l.mine.stage))} · код ${esc(l.mine.code)}</p><a class="btn gold wide" href="./?id=${+l.mine.id}">Бөлмеге кіру</a></div>`;
+      h+=`<div class="card"><h1 style="margin:0 0 4px">Кодпен кіру</h1><p class="note" style="margin:0 0 10px">Бөлмені ашқан адам айтқан 4 санды жаз.</p>
+        <div class="joinrow"><input class="big" id="jcode" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" aria-label="Бөлме коды"><button class="btn gold" id="jgo">Кіру</button></div>
+        <p class="note" id="jmsg" style="margin:8px 0 0;color:var(--bad)">${esc(msg||'')}</p></div>`;
+      if((l.open||[]).length) h+=`<div class="card" style="padding-top:6px;padding-bottom:6px"><h2 style="margin:10px 0 0">Сыныбыңдағы ашық бөлмелер</h2>${l.open.map(o=>`<div class="open"><span>${esc(o.by_teacher?'Мұғалім':first(o.host_name))}<small>${esc(title(o.route,o.stage))} · ${+o.n} ойыншы</small></span><button class="btn" data-code="${esc(o.code)}">Қосылу</button></div>`).join('')}</div>`;
+      if(!l.mine) h+=`<div class="card"><h2 style="margin:0 0 4px">Бөлме ашу</h2>${can.length?`<p class="note" style="margin:0 0 10px">Өзің өткен кез келген станцияны таңда. Саған код беріледі — оны сыныптастарыңа айт.</p>
+          ${routes.length>1?`<div class="seg">${routes.map(r=>`<button type="button" data-tab="${r}" aria-pressed="${r===tab}">${esc(RNAME[r]||r)}</button>`).join('')}</div>`:''}
+          <div class="pick">${can.filter(c=>c.route===tab).reverse().map(c=>{ const n=NAMES[c.route][c.stage], ru=RR.rule(c.route,n.type); return `<button type="button" data-new="${esc(c.stage)}">${esc(n.name)}<small>${ru.n} есеп · ${Math.round(ru.secs/60)} минут</small></button>`; }).join('')}</div><p class="note" id="nmsg" style="margin:8px 0 0;color:var(--bad)"></p>`
+          :`<p class="note" style="margin:0">Бөлме ашу үшін алдымен кез келген бағытта бір станциядан өт. Оған дейін кодпен басқаның бөлмесіне кіре аласың.</p>`}</div>`;
+      if(rec.played) h+=`<div class="card"><h2 style="margin:0 0 10px">Менің жарыстарым</h2><div class="rec"><div><b>${+rec.played}</b><span>жарыс</span></div><div><b>${+rec.wins}</b><span>1-орын</span></div><div><b>${+rec.podium}</b><span>үздік үштік</span></div><div><b>${+rec.beaten}</b><span>озған адам</span></div></div>
+        ${(l.last||[]).length?`<p class="note" style="margin:12px 0 0">Соңғылары: ${l.last.map(x=>`${esc(title(x.route,x.stage))} — ${+x.place}-орын (${+x.n} ішінен)`).join(' · ')}</p>`:''}</div>`;
+      h+=`<p class="note center"><a href="../challenge/">Бір сыныптаспен жекпе-жек жарыс →</a></p>`;
+      app.innerHTML=h;
+      const join=async code=>{ const m=$('jmsg'); if(!/^\d{4}$/.test(code)){ m.textContent='Код — 4 сан.'; return; } m.textContent='';
+        let r; try{ r=await call('esep_room_join',{p_code:code}); }catch(e){ m.textContent='Байланыс жоқ. Қайтала.'; return; }
+        if(!r||r.error){ m.textContent=WHY[r&&r.error]||'Болмады.'; return; }
+        if(r.not_passed) SS.set('esep_room_np',String(r.id));
+        location.href='./?id='+(+r.id); };
+      $('jgo').onclick=()=>join(($('jcode').value||'').trim()); $('jcode').onkeydown=e=>{ if(e.key==='Enter') $('jgo').click(); };
+      app.querySelectorAll('[data-code]').forEach(b=>b.onclick=()=>join(b.dataset.code));
+      app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; SS.set('esep_room_tab',tab); draw(); });
+      app.querySelectorAll('[data-new]').forEach(b=>b.onclick=async()=>{ const all=app.querySelectorAll('[data-new]'); all.forEach(x=>x.disabled=true); const stage=b.dataset.new, ru=RR.rule(tab,NAMES[tab][stage].type), back=t=>{ $('nmsg').textContent=t; all.forEach(x=>x.disabled=false); };
+        /* try the generator BEFORE opening the room: a station that cannot fill a sheet must not leave a class waiting */
+        let mod; try{ mod=await RR.load(tab); }catch(e){ return back('Байланыс жоқ. Қайтала.'); } if(RR.sheet(mod,tab,stage,1,ru.n).length<3) return back(WHY.thin);
+        let r; try{ r=await call('esep_room_create',{p_route:tab,p_stage:stage,p_n:ru.n,p_secs:ru.secs}); }catch(e){ r=null; }
+        if(!r||r.error) return back(WHY[r&&r.error]||'Байланыс жоқ. Қайтала.');
+        location.href='./?id='+(+r.id); }); };
+    draw(); }
 
-  /* ── inside a room: lobby → countdown → ten facts → waiting → podium. The server says which. ── */
-  async function room(id){ clearTimeout(poll); const my=++seq; let s; try{ s=await call('esep_room_state',{p_id:id}); }catch(e){ if(my===seq) poll=setTimeout(()=>room(id),3000); return; }
+  /* ── inside a room: lobby → countdown → the sheet → waiting → podium. The server says which. ── */
+  async function room(id){ if(G&&!G.over) return;   // a sheet is on the screen: the reply to «Бастау» may arrive after the poll that already saw 'running'
+    clearTimeout(poll); const my=++seq; let s; try{ s=await call('esep_room_state',{p_id:id}); }catch(e){ if(my===seq) poll=setTimeout(()=>room(id),3000); return; }
     if(my!==seq) return;   // the view moved on while this reply was in the air
     if(!s||s.error) return fail(s&&s.error);
-    if(s.status==='lobby') lobby(id,s);
+    await namesOf(s.route); if(my!==seq) return;
+    if(s.status==='lobby'){ lobby(id,s); RR.load(s.route).catch(()=>{}); }   // fetch the generators while everybody is still arriving
     else if(s.status==='running'){ if(s.my_done) waiting(id,s); else if(!G){ stop(); return countdown(id,s); } else return; }
     else return podium(id,s);
     poll=setTimeout(()=>room(id),2000); }
 
   let lobbyKey='';
-  function lobby(id,s){ if(G) return; const key=JSON.stringify(s); if(key===lobbyKey&&document.getElementById('rcode')) return; lobbyKey=key;   // redraw only when somebody came or went — a button must not vanish under a finger
-    let np=false; try{ np=sessionStorage.getItem('esep_room_np')===String(id); }catch(e){}
+  function lobby(id,s){ if(G) return; const key=JSON.stringify(s); if(key===lobbyKey&&$('rcode')) return; lobbyKey=key;   // redraw only when somebody came or went — a button must not vanish under a finger
+    const np=SS.get('esep_room_np')===String(id);
     app.innerHTML=top()+`<div class="card center"><p class="note" style="margin:0;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Бөлме коды</p><div class="code" id="rcode">${esc(s.code)}</div>
-        <h2 style="margin:0">${esc(tbl(s.table))}</h2><p class="note" style="margin:2px 0 0">${s.by_teacher?'Бөлмені мұғалім ашты':s.is_host?'Кодты сыныптастарыңа айт':esc(first(s.host_name))+' ашқан бөлме'}</p></div>
-      ${np?`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><b>Бұл кестені әлі өткен жоқсың — бәрібір қатыса аласың. Білгеніңше жауап бер.</b></div>`:''}
+        <h2 style="margin:0">${esc(title(s.route,s.stage))}</h2><p class="note" style="margin:2px 0 0">${esc(RNAME[s.route]||s.route)} · ${+s.n_items} есеп · ${Math.round(s.secs/60)} минут · ${s.by_teacher?'бөлмені мұғалім ашты':s.is_host?'кодты сыныптастарыңа айт':esc(first(s.host_name))+' ашқан бөлме'}</p></div>
+      ${np?`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><b>Бұл станцияны әлі өткен жоқсың — бәрібір қатыса аласың. Білгеніңше жауап бер.</b></div>`:''}
       <div class="card"><h2 style="margin:0">Ойыншылар · ${+s.n}</h2><div class="plist">${(s.players||[]).map(p=>`<span>${esc(first(p))}</span>`).join('')}</div></div>
       ${s.is_host?`<button class="btn gold wide" id="startBtn" ${s.n<2?'disabled':''}>Бастау</button><p class="note center" id="lmsg" style="margin:8px 0 0">${s.n<2?'Кемінде екі ойыншы керек.':'Бәрі жиналғанда баста — кейін ешкім кіре алмайды.'}</p><div style="height:6px"></div><button class="btn plain wide" id="leaveBtn">Бөлмені жабу</button>`
         :`<div class="card center"><b>${s.by_teacher?'Мұғалім':esc(first(s.host_name))} бастағанша күт…</b></div><button class="btn plain wide" id="leaveBtn">Шығу</button>`}`;
     if($('startBtn')) $('startBtn').onclick=async()=>{ $('startBtn').disabled=true; let r; try{ r=await call('esep_room_start',{p_id:id}); }catch(e){ r=null; }
-      if(!r||r.error){ if($('lmsg')) $('lmsg').textContent=WHY[r&&r.error]||'Байланыс жоқ. Қайтала.'; if($('startBtn')) $('startBtn').disabled=false; return; } room(id); };
+      if(!r||r.error){ if($('lmsg')) $('lmsg').textContent=WHY[r&&r.error]||'Байланыс жоқ. Қайтала.'; if($('startBtn')) $('startBtn').disabled=false; return; } if(!G) room(id); };
     $('leaveBtn').onclick=async()=>{ stop(); try{ await call('esep_room_leave',{p_id:id}); }catch(e){} location.href='./'; }; }
 
-  function countdown(id,s){ const kept=SS.get('esep_room_g_'+id)||{};   // a reload mid-race resumes where it was — and gains nothing: the clock is the server's
-    G={id,items:s.items,table:s.table,ans:Array.isArray(kept.ans)?kept.ans.slice(0,s.items.length-1):[],input:'',deadline:Date.now()+s.left}; G.i=G.ans.length;
-    if(s.starts_in<=0) return play(id);
-    const t0=Date.now()+s.starts_in;
-    app.innerHTML=`<div class="quiz"><p class="note center" style="margin:30px 0 0;font-weight:800">${esc(tbl(s.table))} · 10 есеп</p><div class="count" id="cnt"></div><p class="note center">Дайындал!</p></div>`;
-    const step=()=>{ const left=t0-Date.now(); if(left<=0){ clearInterval(tick); tick=null; return play(id); } if($('cnt')) $('cnt').textContent=Math.ceil(left/1000); }; tick=setInterval(step,100); step(); }
+  async function countdown(id,s){ const t0=Date.now()+s.starts_in, deadline=Date.now()+s.left, my=seq; G={over:false,loading:true};   // from here on the race owns the screen
+    app.innerHTML=`<div class="quiz"><p class="note center" style="margin:30px 0 0;font-weight:800">${esc(title(s.route,s.stage))} · ${+s.n_items} есеп</p><div class="count" id="cnt"></div><p class="note center">Дайындал!</p></div>`;
+    const step=()=>{ const left=t0-Date.now(); if($('cnt')) $('cnt').textContent=left>0?Math.ceil(left/1000):''; }; tick=setInterval(step,100); step();
+    let mod; try{ mod=await RR.load(s.route); }catch(e){ if(my!==seq) return; stop(); G=null; poll=setTimeout(()=>room(id),2500); return; }   // no generators yet (wifi): try again — routes.js fetches afresh, the clock is the server's
+    if(my!==seq) return;
+    const qs=RR.sheet(mod,s.route,s.stage,s.seed,s.n_items); if(qs.length<1){ G=null; return fail('thin'); }
+    const kept=SS.get('esep_room_g_'+id)||{};   // a reload mid-race resumes where it was — and gains nothing: the clock is the server's
+    const g=G={id,mod,qs,over:false,sheet:RR.print(qs),rec:Array.isArray(kept.rec)&&kept.sheet===RR.print(qs)?kept.rec.slice(0,qs.length):[],deadline,route:s.route,stage:s.stage};
+    const go=()=>{ clearInterval(tick); tick=null; if(G!==g) return; play(id); }; const wait=t0-Date.now(); if(wait<=0) go(); else setTimeout(go,wait); }
 
-  function play(id){ G.t0=Date.now();
-    app.innerHTML=`<div class="quiz" style="padding-bottom:20px"><div class="qtop"><div class="marks" id="marks">${G.items.map(()=>'<i></i>').join('')}</div><span class="qmeta" id="clock"></span></div>
-      <p class="note center" id="qn" style="margin:0;font-weight:800;letter-spacing:.06em"></p><div class="fact"><span id="qt"></span><span>=</span><output id="out" aria-live="polite"></output></div>
-      <div class="kp">${['1','2','3','4','5','6','7','8','9','←','0','OK'].map(k=>`<button type="button" data-k="${k}" class="${k==='OK'?'go':''}" aria-label="${k==='←'?'Өшіру':k==='OK'?'Тексеру':k}">${k}</button>`).join('')}</div></div>`;
-    const show=()=>{ const [a,b]=G.items[G.i]; $('qt').textContent=`${a} × ${b}`; $('qn').textContent=`${G.i+1} / ${G.items.length}`; $('out').textContent=G.input||' ';
-      document.querySelectorAll('#marks i').forEach((m,j)=>{ m.className=j<G.ans.length?(G.ans[j]===G.items[j][0]*G.items[j][1]?'ok':'no'):j===G.i?'on':''; }); };
-    const press=k=>{ if(!G||G.over) return;
-      if(k==='←') G.input=G.input.slice(0,-1); else if(k==='OK'){ if(!G.input) return; G.ans.push(+G.input); G.input=''; G.i++; SS.set('esep_room_g_'+id,{ans:G.ans}); if(G.i>=G.items.length) return finish(id); }
-      else G.input=(G.input+k).slice(0,3); show(); };
-    app.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ b.blur(); press(b.dataset.k); });   // blur: or Enter would ALSO press the focused key
-    document.onkeydown=e=>{ const k=/^\d$/.test(e.key)?e.key:e.key==='Backspace'?'←':e.key==='Enter'?'OK':null; if(k){ e.preventDefault(); press(k); } };
-    tick=setInterval(()=>{ if(!G) return; const left=G.deadline-Date.now(), el=$('clock'); if(el) el.textContent=mmss(left); if(left<=0) finish(id); },250);   // the three minutes are up: hand in what there is
+  function play(id){ const my=seq;
+    tick=setInterval(()=>{ if(!G) return; const left=G.deadline-Date.now(), el=$('clock'); if(el) el.textContent=mmss(left); if(left<=3000) finish(id); },250);   // the time is (all but) up: hand in what there is, with room for one retry
     /* a light look at the room while playing: the host or the teacher may end the race early */
-    watch=setInterval(async()=>{ const my=seq; let x; try{ x=await call('esep_room_state',{p_id:id}); }catch(e){ return; } if(my!==seq||!G||G.over) return; if(x&&x.status==='done'){ stop(); G=null; SS.del('esep_room_g_'+id); podium(id,x); } },4000);
-    show(); }
+    watch=setInterval(async()=>{ let x; try{ x=await call('esep_room_state',{p_id:id}); }catch(e){ return; } if(my!==seq||!G||G.over) return; if(x&&x.status==='done'){ stop(); G=null; SS.del('esep_room_g_'+id); podium(id,x); } },4000);
+    next(id); }
 
-  async function finish(id){ if(!G||G.over) return; G.over=true; clearInterval(tick); clearInterval(watch); tick=watch=null; document.onkeydown=null; const ms=Date.now()-G.t0;
+  /* one question, drawn the way the runner draws it in a stage test: no hints, no second try, no answer shown */
+  function next(id){ if(!G||G.over) return; const i=G.rec.length; if(i>=G.qs.length) return finish(id); const q=G.qs[i], fig=RR.figHTML(G.mod,q); let input, done=false;
+    if(q.kind==='choice') input=`<div class="choices${q.choices.length===3?' three':''}">${q.choices.map((c,k)=>`<button class="choice" data-v="${esc(c)}">${q.choiceHTML?q.choiceHTML[k]:esc(c)}</button>`).join('')}</div>`;
+    else if(q.kind==='input') input=`<input class="big" id="ans" inputmode="decimal" placeholder="Жауап" autocomplete="off">`; else input=`<div id="custom"></div>`;
+    app.innerHTML=`<div class="quiz"><div class="qtop"><div class="marks" id="marks" style="grid-template-columns:repeat(${G.qs.length},1fr)">${G.qs.map((_,j)=>`<i class="${j<i?(G.rec[j].ok?'ok':'no'):j===i?'on':''}"></i>`).join('')}</div><span class="qmeta" id="clock">${mmss(G.deadline-Date.now())}</span></div>
+      <p class="note center" id="qn" style="margin:0 0 8px;font-weight:800;letter-spacing:.06em">${i+1} / ${G.qs.length}</p>
+      <div class="stem" id="qt">${esc(q.stem)}</div>${q.exprHTML?`<div class="expr">${q.exprHTML}</div>`:''}${fig?`<div class="fig">${fig}</div>`:''}${input}</div>
+      ${q.kind==='custom'?'':`<div class="actbar"><button class="btn" id="ansBtn" disabled>Жауап беру</button></div>`}`;
+    const give=v=>{ if(done||!G||G.over) return; done=true; v=String(v==null?'':v); let ok=false; try{ ok=!!Core.isCorrect(q,v); }catch(e){}
+      G.rec.push({q:qText(q),a:String(q.ans).slice(0,40),g:v.slice(0,40),ok}); SS.set('esep_room_g_'+id,{sheet:G.sheet,rec:G.rec}); next(id); };
+    let sel=null; app.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ app.querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); b.classList.add('pick'); sel=b.dataset.v; $('ansBtn').disabled=false; });
+    const ai=$('ans'); if(ai){ ai.oninput=()=>{ $('ansBtn').disabled=!ai.value.trim(); }; ai.onkeydown=e=>{ if(e.key==='Enter'&&ai.value.trim()){ e.preventDefault(); give(ai.value.trim()); } }; setTimeout(()=>{ try{ ai.focus(); }catch(e){} },30); }
+    if($('ansBtn')) $('ansBtn').onclick=()=>{ const v=ai?ai.value.trim():sel; if(v) give(v); };
+    if(q.kind==='custom'&&q.mount){ try{ q.mount($('custom'),give); }catch(e){ give(''); } } }
+
+  async function finish(id){ if(!G||G.over) return; G.over=true; clearInterval(tick); clearInterval(watch); tick=watch=null;
+    const detail=G.qs.map((q,j)=>G.rec[j]||{q:qText(q),a:String(q.ans).slice(0,40),g:'',ok:false});   // the unanswered ones count as wrong
     app.innerHTML=top()+`<div class="card"><p>Жіберілуде…</p></div>`;
-    let r=null; for(let k=0;k<3&&!r;k++){ try{ r=await call('esep_room_submit',{p_id:id,p_answers:G.ans,p_ms:ms}); }catch(e){ await new Promise(z=>setTimeout(z,1500)); } }
+    let r=null; for(let k=0;k<3&&!r;k++){ try{ r=await call('esep_room_submit',{p_id:id,p_detail:detail,p_sheet:G.sheet}); }catch(e){ await new Promise(z=>setTimeout(z,1500)); } }
     if(!r){ app.innerHTML=top()+`<div class="card"><h2>Интернет жоқ</h2><p>Жауаптарың осы бетте тұр — бетті жаппа. Байланыс шыққанда батырманы бас; жарыс уақыты біткенше үлгеру керек.</p><button class="btn wide" id="again">Қайта жіберу</button></div>`; $('again').onclick=()=>{ G.over=false; finish(id); }; return; }
-    try{ sessionStorage.setItem('esep_room_miss_'+id,JSON.stringify(G.items.map(([a,b],j)=>G.ans[j]===a*b?null:`${a} × ${b} = ${a*b}`).filter(Boolean))); }catch(e){}
-    SS.del('esep_room_g_'+id);
+    SS.set('esep_room_miss_'+id,G.qs.map((q,j)=>detail[j].ok?null:`${esc(q.stem)}${q.exprHTML?` <span class="mexpr">${q.exprHTML}</span>`:''} <b>→ ${q.ansHTML||esc(q.ans)}</b>`).filter(Boolean)); SS.del('esep_room_g_'+id);
     if(r.error&&r.error!=='closed') return fail(r.error);
     G=null; room(id); }
 
-  function waiting(id,s){ app.innerHTML=top()+`<div class="card center"><h1 style="margin:6px 0 2px">Жауаптарың қабылданды</h1><p class="note" style="margin:0">${esc(tbl(s.table))} · сен ${+s.my_ok} / 10</p></div>
-      <div class="card center"><b>${+s.done_count} / ${+s.n} ойыншы аяқтады</b><p class="note" style="margin:6px 0 0">Қалғандарын күтеміз · ${mmss(s.left)} қалды</p></div>
+  let endArmed=false;
+  let waitKey='';
+  function waiting(id,s){ const key=[s.done_count,s.n,s.my_ok,s.is_host,endArmed].join('|'); if(key===waitKey&&$('wleft')){ $('wleft').textContent=mmss(s.left); return; } waitKey=key;
+    app.innerHTML=top()+`<div class="card center"><h1 style="margin:6px 0 2px">Жауаптарың қабылданды</h1><p class="note" style="margin:0">${esc(title(s.route,s.stage))} · сен ${+s.my_ok} / ${+s.my_total}</p></div>
+      <div class="card center"><b>${+s.done_count} / ${+s.n} ойыншы аяқтады</b><p class="note" style="margin:6px 0 0">Қалғандарын күтеміз · <span id="wleft">${mmss(s.left)}</span> қалды</p></div>
       ${s.is_host?`<button class="btn plain wide" id="endBtn">${endArmed?'Иә, қазір аяқтау — тапсырмағандар соңғы орын алады':'Күтпей аяқтау'}</button>`:''}`;
     if($('endBtn')) $('endBtn').onclick=async()=>{ if(!endArmed){ endArmed=true; $('endBtn').textContent='Иә, қазір аяқтау — тапсырмағандар соңғы орын алады'; return; }   // two taps, no dialog
       $('endBtn').disabled=true; try{ await call('esep_room_finish',{p_id:id}); }catch(e){} room(id); }; }
-  let endArmed=false;
 
-  function podium(id,s){ stop(); G=null; SS.del('esep_room_g_'+id); if(s.cancelled){ app.innerHTML=top()+`<div class="card"><h2>Бөлме жабылды</h2><p class="note">Жарыс басталмады.</p><a class="btn wide" href="./">Бөлмелер</a></div>`; return; }
-    const me=s.me||{}; let miss=[]; try{ miss=JSON.parse(sessionStorage.getItem('esep_room_miss_'+id)||'[]'); sessionStorage.removeItem('esep_room_np'); }catch(e){}
-    const onTop=(s.top||[]).some(t=>t.me);
+  function podium(id,s){ stop(); G=null; SS.del('esep_room_g_'+id); SS.del('esep_room_np'); if(s.cancelled){ app.innerHTML=top()+`<div class="card"><h2>Бөлме жабылды</h2><p class="note">Жарыс басталмады.</p><a class="btn wide" href="./">Бөлмелер</a></div>`; return; }
+    const me=s.me||{}, miss=SS.get('esep_room_miss_'+id)||[], onTop=(s.top||[]).some(t=>t.me);
     app.innerHTML=top()+`<div class="card center"><h1 style="margin:6px 0 2px">${!me.finished?'Бұл жолы үлгермедің':me.place===1?'Жеңдің!':me.place<=3?`${+me.place}-орын!`:`${+me.place}-орын`}</h1>
-        <p class="note" style="margin:0">${esc(tbl(s.table))} · ${+s.n} ойыншы${me.finished&&me.beaten?` · сен ${+me.beaten} ойыншыдан оздың`:''}</p></div>
-      <div class="card" style="padding-top:4px;padding-bottom:4px">${(s.top||[]).map(t=>`<div class="res${t.me?' me':''}"><i>${+t.place}</i><span>${esc(t.me?'Сен':first(t.name))}<small>${Math.round(t.ms/1000)} секунд</small></span><b>${+t.ok} / 10</b></div>`).join('')}
-        ${me.finished&&!onTop?`<div class="res me"><i>${+me.place}</i><span>Сен<small>${Math.round(me.ms/1000)} секунд</small></span><b>${+me.ok} / 10</b></div>`:''}</div>
+        <p class="note" style="margin:0">${esc(title(s.route,s.stage))} · ${+s.n} ойыншы${me.finished&&me.beaten?` · сен ${+me.beaten} ойыншыдан оздың`:''}</p></div>
+      <div class="card" style="padding-top:4px;padding-bottom:4px">${(s.top||[]).map(t=>`<div class="res${t.me?' me':''}"><i>${+t.place}</i><span>${esc(t.me?'Сен':first(t.name))}<small>${Math.round(t.ms/1000)} секунд</small></span><b>${+t.ok} / ${+t.total}</b></div>`).join('')}
+        ${me.finished&&!onTop?`<div class="res me"><i>${+me.place}</i><span>Сен<small>${Math.round(me.ms/1000)} секунд</small></span><b>${+me.ok} / ${+me.total}</b></div>`:''}</div>
       ${me.stars?`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><b>★ Саған ${+me.stars} жұлдыз.</b> <span class="note">Алдымен дұрыс жауап саны есептеледі, тең болса — уақыт.</span></div>`:''}
-      ${miss.length?`<div class="card"><h2>Қайталап ал</h2><p style="font-family:var(--disp);font-size:1.15rem;margin:0;font-variant-numeric:tabular-nums">${miss.map(m=>`<span style="white-space:nowrap">${esc(m)}</span>`).join(' &nbsp;·&nbsp; ')}</p></div>`:''}
+      ${miss.length?`<div class="card"><h2>Қайталап ал</h2>${miss.map(m=>`<p style="margin:0 0 8px">${m}</p>`).join('')}</div>`:''}   ${''/* built on THIS device from the route's own code at hand-in — nothing from the server or another pupil */}
       <a class="btn wide" href="./">Тағы бір жарыс</a><div style="height:10px"></div><a class="btn plain wide" href="../">Басты бетке</a>`; }
 
   const q=new URLSearchParams(location.search), id=+q.get('id'), code=(q.get('code')||'').trim();
   if(id>0) room(id);
   else if(/^\d{4}$/.test(code)){   // «Қосылу» on the portal: come straight in
     let r; try{ r=await call('esep_room_join',{p_code:code}); }catch(e){ r=null; }
-    if(r&&r.id){ try{ if(r.not_passed) sessionStorage.setItem('esep_room_np',String(r.id)); }catch(e){} history.replaceState(null,'','./?id='+(+r.id)); room(+r.id); }
+    if(r&&r.id){ if(r.not_passed) SS.set('esep_room_np',String(r.id)); history.replaceState(null,'','./?id='+(+r.id)); room(+r.id); }
     else { history.replaceState(null,'','./'); hub(WHY[r&&r.error]||'Байланыс жоқ. Қайтала.'); } }
   else hub();
 })();
