@@ -140,6 +140,7 @@
       <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
   else html+=`<div class="card"><h1>${hello}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   html+=goalCard();
+  html+=`<div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
   html+=`<div id="duel"></div>`;    // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
   html+=`<div id="board"></div>`;   // filled after the first paint: the board is one extra request and must never hold the page up
   if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
@@ -156,7 +157,7 @@
   app.innerHTML=html;
 
   /* ── classmate challenges: what is waiting for me, results of the ones I started, and the way in ── */
-  const tbl=n=>(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
+  const tbl=n=>+n===0?'Аралас кестелер':(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
   /* guarded: a device that still holds yesterday's core.js must lose only this card, not the rest of the page */
   if(typeof Core.call==='function') Core.call('esep_ch_list',{p_mark_seen:true}).then(l=>{ const box=document.getElementById('duel'); if(!box||!l) return; let h='';
     (l.incoming||[]).slice(0,3).forEach(c=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${esc(String(c.from_name).split(' ')[0])} сені жарысқа шақырды</h2>
@@ -169,6 +170,18 @@
     h+=`<div class="card" id="duelGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Сыныптаспен жарыс</h2>
       <p class="note" style="margin:0">Өзің өткен көбейту кестесі бойынша 10 есеп — екеуіңе бірдей${l.stars?` · ★ ${+l.stars}`:''}</p></div>
       <a class="btn gold" href="challenge/" style="white-space:nowrap">Шақыру</a></div>`;
+    box.innerHTML=h; }).catch(()=>{});
+
+  /* ── challenge rooms: the one I am in, my class's open rooms, and the way in ── */
+  if(typeof Core.call==='function') Core.call('esep_room_list').then(l=>{ const box=document.getElementById('rooms'); if(!box||!l) return; let h='';
+    if(l.mine) h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен жарыс бөлмесіндесің'}</h2>
+      <p style="margin:0 0 12px;font-weight:700">${esc(tbl(l.mine.table))} · код ${esc(l.mine.code)}</p><a class="btn gold wide" href="room/?id=${+l.mine.id}">Бөлмеге кіру</a></div>`;
+    else (l.open||[]).slice(0,2).forEach(o=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} жарыс бөлмесін ашты</h2>
+      <p style="margin:0 0 12px;font-weight:700">${esc(tbl(o.table))} · ${+o.n} ойыншы күтіп тұр</p><a class="btn gold wide" href="room/?code=${encodeURIComponent(o.code)}">Қосылу</a></div>`; });
+    const rec=l.record||{};
+    h+=`<div class="card" id="roomGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2>
+      <p class="note" style="margin:0">Кодпен кір немесе өзің аш — бәріне бір мезгілде бірдей 10 есеп${rec.played?` · ${+rec.wins} жеңіс, ${+rec.played} жарыс`:''}</p></div>
+      <a class="btn gold" href="room/" style="white-space:nowrap">Бөлме</a></div>`;
     box.innerHTML=h; }).catch(()=>{});
 
   /* ── this week's class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the
