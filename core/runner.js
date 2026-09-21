@@ -197,7 +197,13 @@ function renderGuideStep(){
 function checkGuide(){
   const st=PR.stepsArr[PR.stepIdx]; const v=($('gin').value||'').trim(); if(!v) return;
   if(Core.isCorrect({ans:st.val},v)){ log({ev:'step',n:PR.stepIdx+1,ok:true,id:PR.q.id}); PR.stepIdx++;
-    if(PR.stepIdx>=PR.stepsArr.length){ $('guideSteps').innerHTML=PR.stepsArr.map(s=>`<div class="gstep done">${s.label?esc(s.label)+': ':''}${esc(s.expr)} = <b>${esc(s.val)}</b> ✓</div>`).join(''); if(!window._Q.done){ const ai=$('ans'); if(ai) ai.value=st.val; finishAnswer(st.val,null); } }
+    if(PR.stepIdx>=PR.stepsArr.length){ $('guideSteps').innerHTML=PR.stepsArr.map(s=>`<div class="gstep done">${s.label?esc(s.label)+': ':''}${esc(s.expr)} = <b>${esc(s.val)}</b> ✓</div>`).join(''); if(!window._Q.done){ const ai=$('ans');
+        /* The last step's value is submitted as the answer ONLY when it IS the answer. Where the answer has more
+           parts than the last step (3/8 + 2/8: the step is the numerator 5, the answer is 5/8; 7/4: the step is the
+           remainder 3, the answer is 1 3/4) the old code submitted the fragment, and a pupil who had done every
+           step right was told «Қате» and lost the streak. Now they are told to write the whole answer. */
+        if(Core.isCorrect(PR.q,st.val)){ if(ai) ai.value=st.val; finishAnswer(st.val,null); }
+        else { const g=$('guide')||$('guideSteps'); if(g&&!$('guideDone')) g.insertAdjacentHTML('beforeend','<div class="note" id="guideDone" style="margin-top:8px;font-weight:800">Барлық қадам дұрыс! Енді толық жауапты өзің бер.</div>'); if(ai) ai.focus(); } } }
     else renderGuideStep(); }
   else { log({ev:'step',n:PR.stepIdx+1,ok:false,id:PR.q.id}); $('gmsg').textContent=' Қате, қайта есепте.'; $('gin').select(); }
 }
@@ -262,7 +268,7 @@ function finishTest(){
   const st=R.stages[TS.stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need;
   st.tests.push({t:Date.now(),ok:TS.ok,n:TS.qs.length,pass}); log({ev:'test',stage:TS.stId,ok:TS.ok,n:TS.qs.length,pass});
   let html=topbar()+`<div class="card"><h2>${pass?'Кезең өтілді! 🎉':'Әзірге өтпеді'}</h2><p>Нәтиже: <b>${TS.ok}/${TS.qs.length}</b> (өту үшін ${need} керек).</p>`;
-  if(pass){ st.status='passed'; const i=stageIdx(TS.stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; R.stages[nx].status='current'; html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; } }
+  if(pass){ st.status='passed'; const i=stageIdx(TS.stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; if(R.stages[nx].status==='locked') R.stages[nx].status='current';   /* re-passing an old station (to earn its stars) must not drag a later, already passed one back to 'current' */ html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; } }
   else { st.testUnlocked=false; st.l3streak=0; html+=`<p class="note">3-деңгейде тағы жаттығып, қайта тапсыр.</p>`; }
   html+=`<button class="btn wide" id="homeBtn">Жалғастыру</button></div>`; persist(); TS=null; PR=null; app().innerHTML=html; $('homeBtn').onclick=showHome;
 }
