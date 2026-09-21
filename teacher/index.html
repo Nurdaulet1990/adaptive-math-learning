@@ -11,6 +11,7 @@
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/core.js?v=10"></script>
+<script src="../room/routes.js?v=1"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -76,7 +77,7 @@ async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const tot={n:rows.length,min:rows.reduce((a,r)=>a+(r.time_ms||0),0)/60000,
              ans:rows.reduce((a,r)=>a+(isAll()?agg(r).a:(RS(r,route).nAns||0)),0)};
   const rlabel=isAll()?'барлық бағыт':ROUTE_NAME[route];
-  let html=tbar(rlabel)+`<div class="card" id="roomEntry" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2><p class="note" style="margin:0">Кестені таңдаңыз, кодты тақтаға шығарыңыз — бүкіл сынып бір мезгілде бірдей 10 есеп шығарады.</p></div><button class="btn gold" onclick="showRooms()" style="white-space:nowrap">Ашу</button></div>
+  let html=tbar(rlabel)+`<div class="card" id="roomEntry" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2><p class="note" style="margin:0">Кез келген станцияны таңдаңыз, кодты тақтаға шығарыңыз — бүкіл сынып бір мезгілде бірдей есептерді шығарады.</p></div><button class="btn gold" onclick="showRooms()" style="white-space:nowrap">Ашу</button></div>
   <div class="card"><div class="qbar"><span><b>${tot.n}</b> оқушы · <b>${Math.round(tot.min)}</b> мин · <b>${tot.ans}</b> есеп (${isAll()?'барлығы':route})</span>
     <span>Бағыт: <select onchange="T.route=this.value;showTeacher()"><option ${isAll()?'selected':''} value="${ALL}">барлық бағыт</option>${ROUTES.map(c=>`<option ${c===route?'selected':''} value="${c}">${c} ${esc(ROUTE_NAME[c])}</option>`).join('')}</select>
     &nbsp; Сынып: <select onchange="T.klass=this.value;showTeacher()"><option value="">барлығы</option>${classes.map(c=>`<option ${c===T.klass?'selected':''} value="${esc(c)}">${esc(c)}</option>`).join('')}</select></span></div>
@@ -184,47 +185,70 @@ function exportCSV(){ const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T
     if(!rs.length){ lines.push(q([r.name,r.klass||'','—','','',Math.round((r.time_ms||0)/60000),0,'','','—',fmtDT(r.last_seen),fmtDT(r.created_at)])); return; }
     rs.forEach(c=>lines.push(line(r,c))); });
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`esep_${isAll()?'barlygy':T.route}_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); }
-/* ── challenge rooms (supabase/05_rooms.sql). The teacher opens a room on ANY table, shows the code on the board,
-      starts the race and — unlike the pupils, who see the top three and their own place — gets the whole ranking. ── */
-const tblName=n=>+n===0?'Аралас кестелер (2–9)':(+n)+'-кестесі';
-const RWHY={alone:'Кемінде екі ойыншы керек.',too_many:'Ашық бөлме тым көп — біреуін жабыңыз.',busy:'Бос код табылмады, қайталаңыз.',table:'Мұндай кесте жоқ.',not_found:'Бөлме табылмады.'};
+/* ── challenge rooms (supabase/05_rooms.sql). The teacher opens a room on ANY station of AR / FR / TE / WP, shows the
+      code on the board, starts the race and — unlike the pupils, who see the top three and their own place — gets the
+      whole ranking, every answer, and the questions the class missed. Station names come from the routes' own tables. ── */
+const RNM={}; const roomNames=async r=>{ if(RNM[r]) return RNM[r]; if(!window.RoomRoutes) return {}; try{ RNM[r]=await RoomRoutes.stageNames(r); }catch(e){ return {}; } return RNM[r]; };   // a failed download is not remembered
+const stName=x=>{ const n=(RNM[x.route]||{})[x.stage]; return x.stage+(n?' · '+n.name:''); };
+const RWHY={alone:'Кемінде екі ойыншы керек.',too_many:'Ашық бөлме тым көп — біреуін жабыңыз.',busy:'Бос код табылмады, қайталаңыз.',stage:'Бұл станция бойынша жарыс өткізуге болмайды.',thin:'Бұл станцияда жарысқа есеп жеткіліксіз.',not_found:'Бөлме табылмады.'};
 const mmss=ms=>{ const x=Math.max(0,Math.round(num(ms)/1000)); return Math.floor(x/60)+':'+pad2(x%60); };
-async function showRooms(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; T.rarm=false; if(!T.tok) return login();
+async function showRooms(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; T.rarm=false; if(!T.tok) return login(); const gen0=T.view;
   T.app.innerHTML=tbar('жарыс бөлмесі')+`<div class="card"><p>Жүктелуде…</p></div>`;
   let list; try{ list=(await trpc('esep_t_rooms'))||[]; }
   catch(e){ if(!T.tok) return; T.app.innerHTML=tbar('жарыс бөлмесі')+`<div class="card"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a></div><h2>Жарыс бөлмесі әлі орнатылмаған</h2><p class="note">Supabase SQL editor-да <b>supabase/05_rooms.sql</b> файлын бір рет іске қосыңыз. (${esc(e.message)})</p></div>`; return; }
   const classes=[...new Set(T.rows.map(r=>(r.klass||'').trim().toUpperCase()).filter(Boolean))].sort();
+  const RRS=window.RoomRoutes?RoomRoutes.ROUTES:[]; await Promise.all(RRS.map(roomNames)); if(gen0!==T.view||!T.tok) return;   // «шығу» or another view while this was loading
+  if(!RRS.length){ T.app.innerHTML=tbar('жарыс бөлмесі')+`<div class="card"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a></div><h2>Бет толық жүктелмеді</h2><p class="note">room/routes.js жүктелмеді — бетті қайта ашыңыз.</p></div>`; return; }
+  if(!RRS.includes(T.rroute)) T.rroute=RRS.includes(T.route)?T.route:RRS[0];
+  const stOpts=r=>Object.keys(RNM[r]||{}).filter(k=>RoomRoutes.usable(r,RNM[r][k].type)).map(k=>`<option value="${esc(k)}">${esc(k+' · '+RNM[r][k].name)}${RNM[r][k].grade?' ('+esc(RNM[r][k].grade)+'-сын.)':''}</option>`).join('');
   const live=list.filter(x=>x.status!=='done'), done=list.filter(x=>x.status==='done');
-  const row=x=>`<tr style="cursor:pointer" onclick="showRoom(${num(x.id)})"><td style="text-align:left"><b>${esc(x.by_teacher?'Мұғалім':x.host_name)}</b></td><td>${esc(tblName(x.table))}</td><td>${esc(x.klass||'—')}</td><td>${x.status==='done'?'':'<b>'+esc(x.code)+'</b>'}</td><td>${num(x.n)}</td><td>${x.status==='lobby'?'күтіп тұр':x.status==='running'?'жүріп жатыр':'аяқталды'}</td><td>${esc(fmtDT(x.t))}</td></tr>`;
+  const row=x=>`<tr style="cursor:pointer" onclick="showRoom(${num(x.id)})"><td style="text-align:left"><b>${esc(x.by_teacher?'Мұғалім':x.host_name)}</b></td><td style="text-align:left">${esc(stName(x))}</td><td>${esc(x.klass||'—')}</td><td>${x.status==='done'?'':'<b>'+esc(x.code)+'</b>'}</td><td>${num(x.n)}</td><td>${x.status==='lobby'?'күтіп тұр':x.status==='running'?'жүріп жатыр':'аяқталды'}</td><td>${esc(fmtDT(x.t))}</td></tr>`;
   T.app.innerHTML=tbar('жарыс бөлмесі')+`<div class="card"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a></div><h2>Жаңа бөлме</h2>
-    <div class="row" style="margin-bottom:8px;align-items:center"><span style="flex:1">Кесте: <select id="rtab">${[2,3,4,5,6,7,8,9,10].map(t=>`<option value="${t}">${t}-кестесі</option>`).join('')}<option value="0">Аралас (2–9)</option></select></span>
-      <span style="flex:1">Сынып: <select id="rkl"><option value="">тек кодпен</option>${classes.map(c=>`<option ${c===(T.klass||'').trim().toUpperCase()?'selected':''} value="${esc(c)}">${esc(c)}</option>`).join('')}</select></span></div>
-    <p class="note" style="margin:0 0 10px">Сынып таңдалса, бөлме сол сыныптағы оқушылардың басты бетінде өзі шығады. Басқалары кодпен кіреді. Оқушылар тек үздік үштікті және өз орнын көреді; толық тізім тек осы бетте.</p>
+    <div class="row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap"><span>Бағыт: <select id="rroute">${RRS.map(r=>`<option ${r===T.rroute?'selected':''} value="${r}">${r} ${esc(ROUTE_NAME[r]||'')}</option>`).join('')}</select></span>
+      <span style="flex:1;min-width:220px">Станция: <select id="rstage" style="max-width:100%">${stOpts(T.rroute)}</select></span>
+      <span>Сынып: <select id="rkl"><option value="">тек кодпен</option>${classes.map(c=>`<option ${c===(T.klass||'').trim().toUpperCase()?'selected':''} value="${esc(c)}">${esc(c)}</option>`).join('')}</select></span></div>
+    <p class="note" style="margin:0 0 10px">Кез келген станцияны таңдауға болады (оқушылар тек өздері өткен станция бойынша аша алады). Сынып таңдалса, бөлме сол сыныптағы оқушылардың басты бетінде өзі шығады. Басқалары кодпен кіреді. Оқушылар тек үздік үштікті және өз орнын көреді; толық тізім тек осы бетте.</p>
     <button class="btn gold" id="rnew">Бөлме ашу</button> <span class="note" id="rmsg" style="color:var(--bad)">${esc(msg||'')}</span></div>
-    ${live.length?`<div class="card"><h2>Қазір ашық</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Ашқан</th><th>Кесте</th><th>Сынып</th><th>Код</th><th>Ойыншы</th><th>Күйі</th><th>Уақыты</th></tr>${live.map(row).join('')}</table></div></div>`:''}
-    ${done.length?`<div class="card"><h2>Соңғы жарыстар</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Ашқан</th><th>Кесте</th><th>Сынып</th><th></th><th>Ойыншы</th><th>Күйі</th><th>Уақыты</th></tr>${done.map(row).join('')}</table></div><p class="note" style="margin-top:8px">Жолға басу — толық нәтиже.</p></div>`:''}`;
-  $('rnew').onclick=async()=>{ $('rnew').disabled=true; let r; try{ r=await trpc('esep_t_room_create',{p_table:+$('rtab').value,p_klass:$('rkl').value}); }catch(e){ r={error:e.message}; }
+    ${live.length?`<div class="card"><h2>Қазір ашық</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Ашқан</th><th>Станция</th><th>Сынып</th><th>Код</th><th>Ойыншы</th><th>Күйі</th><th>Уақыты</th></tr>${live.map(row).join('')}</table></div></div>`:''}
+    ${done.length?`<div class="card"><h2>Соңғы жарыстар</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Ашқан</th><th>Станция</th><th>Сынып</th><th></th><th>Ойыншы</th><th>Күйі</th><th>Уақыты</th></tr>${done.map(row).join('')}</table></div><p class="note" style="margin-top:8px">Жолға басу — толық нәтиже.</p></div>`:''}`;
+  $('rroute').onchange=()=>{ T.rroute=$('rroute').value; $('rstage').innerHTML=stOpts(T.rroute); };
+  $('rnew').onclick=async()=>{ $('rnew').disabled=true; const route=$('rroute').value, stage=$('rstage').value, ru=RoomRoutes.rule(route,(RNM[route][stage]||{}).type); let r;
+    /* try the generator first: a station that cannot fill a sheet must not leave a class waiting */
+    try{ const mod=await RoomRoutes.load(route); if(RoomRoutes.sheet(mod,route,stage,1,ru.n).length<3) r={error:'thin'}; }catch(e){ r={error:'Байланыс жоқ'}; }
+    if(!r){ try{ r=await trpc('esep_t_room_create',{p_route:route,p_stage:stage,p_klass:$('rkl').value,p_n:ru.n,p_secs:ru.secs}); }catch(e){ r={error:e.message}; } }
     if(!r||r.error){ $('rmsg').textContent=RWHY[r&&r.error]||('Қате: '+((r&&r.error)||'')); $('rnew').disabled=false; return; } showRoom(num(r.id)); }; }
 async function showRoom(id,keep){ clearTimeout(T.rpoll); if(!T.tok) return login(); if(!keep){ T.view=(T.view||0)+1; T.rkey=''; T.rarm=false; } const gen=T.view;
   let s; try{ s=await trpc('esep_t_room_state',{p_id:id}); }catch(e){ if(!T.tok||gen!==T.view) return; T.rpoll=setTimeout(()=>showRoom(id,true),3000); return; }
   if(gen!==T.view||!T.tok) return;   // «← тізім» or «шығу» was pressed while this reply was on its way
   if(!s||s.error) return showRooms(RWHY[s&&s.error]||'Бөлме табылмады.');
+  await roomNames(s.route); if(gen!==T.view||!T.tok) return;
+  /* a finished race: rebuild the sheet HERE from the room's seed. The questions and answers shown below are the teacher
+     page's own; from the pupils come only what they typed and right/wrong, matched by position. A pupil whose device
+     reported another sheet fingerprint is flagged and shown with his own browser's words, marked as such. */
+  let QS=null, MYP=''; if(s.status==='done'&&!s.cancelled&&s.seed&&window.RoomRoutes){ try{ const mod=await RoomRoutes.load(s.route); QS=RoomRoutes.sheet(mod,s.route,s.stage,s.seed,s.n_items); MYP=RoomRoutes.print(QS); }catch(e){ QS=null; } if(gen!==T.view||!T.tok) return; }
+  const qHTML=q=>esc(q.stem)+(q.exprHTML?` <span style="display:inline-block;vertical-align:middle;font-family:var(--disp)">${q.exprHTML}</span>`:''), aHTML=q=>q.ansHTML||esc(q.ans);
   const key=JSON.stringify(Object.assign({},s,{left:0,starts_in:0})); const head=`<div class="qbar"><a href="#" onclick="showRooms();return false">← бөлмелер</a><span class="chip">${esc(s.klass||'тек кодпен')}</span></div>`;
   if(key!==T.rkey||!$('roomView')){ T.rkey=key; let h=tbar('жарыс бөлмесі')+`<div id="roomView">`;
     if(s.status==='lobby') h+=`<div class="card" style="text-align:center">${head}<p class="note" style="margin:8px 0 0;font-weight:800;letter-spacing:.08em;text-transform:uppercase">Бөлме коды</p>
         <div style="font-family:var(--disp);font-weight:600;font-size:clamp(4rem,18vw,9rem);letter-spacing:.14em;padding-left:.14em;line-height:1.1;font-variant-numeric:tabular-nums">${esc(s.code)}</div>
-        <h2 style="margin:0">${esc(tblName(s.table))}</h2><p class="note" style="margin:4px 0 0">Оқушылар: басты бет → «Жарыс бөлмесі» → «Кодпен кіру»</p></div>
+        <h2 style="margin:0">${esc(stName(s))}</h2><p class="note" style="margin:4px 0 0">${num(s.n_items)} есеп · ${Math.round(num(s.secs)/60)} минут · оқушылар: басты бет → «Жарыс бөлмесі» → «Кодпен кіру»</p></div>
       <div class="card"><h2 style="margin:0 0 8px">Ойыншылар · ${s.players.length}</h2><p style="margin:0;line-height:2">${s.players.map(p=>`<span class="chip">${esc(p.name)}</span>`).join(' ')||'<span class="note">Әзірге ешкім кірген жоқ.</span>'}</p></div>
       ${s.by_teacher?`<button class="btn gold" id="rstart" ${s.players.length<2?'disabled':''}>Бастау</button> <button class="btn plain" id="rclose">Бөлмені жабу</button> <span class="note" id="rmsg2">${s.players.length<2?'Кемінде екі ойыншы керек.':'Басталғаннан кейін ешкім кіре алмайды.'}</span>`:`<button class="btn plain" id="rclose">Бөлмені жабу</button> <span class="note">Бұл бөлмені оқушы ашты (${esc(s.host_name)}) — оны сол бастайды.</span>`}`;
-    else if(s.status==='running') h+=`<div class="card" style="text-align:center">${head}<h2 style="margin:8px 0 0">${esc(tblName(s.table))} · жарыс жүріп жатыр</h2>
+    else if(s.status==='running') h+=`<div class="card" style="text-align:center">${head}<h2 style="margin:8px 0 0">${esc(stName(s))} · жарыс жүріп жатыр</h2>
         <div style="font-family:var(--disp);font-weight:600;font-size:clamp(3rem,12vw,6rem);font-variant-numeric:tabular-nums" id="rleft"></div>
         <p style="margin:0;font-weight:800">${s.players.filter(p=>p.done).length} / ${s.players.length} аяқтады</p></div>
       <div class="card"><p style="margin:0;line-height:2">${s.players.map(p=>`<span class="chip" style="${p.done?'background:var(--good);color:#fff':''}">${esc(p.name)}${p.done?' ✓':''}</span>`).join(' ')}</p></div>
       <button class="btn plain" id="rclose" data-arm="1">${T.rarm?'Иә, аяқтау — тапсырмағандар соңғы орын алады':'Қазір аяқтау'}</button> <span class="note">Уақыт біткенде немесе бәрі тапсырғанда жарыс өзі аяқталады.</span>`;
     else if(s.cancelled) h+=`<div class="card">${head}<h2>Бөлме жабылды</h2><p class="note">Жарыс басталмады.</p></div>`;
-    else h+=`<div class="card">${head}<h2>${esc(tblName(s.table))} · нәтиже</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Орын</th><th>Оқушы</th><th>Дұрыс</th><th>Уақыт</th></tr>
-        ${(s.ranking||[]).map(k=>`<tr><td><b>${k.finished?num(k.place):'—'}</b></td><td style="text-align:left"><b>${esc(k.name)}</b></td><td style="${k.finished&&num(k.ok)<5?'color:var(--bad)':''}">${k.finished?num(k.ok)+' / 10':'тапсырмады'}</td><td>${k.finished?Math.round(num(k.ms)/1000)+' с':''}</td></tr>`).join('')}</table></div>
-        <p class="note" style="margin-top:8px">Алдымен дұрыс жауап саны, тең болса — уақыт. Оқушылар тек үздік үштікті және өз орнын көреді.</p></div><button class="btn gold" onclick="showRooms()">Тағы бір бөлме</button>`;
+    else { const rk=(s.ranking||[]).map(k=>Object.assign({},k,{odd:!!(k.finished&&QS&&k.sheet!==MYP),det:Array.isArray(k.detail)?k.detail:[]}));
+      const miss=QS?QS.map((q,i)=>{ const pl=rk.filter(k=>k.finished&&!k.odd); return {q,of:pl.length,wrong:pl.filter(k=>!(k.det[i]&&k.det[i].ok===true)).length}; }).filter(m=>m.wrong>0).sort((x,y)=>y.wrong-x.wrong).slice(0,5):[];
+      h+=`<div class="card">${head}<h2>${esc(stName(s))} · нәтиже</h2><div style="overflow-x:auto"><table class="t3"><tr><th>Орын</th><th>Оқушы</th><th>Дұрыс</th><th>Уақыт</th><th>Қате жауаптары</th></tr>
+        ${rk.map(k=>{ const bad=k.det.map((d,i)=>({d,i})).filter(x=>x.d&&x.d.ok!==true).slice(0,6);
+          return `<tr><td><b>${k.finished?num(k.place):'—'}</b></td><td style="text-align:left"><b>${esc(k.name)}</b>${k.odd?' <span class="chip gold" title="Бұл құрылғыда есептер басқаша шықты">⚠ басқа парақ</span>':''}</td><td style="${k.finished&&num(k.ok)*2<num(k.total)?'color:var(--bad)':''}">${k.finished?num(k.ok)+' / '+num(k.total):'тапсырмады'}</td><td>${k.finished?Math.round(num(k.ms)/1000)+' с':''}</td>
+          <td style="text-align:left;font-size:.85rem">${bad.map(x=>{ const q=QS&&!k.odd?QS[x.i]:null; return `${q?qHTML(q):'<span class="muted">(оқушы құрылғысының жазуы)</span> '+esc(x.d.q)} → <b>${esc(x.d.g===''?'—':x.d.g)}</b> <span class="muted">(${q?aHTML(q):esc(x.d.a)})</span>`; }).join('<br>')}</td></tr>`; }).join('')}</table></div>
+        <p class="note" style="margin-top:8px">Алдымен дұрыс жауап саны, тең болса — уақыт (сервер сағаты бойынша). Оқушылар тек үздік үштікті және өз орнын көреді. Есептер мен дұрыс жауаптар осы бетте бөлменің «тұқымынан» қайта құрылған; оқушыдан тек оның терген жауабы мен дұрыс/қате белгісі алынады (жауапты жаттығудағыдай оқушының браузері тексереді). «⚠ басқа парақ» — сол құрылғыда есептер басқаша шыққан.</p></div>
+      ${miss.length?`<div class="card"><h2>Сынып жиі қателескен есептер</h2><div class="kv">${miss.map(m=>`<span>${qHTML(m.q)} <span class="muted">= ${aHTML(m.q)}</span></span><span>${m.wrong} / ${m.of} қате</span>`).join('')}</div></div>`:''}
+      <button class="btn gold" onclick="showRooms()">Тағы бір бөлме</button>`; }
     T.app.innerHTML=h+`</div>`;
     if($('rstart')) $('rstart').onclick=async()=>{ $('rstart').disabled=true; let r; try{ r=await trpc('esep_t_room_start',{p_id:id}); }catch(e){ r={error:e.message}; } if(r&&r.error){ $('rmsg2').textContent=RWHY[r.error]||r.error; $('rstart').disabled=false; return; } showRoom(id); };
     if($('rclose')) $('rclose').onclick=async()=>{ if($('rclose').dataset.arm&&!T.rarm){ T.rarm=true; $('rclose').textContent='Иә, аяқтау — тапсырмағандар соңғы орын алады'; return; }   // ending a race takes two taps, no dialog
