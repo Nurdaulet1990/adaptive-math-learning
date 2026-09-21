@@ -372,6 +372,10 @@ platform's own — a route implements none of them:
 | a stage test | 10/10 → 3 · 9/10 → 2 · 8/10 → 1 |
 | a classmate challenge | win 3 · draw 2 · loss 1 |
 | a challenge room | 1st 3 · 2nd–3rd 2 (≥4 played) · handed in 1 |
+
+Ties share a rank and all of them are listed, so the class board's «top five» is everyone down to
+fifth place — eight children level on stars is eight rows, not five. Deliberate: a child who has
+the same number as the leader is told so.
  A station handed out by the diagnostic, or set by the
 teacher, carries no test and is therefore worth nothing — deliberately: a star means *it was shown*.
 For a route author this is one more reason §5's six-distinct-items floor matters — a stage whose test

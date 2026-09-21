@@ -159,6 +159,20 @@ const stage = (status, tests = []) => ({ status, level: 3, streak: 0, wrong: 0, 
     (await denied(`select esep_private.rm_stars('x')`)) === true);
   T('a dead token gets nothing', (await rpc('esep_board', { p_token: 'nope' })) === null);
 
+  // ── ties ───────────────────────────────────────────────────────────────
+  // Ties share a rank and every one of them is shown — owner decision, 2026-09-21. «Top five» therefore
+  // means «everyone down to fifth place», which in a class where eight children are level is eight rows.
+  // Pinned here so it is not later mistaken for a bug and trimmed to five. Its own class, so that the
+  // fixtures above keep meaning what they meant.
+  await pg.query(`insert into students(name,pin,klass) values ('Бір','1001','6В'),('Екі','1002','6В'),('Үш','1003','6В'),('Төрт','1004','6В')`);
+  await pg.query(`update students set pin_hash = crypt(pin, gen_salt('bf', 8)) where pin_hash is null`);
+  for (const nm of ['Бір','Екі','Үш','Төрт']) await setState(nm, st(test(fresh, 10, 10)));      // 3 stars each
+  const tieTok = (await rpc('esep_login', { p_name: 'Бір', p_pin: '1001', p_klass: '', p_code: '' })).token;
+  const tb = await rpc('esep_board', { p_token: tieTok });
+  T('four pupils on the same number share rank 1, and all four are listed',
+    (tb.top || []).length === 4 && (tb.top || []).every(x => x.rank === 1 && x.n === 3), tb.top);
+  T('and each of them is told they are first of four', tb.me.rank === 1 && tb.me.of === 4, tb.me);
+
   // ── 8. is it fast enough to sit in front of a child ──────────────────
   await pg.query(`
     insert into students(name, pin, klass, state, last_seen)
