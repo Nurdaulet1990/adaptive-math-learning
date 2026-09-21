@@ -54,6 +54,12 @@
 .brd-row span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .brd-me{margin-top:8px;padding:11px 12px;border-radius:14px;background:var(--accent-soft);border-bottom:0}
 .brd-me small{display:block;font-size:.8rem;font-weight:800;color:var(--good)}
+.brd-row small{display:block;font-size:.78rem;font-weight:800;color:var(--good)}
+/* the star purse in the greeting line: a number a child can point at, not a badge to decode */
+.purse{flex:none;display:inline-flex;align-items:center;gap:5px;text-decoration:none;padding:5px 12px 5px 13px;border-radius:999px;
+  background:var(--gold-soft,#FBF2DC);border:1px solid var(--gold,#D99A1E);color:var(--ink);font-size:1.05rem;line-height:1}
+.purse b{font-family:var(--disp);font-weight:600;font-variant-numeric:tabular-nums}
+.purse i{font-style:normal;color:var(--gold,#D99A1E)}
 .brd-bar{height:14px;border-radius:999px;background:var(--fig);overflow:hidden;margin:4px 0 12px}
 .brd-bar b{display:block;height:100%;border-radius:999px;background:var(--muted);opacity:.55}
 .brd-bar b.mine{background:var(--accent);opacity:1}
@@ -130,16 +136,22 @@
       <div class="week">${week}</div></div>`;
   }
 
+  /* The star purse. Route stars are in the state we already hold, so the number is on screen with the first paint;
+     the board answers a moment later with the authoritative total, which also carries challenge and room stars,
+     and #starTot is quietly corrected. A pupil with no class gets no board — the route total stands. */
+  const routeStars=Core.config.ROUTES.reduce((a,[code])=>a+((progress(code)||{}).stars||0),0);
+  const purse=`<a class="purse" href="#board" title="Жұлдыздар"><b id="starTot">${routeStars}</b><i>★</i></a>`;
+
   const r=resume(), hello=`Сәлем, ${esc(student.name.split(' ')[0])}!`;
   let html=Core.topbar();
   if(r){ const rc=r.code.toLowerCase();
-    html+=`<h1 style="margin:4px 2px 12px">${hello}</h1>
+    html+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>
     <a class="go" href="${r.url}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
       <small>${esc(r.name)}</small><b>${r.allDone?'Барлық станция өтілді':r.n+'-станция'}</b>
       ${r.allDone||r.code==='PV'?'':`<span class="go-sub">Деңгей ${r.level}/3 · қатарынан ${r.streak}/3</span>`}
       <div class="go-bar"><div><i style="width:${Math.round(100*r.passed/r.total)}%"></i></div><span>${r.passed} / ${r.total}</span></div>
       <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
-  else html+=`<div class="card"><h1>${hello}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
+  else html+=`<div class="card"><h1 style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
   html+=goalCard();
   html+=`<div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
   html+=`<div id="duel"></div>`;    // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
@@ -184,26 +196,35 @@
       <p style="margin:0 0 12px;font-weight:700">${esc(title(o))} · ${+o.n} ойыншы күтіп тұр</p><a class="btn gold wide" href="room/?code=${encodeURIComponent(o.code)}">Қосылу</a></div>`; });
     const rec=l.record||{};
     h+=`<div class="card" id="roomGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2>
-      <p class="note" style="margin:0">Кодпен кір немесе өзің өткен кез келген станция бойынша аш — бәріне бір мезгілде бірдей есептер${rec.played?` · ${+rec.wins} жеңіс, ${+rec.played} жарыс`:''}</p></div>
+      <p class="note" style="margin:0">Кодпен кір немесе өзің өткен кез келген станция бойынша аш — бәріне бір мезгілде бірдей есептер${rec.played?` · ${+rec.wins} жеңіс, ${+rec.played} жарыс${rec.stars?`, ★ ${+rec.stars}`:''}`:''}</p></div>
       <a class="btn gold" href="room/" style="white-space:nowrap">Бөлме</a></div>`;
     box.innerHTML=h; }).catch(()=>{});
 
-  /* ── this week's class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the
-     per-pupil average of each class in my grade. Score = right first time, no hints, outside the placement test.
-     Nothing is drawn when offline, when the pupil has no class, or when nobody has scored yet. ── */
+  /* ── the class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the per-pupil
+     average of each class in my grade. The number is the pupil's STAR TOTAL — stage tests, challenges and rooms
+     together — and `week` beside it is what was added since Monday. It never resets, so the board is also the
+     one place where the purse in the header is authoritative; #starTot is corrected from it here.
+     Nothing is drawn when offline, when the pupil has no class, or when nobody has a star yet. ── */
   Core.board().then(b=>{ const box=document.getElementById('board'); if(!box||!b||!b.klass||!b.me) return;
+    /* 06_stars.sql may not have been run yet: that board still counts this week's answers, not stars. It is
+       told apart by `week`, which only the star version sends. Until then the purse keeps the route total it
+       already has and the card keeps its old wording — a page that ships before the migration must not
+       relabel someone's answer count as stars. */
+    const stars=b.me.week!==undefined;
+    const tot=document.getElementById('starTot'); if(stars&&tot&&b.me.n!=null) tot.textContent=b.me.n;
     const top=b.top||[], cls=(b.classes||[]), max=Math.max(1,...cls.map(c=>c.avg));
     if(!top.length&&!cls.length) return;
-    const inTop=top.some(x=>x.me), d=b.me.n-(b.me.prev_same_point||0);
-    const mine=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i><span>Сен${d>0&&b.me.prev_same_point?`<small>өткен аптаның осы күнінен +${d}</small>`:''}</span><b>${b.me.n}</b></div>`;
-    const tabMine=(top.length?top.map(x=>`<div class="brd-row"><i>${x.rank}</i><span>${x.me?'Сен':esc(x.name)}</span><b>${x.n}</b></div>`).join(''):`<p class="note">Бұл аптада әлі ешкім ұпай жинаған жоқ. Бірінші бол!</p>`)+(inTop?'':mine);
+    const wk=x=>stars&&x.week>0?`<small>осы аптада +${x.week}</small>`:'';
+    const inTop=top.some(x=>x.me);
+    const mine=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i><span>Сен${wk(b.me)}</span><b>${b.me.n}</b></div>`;
+    const tabMine=(top.length?top.map(x=>`<div class="brd-row"><i>${x.rank}</i><span>${x.me?'Сен':esc(x.name)}${wk(x)}</span><b>${x.n}</b></div>`).join(''):`<p class="note">${stars?'Әзірге ешкім жұлдыз жинаған жоқ.':'Бұл аптада әлі ешкім ұпай жинаған жоқ.'} Бірінші бол!</p>`)+(inTop?'':mine);
     const tabCls=cls.length>1?cls.map(c=>`<div class="brd-row" style="border:0;padding:0"><span>${esc(c.klass)}${c.mine?' · сенің сыныбың':''}</span><b>${c.avg}</b></div><div class="brd-bar"><b class="${c.mine?'mine':''}" style="width:${Math.round(100*c.avg/max)}%"></b></div>`).join('')
-      +`<p class="note" style="margin:0">Бір оқушыға шаққандағы орташа. Сенің ${b.me.n} есебің ${esc(b.klass)} нәтижесіне қосылды.</p>`:'';
+      +`<p class="note" style="margin:0">Бір оқушыға шаққандағы орташа${stars?' жұлдыз':''}. Сенің ${b.me.n} ${stars?'жұлдызың':'есебің'} ${esc(b.klass)} нәтижесіне қосылды.</p>`:'';
     let tab='mine';
-    const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">осы апта</span></div>
+    const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">${stars?'★ жұлдыз':'осы апта'}</span></div>
       ${tabCls?`<div class="brd-tabs"><button type="button" data-t="mine" aria-pressed="${tab==='mine'}">Менің сыныбым</button><button type="button" data-t="cls" aria-pressed="${tab==='cls'}">Сыныптар</button></div>`:'<div style="height:8px"></div>'}
-      ${tab==='mine'?`<p class="note" style="margin:0 0 4px">Кеңессіз, бірінші реттен дұрыс шешілген есептер</p>${tabMine}`:tabCls}
-      <p class="note" style="margin:10px 0 0">Дүйсенбі күні тақта нөлден басталады.</p></div>`;
+      ${tab==='mine'?`<p class="note" style="margin:0 0 4px">${stars?'Кезең тесті, жарыс және бөлме — бәрі қосылады':'Кеңессіз, бірінші реттен дұрыс шешілген есептер'}</p>${tabMine}`:tabCls}
+      <p class="note" style="margin:10px 0 0">${stars?'Жұлдыз кезең тестінен алынады: 10/10 — үш, 9/10 — екі, 8/10 — бір. Жиналған жұлдыз ешқашан жоғалмайды.':'Дүйсенбі күні тақта нөлден басталады.'}</p></div>`;
       box.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{ tab=x.dataset.t; draw(); }); };
     draw(); });
 })();

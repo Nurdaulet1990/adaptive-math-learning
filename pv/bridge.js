@@ -42,8 +42,22 @@ const _fb=showFeedback; showFeedback=function(correct,hint){
     const ansM=hint?String(hint).replace(/^Дұрыс( жауап)?:\s*/,''):'';
     Core.answer({stage:stageId(state.level),lvl:3,ok:!!correct,mode:'practice',hints:qHints,ms:Date.now()-qT0,type:state.level,stem:levelName(state.level)+(stem?' — '+stem:''),ans:correct?undefined:ansM,given:undefined}); }
   return _fb.apply(this,arguments); };
+/* Finishing a PV level is a stage test, and is recorded as one. Until 2026-09-21 the result went out as an
+   event only, so `stages[].tests` stayed empty for all 48 stations — and stars are counted from that array
+   everywhere outside PV (the portal, the map, the class board). A child who worked only in PV was therefore
+   worth nought stars anywhere but PV's own header, which kept a private counter of its own.
+   Shape and rule are core/runner.js finishTest's: keep every attempt, the best ratio is what scores
+   (10/10 → 3, ≥9/10 → 2, ≥8/10 → 1). PV's short levels are 5 questions to pass 4 — 0.8, so one star. */
 const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.level, score=state.score, n=state.questionsPerLevel; const r=_lc.apply(this,arguments);
-  if(R&&lv){ const mastery=COMP_LVL.has(lv)?4:8; Core.event({ev:'test',stage:stageId(lv),ok:score,n,pass:score>=mastery}); push(); } return r; };
+  if(R&&lv){ const id=stageId(lv), pass=score>=(COMP_LVL.has(lv)?4:8);
+    Core.event({ev:'test',stage:id,ok:score,n,pass});
+    push();                                                   // mirror() runs here, so the stage row exists below
+    const st=R.stages&&R.stages[id];
+    if(st&&n>0){ st.tests=Array.isArray(st.tests)?st.tests:[];
+      st.tests.push({t:Date.now(),ok:score,n,pass});
+      if(st.tests.length>20) st.tests.splice(0,st.tests.length-20);   // one row per station, not a diary
+      Core.save(R); } }
+  return r; };
 /* the re-diagnostic may only move a pupil forward — PV's own placement is free to land lower,
    so the ceiling is restored here. Same rule as core/runner.js and wp/diag_test.js. */
 const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const before=state.unlockedUpTo||0; const r=_fp.apply(this,arguments);

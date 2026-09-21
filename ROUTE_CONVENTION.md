@@ -1,8 +1,8 @@
 # ROUTE_CONVENTION.md — how to build a route for Есеп жолы
 
-**v1.1 · 2026-09-14.** Every checkable statement below was verified against the code that is live in
+**v1.3 · 2026-09-21.** Every checkable statement below was verified against the code that is live in
 this repository (`core/core.js`, `core/runner.js`, `core/map.js`, `core/map.css`, `core/ui.css`,
-`core/figs.js`) and against the four routes running on it: `wp/`, `fr/`, `pv/`, `ar/`.
+`core/figs.js`) and against the five routes running on it: `wp/`, `fr/`, `pv/`, `ar/`, `te/`.
 
 Everything here is normative. Where this document and the code disagree, **the code wins** — and
 that disagreement is a bug in this document: report it. v1.0 had three; the audit for v1.1 found
@@ -22,6 +22,10 @@ eighteen more, several of them copied out of code comments that were themselves 
 
 **v1.1 相对 v1.0 改了什么：** §5「固定题机制」删掉（那东西不存在）；§8 小数由逗号改成小数点；
 §3 示例编号标注为虚构；新增 §10 诊断测试的完整规则；§7 补上重试、「不会」按钮和提示阶梯的真实行为。
+
+**v1.3 加了什么：** 星星成了学生的分数 —— 班级榜按总星星排（关卡测 + 挑战 + 房间），旁边显示本周新增；
+主页顶上有总数；PV 的过关成绩终于写进 `tests`，以前它在自己首页之外一颗星都没有。
+诊断跳过的关卡**不给星** —— 星星只能靠考出来。
 
 **注意：段号变了。** v1.0 的「§9 交付自检」现在是 **§14**（中间插了新的 §10 诊断）。
 `ar/_selfcheck.js` 和 `ar/stages.js` 里引用的「§9」指的是旧编号。
@@ -353,8 +357,17 @@ Automatic; the route only has to make sure enough distinct level-3 items exist (
 - Passing marks the stage `passed` and opens the next row. Failing re-locks the test and resets
   `l3streak`; the level stays at 3, so the pupil practises there and retries.
 - **Stars are a ratio of the best result ever recorded** (pass or fail): ≥100% → ★★★, ≥90% → ★★,
-  ≥80% → ★. On a full 10-item test that is 10/10, 9/10, 8/10. On a short test the thresholds bite:
-  6/7 is a pass and still zero stars. One more reason to reach 10 distinct items.
+  ≥80% → ★. On a full 10-item test that is 10/10, 9/10, 8/10. A short test is judged by the same
+  ratio — 7/7 is three stars, 6/7 is 0.857 and so one — which means a thin stage can never award two.
+  One more reason to reach 10 distinct items.
+
+**Stars are the pupil's score — NEW in v1.3.** The class board, the total in the portal header and the
+route cards are all the same number: stars, earned only by passing a stage test (plus challenges and
+rooms, which the platform awards itself). A station handed out by the diagnostic, or set by the
+teacher, carries no test and is therefore worth nothing — deliberately: a star means *it was shown*.
+For a route author this is one more reason §5's six-distinct-items floor matters — a stage whose test
+cannot open is a stage that can never be worth a star. Nothing to implement; `core/runner.js` records
+the test and `supabase/06_stars.sql` does the counting.
 
 ---
 
@@ -523,6 +536,13 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 ---
 
 ## Version history
+
+**v1.3 · 2026-09-21** — stars became the pupil's score. The class board ranks by the star total
+(stage tests + challenges + rooms) with this week's gain beside it, the portal shows the total in its
+header and PV finally contributes: its level results are now written into `stages[].tests` like every
+other route's (`pv/bridge.js`), where before they went out as an event only and PV was worth nothing
+outside its own header. §9 also corrects v1.2's arithmetic: 6 of 7 is 0.857, which is **one** star,
+not none. Server side: `supabase/06_stars.sql`, rehearsed by `supabase/test/run_stars.js`.
 
 **v1.2 · 2026-09-20** — the re-diagnostic and the tester account (§10); §6 gained the option of
 keeping the picture at level 3. A pupil who rushed the placement test could only
