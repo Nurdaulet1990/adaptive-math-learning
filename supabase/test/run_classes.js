@@ -118,6 +118,23 @@ const out = []; const T = (name, ok, extra) => { out.push(ok); console.log(ok ? 
   T('the class table itself is out of reach', await denied(`select * from esep_private.classes`));
   T('a pupil cannot call the teacher\'s class tools', (await rpc('esep_t_class_add', { p_token: 'nope', p_name: 'X' }).catch(e => ({ err: e.message }))).err !== undefined);
 
+  // ── 10: a pupil places herself, once ──────────────────────────────────
+  await file('10_my_class.sql'); await file('10_my_class.sql');
+  const malTok = (await rpc('esep_login', { p_name: 'Малика', p_pin: '5555', p_klass: '', p_code: '' })).token;
+  await pg.query(`update students set klass = '' where name = 'Малика'`);   // as she was: sixteen children were
+  T('a pupil with no class may choose one from the list',
+    (await rpc('esep_my_class', { p_token: malTok, p_klass: '5' })).klass === '5' &&
+    (await val(`select klass v from students where name='Малика'`)) === '5');
+  T('…and may not then move herself — that is the teacher\'s, or the board stops meaning anything',
+    (await rpc('esep_my_class', { p_token: malTok, p_klass: '3Ә' })).error === 'already');
+  await pg.query(`update students set klass = '' where name = 'Малика'`);
+  T('a class that is not on the list is refused here too',
+    (await rpc('esep_my_class', { p_token: malTok, p_klass: 'ЖОҚ' })).error === 'klass' &&
+    (await val(`select coalesce(klass,'') v from students where name='Малика'`)) === '');
+  T('a dead token gets nothing', (await rpc('esep_my_class', { p_token: 'nope', p_klass: '5' })).error === 'token');
+  T('the teacher may still move anyone, placed or not',
+    (await tcl('esep_t_set_class', { p_student: await one(`select id::text v from students where name='Малика'`).then(r => r.v), p_klass: '5' })) === true);
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   await pg.end();

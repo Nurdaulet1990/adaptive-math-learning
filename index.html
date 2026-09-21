@@ -163,7 +163,8 @@
   html+=goalCard();
   html+=`<div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
   html+=`<div id="duel"></div>`;    // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
-  html+=`<div id="board"></div>`;   // filled after the first paint: the board is one extra request and must never hold the page up
+  html+=`<div id="board"></div>`;
+  html+=`<div id="noclass"></div>`;   // shown only when the pupil has no class: the board cannot exist without one   // filled after the first paint: the board is one extra request and must never hold the page up
   if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
@@ -207,6 +208,29 @@
       <p class="note" style="margin:0">Кодпен кір немесе өзің өткен кез келген станция бойынша аш — бәріне бір мезгілде бірдей есептер${rec.played?` · ${+rec.wins} жеңіс, ${+rec.played} жарыс${rec.stars?`, ★ ${+rec.stars}`:''}`:''}</p></div>
       <a class="btn gold" href="room/" style="white-space:nowrap">Бөлме</a></div>`;
     box.innerHTML=h; }).catch(()=>{});
+
+  /* ── no class, no board — but say so, instead of leaving a hole ──────────────────────────
+     A pupil whose class is empty cannot be ranked against classmates, so esep_board returns nothing and
+     the card above never appears. Sixteen children were in that state on 2026-09-21 and saw only blank
+     space. They may place themselves, once; moving between classes stays the teacher's. ── */
+  if(!(student.klass||'').trim() && typeof Core.call==='function'){
+    Core.call('esep_classes',{}).then(list=>{ const box=document.getElementById('noclass');
+      if(!box||!Array.isArray(list)||!list.length) return;
+      box.innerHTML=`<div class="card"><h2 style="margin:0 0 2px">Сыныбың көрсетілмеген</h2>
+        <p class="note" style="margin:0 0 10px">Сыныбыңды таңда — сонда сынып тақтасынан өз орныңды көресің.</p>
+        <div class="row"><select class="big" id="myKl" style="flex:1"><option value="">Сынып…</option>${
+          list.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('')}</select>
+        <button class="btn" id="myKlGo" style="flex:none">Сақтау</button></div>
+        <p class="note" id="myKlMsg" style="margin:8px 0 0"></p></div>`;
+      document.getElementById('myKlGo').onclick=async()=>{
+        const v=document.getElementById('myKl').value; if(!v) return;
+        const msg=document.getElementById('myKlMsg'); msg.textContent='…';
+        try{ const r=await Core.call('esep_my_class',{p_klass:v});
+          if(r&&r.klass){ location.reload(); return; }
+          msg.textContent=r&&r.error==='already'?'Сыныбың бұрын қойылған. Ауыстыру үшін мұғалімге айт.':'Болмады. Тағы көр.';
+        }catch(e){ msg.textContent='Қосылу мүмкін болмады.'; } };
+    }).catch(()=>{});
+  }
 
   /* ── the class board (Core.board → esep_board). Shows: top five of MY class, my own place, and the per-pupil
      average of each class in my grade. The number is the pupil's STAR TOTAL — stage tests, challenges and rooms
