@@ -21,6 +21,14 @@ do $$ begin
 end $$;
 
 alter table public.students add column if not exists pin_hash text;
+-- the live table declares `pin text NOT NULL`; pupils registered through esep_login have only a hash, so the plain column must allow null
+-- (old clients always write a pin, so this changes nothing for them; guarded so the script still runs after 03 has dropped the column)
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema='public' and table_name='students'
+              and column_name='pin' and is_nullable='NO') then
+    alter table public.students alter column pin drop not null;
+  end if;
+end $$;
 create index if not exists students_name_lower on public.students (lower(name));
 create index if not exists events_student_t on public.events (student_id, t);
 -- new clients stamp every event with a random `u`; the same (pupil, u) is stored once, so a client may safely resend
