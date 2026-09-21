@@ -147,7 +147,14 @@ PV（位值）是早期的单文件页面，没有独立的出题模块，进不
 
 客户端要一起上：门户顶部的星星总数、房间卡片上的生涯星星、`pv/bridge.js` 把过关成绩写进 `tests`（不改这个，只做 PV 的孩子永远 0 星）。
 
-演练：`node supabase/test/run_stars.js`（37 项：星星算法、脏数据、旧格式 state、周增量、诊断关卡不计分、挑战/房间计入、tester 排除、anon 权限、300 人性能）。
+演练两套：
+
+```bash
+node supabase/test/run_stars.js    # 37 项：星星算法、脏数据、旧格式 state、周增量、诊断关卡不计分、挑战/房间计入、tester 排除、anon 权限、300 人性能
+node supabase/test/e2e_stars.js    # 12 项：端到端 —— 真的 core/core.js、真的 pv/bridge.js、真的门户脚本，打到装好 01+04+05+06 的本地库
+```
+
+`e2e_stars.js` 里我们自己的代码一行都没有替身：假的只有浏览器（一个小 DOM，`<script>` 标签会真去加载那个文件）和 PV 老应用自己的那几个函数（bridge.js 包的就是它们）。它验证的是三块能对上 —— core.js 存下的关卡测、bridge 写进去的 PV 成绩、服务端判的房间名次，最后门户把三者合成同一个星星数。
 
 ## 周榜规则（`esep_board`）
 
