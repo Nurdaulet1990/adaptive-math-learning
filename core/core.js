@@ -147,7 +147,7 @@
       host.innerHTML=`<div class="top"><div class="brand">Есеп жолы<small>Математика · 1–5 сынып</small></div><div class="who">${langLinks()}</div></div>
       <div class="card"><h1>Сәлем!</h1><p>Атыңды және 4 таңбалы PIN кодыңды жаз. Бірінші рет кірсең — PIN-ді өзің ойлап тап және есте сақта.</p>
       <input class="big" id="c_nm" placeholder="Аты-жөні (мысалы: Айгүл С.)" autocomplete="off">
-      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><input class="big" id="c_kl" placeholder="Сынып (3А)" autocomplete="off" style="flex:1"></div>
+      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сынып…</option></select></div>
       <div id="c_codebox" style="display:none"><div style="height:8px"></div><input class="big" id="c_code" placeholder="Мектеп коды" autocomplete="off" autocapitalize="off"></div>
       <div style="height:12px"></div><p class="note" style="margin:0 0 6px">Жолда сені кім ертіп жүреді?</p>
       <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}">${a}</button>`).join('')}</div>
@@ -155,6 +155,12 @@
       ${Object.keys(known).length?`<p class="note" style="margin-top:10px">Бұл құрылғыда бұрын кірген:</p><div class="row" id="c_known">${Object.values(known).map(k=>`<button class="btn ghost" data-id="${esc(k.id)}">${esc(k.name)}</button>`).join('')}</div>`:''}
       </div>`;
       const $=id=>document.getElementById(id); const msg=t=>{ $('c_msg').textContent=t; };
+      /* The class is chosen, never typed: one child's «5 БАРЫС» and another's «БАРЫС5» used to be two classes,
+         which split every class board into groups of one. The list is the teacher's, from esep_classes(). */
+      rpc('esep_classes',{}).then(list=>{ const sel=$('c_kl'); if(!sel||!Array.isArray(list)||!list.length) return;
+        sel.innerHTML='<option value="">Сынып…</option>'+list.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
+        const last=ls.get('esep_klass'); if(last&&list.indexOf(last)>=0) sel.value=last;
+      }).catch(()=>{});
       async function go(){
         const name=($('c_nm').value||'').trim().replace(/\s+/g,' '), pin=($('c_pin').value||'').trim(), klass=($('c_kl').value||'').trim().toUpperCase();
         if(!name) return msg('Атыңды жаз.'); if(!/^\d{4}$/.test(pin)) return msg('PIN — 4 сан болу керек.');
@@ -166,13 +172,14 @@
           if(r&&r.error){ $('c_go').disabled=false;
             return msg(r.error==='pin'?'Бұл атпен оқушы бар, бірақ PIN басқа. PIN-ді тексер немесе атыңа тегіңнің әрпін қос.'
                       :r.error==='locked'?'Қате PIN тым көп терілді. 10 минуттан кейін қайтала немесе мұғалімге айт.'
+                      :r.error==='klass'?'Сыныпты тізімнен таңда. Тізімде жоқ болса — мұғалімге айт.'
                       :'Атың мен 4 санды PIN-ді тексер.'); }
           finish(r.student,r.token);
         }catch(e){ console.error(e); $('c_go').disabled=false; msg('Қосылу мүмкін болмады. Интернетті тексер де, қайта бас.'); }
       }
       function finish(row,token){ session={id:row.id,name:row.name,klass:row.klass||'',token}; ls.set(SESSION_KEY,session); const kn=ls.get('esep_known_v1')||{}; kn[row.id]={id:row.id,name:row.name}; ls.set('esep_known_v1',kn); resolve(row); }
       $('c_ava').onclick=e=>{ const b=e.target.closest('button[data-a]'); if(!b) return; pickAva=b.dataset.a; ls.set('esep_ava',pickAva); $('c_ava').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
-      $('c_go').onclick=go; $('c_pin').onkeydown=e=>{ if(e.key==='Enter') go(); }; $('c_kl').onkeydown=e=>{ if(e.key==='Enter') go(); };
+      $('c_go').onclick=go; $('c_pin').onkeydown=e=>{ if(e.key==='Enter') go(); }; $('c_kl').onchange=()=>ls.set('esep_klass',$('c_kl').value);
       /* "was here before" is a shortcut for typing the name — the PIN is still asked, so a classmate can't walk in */
       const kb=$('c_known'); if(kb) kb.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; $('c_nm').value=b.textContent; $('c_pin').value=''; $('c_pin').focus(); msg('PIN кодыңды жаз.'); };
       setTimeout(()=>{ const i=$('c_nm'); if(i) i.focus(); },50);

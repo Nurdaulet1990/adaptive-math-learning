@@ -97,11 +97,42 @@ async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
     const dist={}; rows.forEach(r=>{ const c=stOf(r,route)||(hasData(r,route)?'—':'жоқ'); dist[c]=(dist[c]||0)+1; });
     html+=`<div class="card"><h2>Кезең бойынша бөлінуі · ${route}</h2><div class="kv">${Object.keys(dist).sort().map(k=>`<span>${k==='—'?'Диагностика өтпеген':k==='жоқ'?'Бұл бағытқа кірмеген':esc(k)}</span><span>${dist[k]}</span>`).join('')}</div></div>`;
   }
+  html+=`<div class="card" id="clsCard"></div>`;   // the class list: filled after the first paint, like the board
   html+=`<div class="card" id="dayCard"><h2>Күн бойынша: ${esc(T.klass||'барлық сынып')} · ${isAll()?'барлық бағыт':route}</h2>
     <div class="row" style="margin-bottom:8px"><input type="date" id="cfrom" value="${esc(T.crange.from)}" class="big" style="font-size:1rem;padding:8px;flex:1"><input type="date" id="cto" value="${esc(T.crange.to)}" class="big" style="font-size:1rem;padding:8px;flex:1"><button class="btn ghost" onclick="T.crange={from:$('cfrom').value,to:$('cto').value};showTeacher()">Көрсету</button></div>
     <div class="row" style="margin-bottom:12px">${[['today','Бүгін'],['yest','Кеше'],['7','7 күн'],['30','30 күн']].map(([k,l])=>`<button class="btn plain" style="min-height:36px;padding:6px 10px" onclick="T.crange=rangePreset('${k}');showTeacher()">${l}</button>`).join('')}</div>
     <div id="dayBody"><p class="note">Жүктелуде…</p></div></div>`;
-  T.app.innerHTML=html; renderClassDay(rows);
+  T.app.innerHTML=html; renderClassDay(rows); renderClasses();
+}
+/* ── the class list ──────────────────────────────────────────────────────────────────────
+   A class used to be a free-text box, so one class arrived as «5», «5 БАРЫС», «БАРЫС5» and
+   «5БАРЫС» — four classes to the server, and a board of one pupil each. Pupils now pick from
+   this list; it is the teacher who keeps it, and MERGE is the tool that repairs the old mess:
+   it moves every pupil of one spelling into another and removes the spelling for good. ── */
+async function renderClasses(){
+  const box=$('clsCard'); if(!box) return;
+  let list=[]; try{ list=await trpc('esep_t_classes'); }catch(e){
+    box.innerHTML=`<h2>Сыныптар</h2><p class="note">Бұл мүмкіндік әлі орнатылмаған (supabase/08_classes.sql).</p>`; return; }
+  T.classes=list;
+  const stray=list.filter(c=>!c.listed);
+  box.innerHTML=`<div class="rt-head" style="padding:0"><h2 style="margin:0">Сыныптар</h2><span class="note">оқушы тек тізімнен таңдайды</span></div>
+    <div style="overflow-x:auto"><table class="t3" style="margin-top:8px"><tr><th style="text-align:left">Сынып</th><th>Оқушы</th><th></th></tr>
+    ${list.map(c=>`<tr><td style="text-align:left"><b>${esc(c.name)}</b>${c.listed?'':' <span class="chip">тізімде жоқ</span>'}</td><td>${+c.pupils}</td>
+      <td style="white-space:nowrap">${c.pupils?`<select data-merge="${esc(c.name)}" style="font-size:.85rem"><option value="">біріктіру →</option>${
+        list.filter(x=>x.listed&&x.name!==c.name).map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select>`
+        :`<a href="#" data-del="${esc(c.name)}">өшіру</a>`}</td></tr>`).join('')}
+    </table></div>
+    <p class="note" style="margin-top:10px">Жаңа сынып: <input class="big" id="clsNew" placeholder="3Ә" style="width:110px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" id="clsAdd">Қосу</button></p>
+    ${stray.length?`<p class="note" style="color:var(--bad)">Тізімде жоқ ${stray.length} жазылым бар — оларды дұрыс сыныпқа біріктір, сонда сынып тақтасы қайта жұмыс істейді.</p>`:''}
+    <p class="note" id="clsMsg"></p>`;
+  const run=async(fn,args)=>{ try{ $('clsMsg').textContent=''; const r=await trpc(fn,args);
+      if(r&&r.error){ $('clsMsg').textContent=r.error==='not_empty'?'Ішінде оқушысы бар сыныпты өшіруге болмайды.':r.error==='into'?'Мұндай сынып жоқ.':'Болмады.'; return; }
+      await renderClasses(); await showTeacher(); }
+    catch(e){ $('clsMsg').textContent='Қате: '+e.message; } };
+  box.querySelectorAll('[data-merge]').forEach(sel=>sel.onchange=()=>{ if(!sel.value) return;
+    run('esep_t_class_merge',{p_from:sel.dataset.merge,p_into:sel.value}); });
+  box.querySelectorAll('[data-del]').forEach(a=>a.onclick=e=>{ e.preventDefault(); run('esep_t_class_delete',{p_name:a.dataset.del}); });
+  $('clsAdd').onclick=()=>{ const v=($('clsNew').value||'').trim(); if(v) run('esep_t_class_add',{p_name:v}); };
 }
 async function renderClassDay(rows){
   const box=$('dayBody'); if(!box) return; if(!rows.length){ box.innerHTML='<p class="note">Оқушы жоқ.</p>'; return; }
