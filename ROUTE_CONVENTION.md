@@ -126,6 +126,11 @@ went out in one day while every page still asked for `core.js?v=10`, so devices 
 the old one — including the fix that was meant to repair them. **If you changed a file, bump the query
 string of every page that loads it, in the same commit.**
 
+A shared file must carry the *same* number on every page. `te/index.html` sat on `core/map.js?v=5` and
+`core/figs.js?v=5` while the other four routes asked for `v=7`, so a device that had opened any other
+route ran one `map.js` there and a different one on TE, with nothing anywhere to say so. `node
+tests/cachebust.js` fails on that, and on a `core/` reference with no `?v` at all — run it before a release.
+
 ---
 
 ## §3 · `STAGES`

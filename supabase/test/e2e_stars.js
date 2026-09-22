@@ -114,6 +114,14 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     !!(pv.stages && pv.stages['PV-02'] && pv.stages['PV-02'].tests.length===1 && pv.stages['PV-02'].tests[0].ok===10), pv.stages && pv.stages['PV-02']);
   const board2 = await b2.Core.board();
   T('PV earns stars now: 10/10 → 3 and 4/5 → 1, four in all', board2.me.n === 4, board2.me);
+  // PV's own home strip must print the SAME number. The legacy app keeps a `state.stars` on another
+  // economy entirely (one per correct answer, three per level the placement skipped), and printing that
+  // here meant the map said one thing and the portal another for the same child.
+  b2.state.stars = 999;                              // whatever the legacy counter happens to hold
+  b2.state.level = null; b2.renderMain();             // the bridge's wrapper draws the map when no level is open
+  const strip = (b2.els.main && b2.els.main.innerHTML) || '';
+  T('PV\'s map shows the platform star count, not the legacy one',
+    /★ 4</.test(strip) && !/999/.test(strip), strip.slice(0, 300));
 
   console.log('\n3 · stars won against other children land in the same purse');
   const ids = Object.fromEntries((await pg.query(`select name, id::text from students`)).rows.map(r=>[r.name,r.id]));

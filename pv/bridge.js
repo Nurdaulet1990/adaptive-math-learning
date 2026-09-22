@@ -68,7 +68,7 @@ const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placeme
    PV keeps its own question screens (48 levels of tested code), but the way in is the same as every
    other route: the road with one station per level, grouped by the app's own five modules. This is
    also the only navigation on a phone — pv's own stylesheet hides its sidebar under 768px. */
-const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=6'; document.head.appendChild(mapCSS);
+const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=7'; document.head.appendChild(mapCSS);
 const mapWrap=document.createElement('style'); mapWrap.textContent=
  /* width:100% matters: #main is a flex container, so without it the map shrinks to its content
      (~340px) and sits in a narrow column instead of filling the 560px reading measure. */
@@ -118,8 +118,14 @@ function showMap(){
       status:state.completed[e.levelId]?'passed':(i===cur?'current':(i<cur?'passed':'locked')),
       sub:state.completed[e.levelId]?'Өтілді':(i===cur?'Осы жерден жалғастыр':mod.name)}; });
   const fresh=done===0&&cur===0;
+  /* ★ on this strip is the PLATFORM's number, the one the portal and the class board use: earned from
+     level results (Core.mapStars over the mirrored stages), nothing else. The legacy app keeps its own
+     `state.stars` on a quite different economy — one per correct answer, plus three per level the
+     placement test skipped — so showing that here meant a child read ★ 200 on this page and ★ 14 on the
+     portal. A number a child is ranked by must be the same number everywhere it appears. (2026-09-22) */
+  const stars=(R&&R.stages)?Object.keys(R.stages).reduce((a,k)=>a+Core.mapStars(R.stages[k]),0):0;
   main.innerHTML=`<div id="pvmap">${Core.topbar('Орын мәні · 1–4 сынып')}
-    <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${state.stars||0}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
+    <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${stars}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
     <button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">${fresh?'🎯 Диагностика — қай жерден бастау керек?':'🎯 Қайта диагностика — бәрі тым оңай ма?'}</button>
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
     <p class="hint">Станцияны басып көр · <a href="../">барлық бағыттар</a></p></div>`;
@@ -139,7 +145,7 @@ const _rm=renderMain; renderMain=function(){ if(R&&!state.level){ showMap(); ret
 /* boot: pull in the map component (pv/index.html only loads core.js), then login → load → re-render */
 const loadScript=src=>new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
 host.style.display='block';
-loadScript('../core/map.js?v=6').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
+loadScript('../core/map.js?v=7').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);

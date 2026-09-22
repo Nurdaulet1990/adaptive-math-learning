@@ -154,7 +154,12 @@ node supabase/test/run_stars.js    # 37 项：星星算法、脏数据、旧格�
 node supabase/test/e2e_stars.js    # 14 项：端到端 —— 真的 core/core.js、真的 pv/bridge.js、真的门户脚本，打到装好 01+04+05+06 的本地库
 node supabase/test/e2e_tester.js  # 25 项：tester 账号 —— 五条路线各自按自己 index.html 的顺序真的启动一遍，看 129 个关卡是不是真开着
 node supabase/test/e2e_diag.js    # 12 项：诊断定位 —— 真 DOM（jsdom）里把整套诊断打完，看答对多少落在哪一站；不需要数据库
+node tests/cachebust.js           # 3 项：所有页面对同一个 core/ 文件的 ?v 必须一致（不需要数据库，秒级）
 ```
+
+只读排查：`supabase/q_ar_misplaced.sql` —— 2026-09-22 之前被诊断上限放低的孩子是谁。一条 SELECT，什么都不改；
+认的是「答过、但 `diag.results` 里没有裁定」的那个站。`дұрыс = 2` 的孩子请他们按一次「Қайта диагностика」即可，
+数据库里不需要动任何东西。
 
 `e2e_stars.js` 里我们自己的代码一行都没有替身：假的只有浏览器（一个小 DOM，`<script>` 标签会真去加载那个文件）和 PV 老应用自己的那几个函数（bridge.js 包的就是它们）。它验证的是三块能对上 —— core.js 存下的关卡测、bridge 写进去的 PV 成绩、服务端判的房间名次，最后门户把三者合成同一个星星数。
 
