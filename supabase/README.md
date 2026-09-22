@@ -153,7 +153,7 @@ PV（位值）是早期的单文件页面，没有独立的出题模块，进不
 node supabase/test/run_stars.js    # 37 项：星星算法、脏数据、旧格式 state、周增量、诊断关卡不计分、挑战/房间计入、tester 排除、anon 权限、300 人性能
 node supabase/test/e2e_stars.js    # 14 项：端到端 —— 真的 core/core.js、真的 pv/bridge.js、真的门户脚本，打到装好 01+04+05+06 的本地库
 node supabase/test/e2e_tester.js  # 25 项：tester 账号 —— 五条路线各自按自己 index.html 的顺序真的启动一遍，看 129 个关卡是不是真开着
-node supabase/test/e2e_diag.js    # 12 项：诊断定位 —— 真 DOM（jsdom）里把整套诊断打完，看答对多少落在哪一站；不需要数据库
+node supabase/test/e2e_diag.js    # 19 项：诊断定位 —— 真 DOM（jsdom）里把整套诊断打完；核心是「只会 1..K 站的孩子必须落在第 K+1 站」，不需要数据库
 node tests/cachebust.js           # 3 项：所有页面对同一个 core/ 文件的 ?v 必须一致（不需要数据库，秒级）
 ```
 

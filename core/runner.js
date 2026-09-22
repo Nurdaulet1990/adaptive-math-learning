@@ -43,7 +43,7 @@ function cardsOf(st){ return (typeof CARDS!=='undefined'&&CARDS&&CARDS[st])||[];
 const routeIcons=()=>(typeof ICONS!=='undefined'&&ICONS)||{};
 function showHome(){
   const cur=currentStage(); let html=topbar();
-  if(!R.diag){ html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест: 8–12 есеп. Сен қай кезеңнен бастайтыныңды анықтайды. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" id="b_diag">Диагностиканы бастау</button></div>`; }
+  if(!R.diag){ html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Сен қай кезеңнен бастайтыныңды анықтайды: тапқанша сұрайды, сондықтан есеп саны алдын ала белгісіз — көбіне 10–20 есеп. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" id="b_diag">Диагностиканы бастау</button></div>`; }
   else {
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
@@ -224,7 +224,7 @@ function startDiag(again){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent)
    or the button becomes a trap instead of a way out. Stars already earned are never touched. */
 function askRediag(){
   app().innerHTML=topbar()+`<div class="card"><h2>Қайта диагностика</h2>
-    <p>Тағы 8–12 есеп. Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
+    <p>Тағы бірнеше есеп (көбіне 10–20). Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
     <p class="note">Артқа шегінбейсің: нәтиже нашар болса да, қазіргі станцияң мен жұлдыздарың сол күйінде қалады.</p>
     <div class="row"><button class="btn" id="rd_go">Бастау</button><button class="btn plain" id="rd_no">Артқа</button></div></div>`;
   $('rd_go').onclick=()=>startDiag(true); $('rd_no').onclick=showHome;
@@ -240,13 +240,21 @@ function nextDiag(){
     if(p.asked>=2){ const mid=DG.cur; DG.cur=null;
       if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; if(DG.climb&&!DG.bracketed) DG.step=DG.step*2+1; }
       else { DG.results[st]='fail'; DG.hi=mid-1; if(DG.climb){ DG.bracketed=true; DG.step=0; } } } }
-  if(DG.n>=12||DG.lo>DG.hi||Date.now()-DG.start>15*60000) return finishDiag();
+  /* No question cap. The diagnostic runs until the search is finished — owner's decision, 2026-09-22.
+     There used to be a ceiling of twelve, which on a 41-stage route stopped the search before it had an
+     answer and placed the pupil on whatever it happened to know. A placement decided by a counter rather
+     than by the pupil is worse than a few more questions. The search is what ends it: every probe either
+     raises `lo` or lowers `hi`, so it cannot run forever — the worst case is about 2·log2(stations) + the
+     climb, which is roughly 20 questions on AR. The wall clock stays as a valve for an abandoned tab. */
+  if(DG.lo>DG.hi||Date.now()-DG.start>30*60000) return finishDiag();
   const mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
   DG.cur=mid;
   const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.n++; const t0=Date.now();
-  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12,sub:st,noHints:true,
+  /* The bar is how much of the search is left, not how many questions have been asked — there is no
+     denominator to count towards any more, and the range shrinking IS the progress. */
+  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length),sub:st,noHints:true,
     onAnswer:ok=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:q.type,...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
     onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:q.type,stem:String(q.stem).slice(0,200),ans:String(q.ans)}); nextDiag(); }});
 }

@@ -11,7 +11,7 @@ function startDiag(again){
    a child stages they really passed. Same rule in core/runner.js; PV guards finishPlacement. */
 function askRediag(){
   app().innerHTML=topbar()+`<div class="card"><h2>Қайта диагностика</h2>
-    <p>Тағы 8–12 есеп. Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
+    <p>Тағы бірнеше есеп (көбіне 8–16). Егер жақсы шығарсаң, әрі қарайғы станциядан бастайсың.</p>
     <p class="note">Артқа шегінбейсің: нәтиже нашар болса да, қазіргі станцияң мен жұлдыздарың сол күйінде қалады.</p>
     <div class="row"><button class="btn" onclick="startDiag(true)">Бастау</button><button class="btn plain" onclick="showHome()">Артқа</button></div></div>`;
 }
@@ -23,12 +23,13 @@ function nextDiag(){
   if(DG.cur!=null){ const st=DG.ids[DG.cur], p=DG.per[st]||{asked:0,ok:0};
     if(p.asked>=2){ const mid=DG.cur; DG.cur=null;
       if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } } }
-  if(DG.n>=12 || DG.lo>DG.hi || Date.now()-DG.start>15*60000){ return finishDiag(); }
+  /* No question cap — the search is what ends it. Same rule and same reason as core/runner.js. */
+  if(DG.lo>DG.hi || Date.now()-DG.start>30*60000){ return finishDiag(); }
   const mid=Math.floor((DG.lo+DG.hi)/2); const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
-  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12, sub:st, noHints:true,
+  renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length), sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
     onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:'tpl',stem:String(q.stem).slice(0,200),ans:q.ans}); nextDiag(); }});
 }

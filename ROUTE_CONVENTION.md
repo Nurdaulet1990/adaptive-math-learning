@@ -442,12 +442,25 @@ open, one «current», no placement test — plus the four things a tester must 
 - **pass = 2 out of 2.** One miss marks the stage failed. Deliberately strict: it is cheaper to
   place a child one stage too low than one stage too high.
 - **«Білмеймін» is scored wrong** and moves on at once. Hints are off during the diagnostic.
-- **Stops at 12 questions** (or 15 minutes), whichever comes first, and places on what it knows —
-  but a probe the pupil has *finished* is always counted first. The cap ends the diagnostic; it never
-  discards an answered pair. (It used to: AR's climb probes six stations in exactly twelve questions,
-  so a pupil who got every one right had the last pair binned and was placed on station 32 of 41.
-  Fixed 2026-09-22 in `core/runner.js` and `wp/diag_test.js`; `supabase/test/e2e_diag.js` plays the
-  whole diagnostic through the real screen and would fail again.)
+- **There is no question limit.** The diagnostic runs until the search has an answer — owner's
+  decision, 2026-09-22. It cannot run forever: every probe either raises the floor or lowers the
+  ceiling, so the length is bounded by the route (about `2·log₂(stations)` plus the climb — measured
+  worst case is **20 questions on AR's 41 stations**, 6 on a pupil who stops at station 1, 2 on a
+  pupil who knows nothing). A 30-minute wall clock remains, as a valve for an abandoned tab.
+- A probe the pupil has **finished is always counted** before anything can end the run.
+
+  Both of these are the same lesson, learned twice in one day. There used to be a ceiling of twelve
+  questions, checked *before* the last pair was counted. AR's climb probes six stations in exactly
+  twelve questions — so a pupil who got every one of them right had the last pair binned and was
+  placed on station 32 of 41. Counting first fixed that case; but the ceiling was still deciding the
+  other ones, because on a 41-stage route the climb alone spends twelve questions and the bracket was
+  never searched at all — a child who really belonged on station 21 was parked around 16. **A
+  placement decided by a counter instead of by the pupil is worth less than a few more questions.**
+  `supabase/test/e2e_diag.js` now plays a pupil who knows exactly stations 1…K, for K across the
+  whole route, and requires the placement to be **K+1 exactly**.
+
+- **The progress bar is how much of the search is left**, not questions asked — there is no
+  denominator to count towards. `1 − (hi−lo+1)/stations`. The meta reads «N-сұрақ».
 
 **Which stage it probes next** — this is what `placement` changes:
 
@@ -579,9 +592,11 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 
 ## Version history
 
-**v1.5 · 2026-09-22** — the placement test no longer throws away its last probe (§10): on a 41-stage
-route the twelve-question cap fired before the sixth probe was counted, so a perfect run was placed on
-station 32 of 41. Also: how to make the tester account, and a test that boots all five routes as one
+**v1.5 · 2026-09-22** — the placement test has no question limit and no longer throws away its last
+probe (§10). The cap fired before the sixth probe was counted, so a perfect run on AR was placed on
+station 32 of 41; and even counted, twelve questions could not search a 41-stage route, so every pupil
+above the climb's reach was placed low. It now runs until the search has an answer — measured worst
+case 20 questions — and the placement is exact. Also: how to make the tester account, and a test that boots all five routes as one
 (§10). Nothing a route implements changed. Also, for anyone writing SQL the browser will call: a
 function in `public` named `esep_*` must be VOLATILE. PostgREST serves a `stable` one over GET only
 and answers the POST that `core.js` sends with **405**, before the function runs — two of them,

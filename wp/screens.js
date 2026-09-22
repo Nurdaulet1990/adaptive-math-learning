@@ -14,7 +14,7 @@ function showHome(){
   const cur=currentStage();
   let html=topbar();
   if(!R.diag){
-    html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест: 8–12 есеп, 10–15 минут. Сен қай кезеңнен бастайтыныңды анықтайды. Сурет жоқ, тек мәтін. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" onclick="startDiag()">Диагностиканы бастау</button></div>`;
+    html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Сен қай кезеңнен бастайтыныңды анықтайды: тапқанша сұрайды, сондықтан есеп саны алдын ала белгісіз — көбіне 8–16 есеп. Сурет жоқ, тек мәтін. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" onclick="startDiag()">Диагностиканы бастау</button></div>`;
   } else {
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
