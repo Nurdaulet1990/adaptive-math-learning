@@ -1,6 +1,6 @@
 # ROUTE_CONVENTION.md — how to build a route for Есеп жолы
 
-**v1.4 · 2026-09-21.** Every checkable statement below was verified against the code that is live in
+**v1.5 · 2026-09-22.** Every checkable statement below was verified against the code that is live in
 this repository (`core/core.js`, `core/runner.js`, `core/map.js`, `core/map.css`, `core/ui.css`,
 `core/figs.js`) and against the five routes running on it: `wp/`, `fr/`, `pv/`, `ar/`, `te/`.
 
@@ -417,6 +417,20 @@ the name sits in the top bar, so a full map is never mistaken for a child's prog
 once in `core/core.js` (`Core.tester`) and honoured by `core/runner.js`, `wp/state.js` and
 `pv/bridge.js` — a route inherits it.
 
+*Making one* (v1.5): it is registered exactly like a child, on the login card — name `tester`,
+any 4-digit PIN, **class left as «Сынып…»**, and the school code, which a name nobody has used
+before is always asked for. Case does not matter: `TESTER` comes back to the same account. Give
+it no class: a tester is kept off the class board, out of the class average and out of challenges
+by name (`name !~* '^\s*tester\s*$'`, in 01/04/06/07/08), but a class is what it has no business
+being in. Its own star purse works normally, so the portal can be checked the way a child sees it.
+Only the exact name counts — `tester2` is an ordinary pupil who would show up on a real board.
+
+The unlock is six lines, and those six lines live in **four** files; a route added later will
+make a fifth, and a tester account that quietly stops unlocking one route is worse than none,
+because the map still looks full. So `supabase/test/e2e_tester.js` boots all five routes the way
+their own `index.html` does and reads back what the route itself wrote: 129 stations, every one
+open, one «current», no placement test — plus the four things a tester must *not* do.
+
 **How it probes.** The runner builds the list of stages that have a generator, then:
 
 - **2 items per probed stage**, both at level 3;
@@ -554,6 +568,13 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 ---
 
 ## Version history
+
+**v1.5 · 2026-09-22** — how to make the tester account, and a test that boots all five routes as one
+(§10). Nothing a route implements changed. Also, for anyone writing SQL the browser will call: a
+function in `public` named `esep_*` must be VOLATILE. PostgREST serves a `stable` one over GET only
+and answers the POST that `core.js` sends with **405**, before the function runs — two of them,
+marked `stable` because they are, took the class board and the star purse off the air for a day with
+a perfectly correct database underneath (`supabase/12_volatile.sql`, and a test that fails on the next one).
 
 **v1.4 · 2026-09-21** — practice earns stars again. The first app gave one per correct answer; the
 platform layer never picked that up, so a child could practise a whole lesson and watch the number

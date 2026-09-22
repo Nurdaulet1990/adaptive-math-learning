@@ -151,7 +151,8 @@ PV（位值）是早期的单文件页面，没有独立的出题模块，进不
 
 ```bash
 node supabase/test/run_stars.js    # 37 项：星星算法、脏数据、旧格式 state、周增量、诊断关卡不计分、挑战/房间计入、tester 排除、anon 权限、300 人性能
-node supabase/test/e2e_stars.js    # 12 项：端到端 —— 真的 core/core.js、真的 pv/bridge.js、真的门户脚本，打到装好 01+04+05+06 的本地库
+node supabase/test/e2e_stars.js    # 14 项：端到端 —— 真的 core/core.js、真的 pv/bridge.js、真的门户脚本，打到装好 01+04+05+06 的本地库
+node supabase/test/e2e_tester.js  # 25 项：tester 账号 —— 五条路线各自按自己 index.html 的顺序真的启动一遍，看 129 个关卡是不是真开着
 ```
 
 `e2e_stars.js` 里我们自己的代码一行都没有替身：假的只有浏览器（一个小 DOM，`<script>` 标签会真去加载那个文件）和 PV 老应用自己的那几个函数（bridge.js 包的就是它们）。它验证的是三块能对上 —— core.js 存下的关卡测、bridge 写进去的 PV 成绩、服务端判的房间名次，最后门户把三者合成同一个星星数。
