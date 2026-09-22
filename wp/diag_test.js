@@ -3,7 +3,7 @@
 let DG=null;
 function startDiag(again){
   const ids=STAGES.map(s=>s[0]).filter(stageL3);
-  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again};
+  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again, cur:null};
   nextDiag();
 }
 /* A pupil who rushed the first diagnostic is parked below what they can do. The re-diagnostic is
@@ -16,14 +16,17 @@ function askRediag(){
     <div class="row"><button class="btn" onclick="startDiag(true)">Бастау</button><button class="btn plain" onclick="showHome()">Артқа</button></div></div>`;
 }
 function nextDiag(){
+  /* Count a finished probe BEFORE anything may end the diagnostic — the question cap used to be checked
+     first, which threw away a probe the pupil had already answered in full. It bit AR (41 stages, the cap
+     landing exactly on the last probe: 12 right answers, placed on station 32); WP is short enough that it
+     never showed, but the same code deserves the same fix. Same change in core/runner.js. (2026-09-22) */
+  if(DG.cur!=null){ const st=DG.ids[DG.cur], p=DG.per[st]||{asked:0,ok:0};
+    if(p.asked>=2){ const mid=DG.cur; DG.cur=null;
+      if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } } }
   if(DG.n>=12 || DG.lo>DG.hi || Date.now()-DG.start>15*60000){ return finishDiag(); }
-  const mid=Math.floor((DG.lo+DG.hi)/2); const st=DG.ids[mid];
+  const mid=Math.floor((DG.lo+DG.hi)/2); const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  if(DG.per[st].asked>=2){
-    if(DG.per[st].ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; }
-    return nextDiag();
-  }
-  const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; return nextDiag(); }
+  const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12, sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },

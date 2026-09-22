@@ -437,7 +437,12 @@ open, one «current», no placement test — plus the four things a tester must 
 - **pass = 2 out of 2.** One miss marks the stage failed. Deliberately strict: it is cheaper to
   place a child one stage too low than one stage too high.
 - **«Білмеймін» is scored wrong** and moves on at once. Hints are off during the diagnostic.
-- **Stops at 12 questions** (or 15 minutes), whichever comes first, and places on what it knows.
+- **Stops at 12 questions** (or 15 minutes), whichever comes first, and places on what it knows —
+  but a probe the pupil has *finished* is always counted first. The cap ends the diagnostic; it never
+  discards an answered pair. (It used to: AR's climb probes six stations in exactly twelve questions,
+  so a pupil who got every one right had the last pair binned and was placed on station 32 of 41.
+  Fixed 2026-09-22 in `core/runner.js` and `wp/diag_test.js`; `supabase/test/e2e_diag.js` plays the
+  whole diagnostic through the real screen and would fail again.)
 
 **Which stage it probes next** — this is what `placement` changes:
 
@@ -569,7 +574,9 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 
 ## Version history
 
-**v1.5 · 2026-09-22** — how to make the tester account, and a test that boots all five routes as one
+**v1.5 · 2026-09-22** — the placement test no longer throws away its last probe (§10): on a 41-stage
+route the twelve-question cap fired before the sixth probe was counted, so a perfect run was placed on
+station 32 of 41. Also: how to make the tester account, and a test that boots all five routes as one
 (§10). Nothing a route implements changed. Also, for anyone writing SQL the browser will call: a
 function in `public` named `esep_*` must be VOLATILE. PostgREST serves a `stable` one over GET only
 and answers the POST that `core.js` sends with **405**, before the function runs — two of them,

@@ -216,7 +216,7 @@ function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,st
    stage, ~50% likely to be failed by design — on AR's 41 stages that is the 8/9 division facts (AR-21)
    as question one, for a child who has never multiplied. See ROUTE_CONVENTION.md §10. */
 function startDiag(again){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
-  DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),again:!!again,
+  DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),again:!!again,cur:null,
       climb:CFG.placement==='climb',step:0,bracketed:false}; nextDiag(); }
 /* A pupil who rushed the first diagnostic lands far below what they can do and then grinds
    through stages they already own. The re-diagnostic exists for that, and it can only move them
@@ -230,14 +230,21 @@ function askRediag(){
   $('rd_go').onclick=()=>startDiag(true); $('rd_no').onclick=showHome;
 }
 function nextDiag(){
+  /* A probe that is finished is counted BEFORE anything is allowed to end the diagnostic. It used to be
+     counted on the way IN to the next question, which meant the question cap could fire first and throw a
+     finished probe away: AR's climb probes stations 1·3·7·15·31·41 — six probes, two items each, exactly
+     twelve questions — so a pupil who got every one of them right had the last pair silently discarded and
+     was placed on station 32 of 41. Both answers given, both right, both binned. AR is the only route long
+     enough for the cap to land on the last probe, which is why nothing else ever showed it. (2026-09-22) */
+  if(DG.cur!=null){ const st=DG.ids[DG.cur], p=DG.per[st]||{asked:0,ok:0};
+    if(p.asked>=2){ const mid=DG.cur; DG.cur=null;
+      if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; if(DG.climb&&!DG.bracketed) DG.step=DG.step*2+1; }
+      else { DG.results[st]='fail'; DG.hi=mid-1; if(DG.climb){ DG.bracketed=true; DG.step=0; } } } }
   if(DG.n>=12||DG.lo>DG.hi||Date.now()-DG.start>15*60000) return finishDiag();
   const mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
+  DG.cur=mid;
   const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  if(DG.per[st].asked>=2){
-    if(DG.per[st].ok===2){ DG.results[st]='pass'; DG.lo=mid+1; if(DG.climb&&!DG.bracketed) DG.step=DG.step*2+1; }
-    else { DG.results[st]='fail'; DG.hi=mid-1; if(DG.climb){ DG.bracketed=true; DG.step=0; } }
-    return nextDiag(); }
-  const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; return nextDiag(); }
+  const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}/12`,prog:DG.n/12,sub:st,noHints:true,
     onAnswer:ok=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:q.type,...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
