@@ -931,55 +931,56 @@ function svgThousand(x=0,y=0) {
 }
 
 function renderBlocksSVG(th,h,t,o) {
-  /* One PLACE PER ROW, wrapped, instead of everything on a single line.
-     The old layout put thousands, hundreds, tens and ones end to end and then let
-     `max-width:100%` shrink the whole thing to the card. 895 is eight flats plus nine rods
-     plus five cubes — about 1750px of drawing — so on a phone it arrived at roughly a fifth
-     of its size: one smear of thin lines that cannot be counted. A child read it as 815.
-     Rows keep the 1:10:100 proportion exactly (the same svgHundred / svgTen / svgOne), they
-     just stop the picture from being one enormous line. (2026-09-22) */
-  /* One row while it fits, one place per row only when it does not. The wrap was put in for 895 (eight
-     flats, nine rods, five cubes — about 1750px of drawing squeezed into a phone). But «17 санын кестеге
-     жазыңыз» is one rod and seven cubes: it fits across easily, and the chart underneath it has its
-     columns side by side — Ондықтар then Бірліктер. Stacking the rod above the cubes put the picture at
-     right angles to the chart the child is filling in. (2026-09-23) */
-  const ONE_ROW_MAX = 420;
-  const PER_ROW = 5;                 // flats per row; more than this and nothing is countable
-  const gapX = 12, gapY = 14, thSz = H_H;
-  const rows = [];                   // {draw:(x,y)=>svg, w, h, n} laid out left to right, top to bottom
-  const place = (count, w, h, draw) => {
-    for (let i = 0; i < count; i += PER_ROW) {
-      const n = Math.min(PER_ROW, count - i);
-      rows.push({ n, w: n * (w + gapX) - gapX, h, draw, step: w + gapX });
-    }
+  /* A place-value chart, read left to right like the number itself — owner, 2026-09-23: «这些要横着放
+     而且要写上个位十位百位等（一位数不需要）».
+
+     It has been three shapes now, and each was wrong in its own way. One long line let 895 be squeezed to
+     a fifth of its size and become uncountable. One place per ROW fixed the squeeze but stood the picture
+     at right angles to every chart the child fills in underneath it. This one puts each place in its own
+     labelled column, side by side, and wraps the blocks INSIDE the column — so the places read in the same
+     order as the digits, each one is countable, and the whole thing still shrinks to a phone.
+
+     The 1:10:100 proportion is kept exactly: every glyph is drawn at its true size and the SVG as a whole
+     is what scales. A one-digit number gets no headings — there is only one place, and naming it would be
+     answering a question nobody asked. */
+  const NAMES = { th:'Мыңдық', h:'Жүздік', t:'Ондық', o:'Бірлік' };
+  const gapX = 26, headH = 20, padB = 6;
+  const cols = [];
+  /* The gap between two glyphs must beat the gaps INSIDE one, or they read as a single slab. A hundred
+     flat is a ten-by-ten grid with 4px between its cubes, so nine of them six pixels apart came out as
+     one large rectangle — nothing to count. Each place therefore carries its own spacing, scaled to the
+     thing being spaced. */
+  const add = (key, count, w, hgt, per, gap, draw) => {
+    const n = Math.max(1, Math.min(per, count || 1));
+    const rows = Math.max(1, Math.ceil((count || 0) / per));
+    cols.push({ key, count, w, hgt, per, gap,
+      width: Math.max(count ? n * (w + gap) - gap : 30, 30),
+      height: count ? rows * (hgt + gap) - gap : 0, draw });
   };
-  if (th > 0) place(th, thSz, thSz, (x, y) => svgThousand(x, y));
-  if (h  > 0) place(h,  H_W,  H_H,  (x, y) => svgHundred(x, y));
-  if (t  > 0) {
-    // rods are narrow: a row of ten still fits, and ten rods read as «one hundred» at a glance
-    for (let i = 0; i < t; i += 10) { const n = Math.min(10, t - i);
-      rows.push({ n, w: n * (TEN_W + 8) - 8, h: TEN_H, draw: (x, y) => svgTen(x, y), step: TEN_W + 8 }); }
-  }
-  if (o > 0) {
-    for (let i = 0; i < o; i += 5) { const n = Math.min(5, o - i);
-      rows.push({ n, w: n * (BU + 4) - 4, h: BU, draw: (x, y) => svgOne(x, y), step: BU + 4 }); }
-  }
-  if (!rows.length) return '<svg viewBox="0 0 60 20" width="60" height="20"></svg>';
-  const flatW = rows.reduce((t, r) => t + r.w, 0) + (rows.length - 1) * gapX;
-  if (rows.length > 1 && flatW <= ONE_ROW_MAX) {
-    const H1 = Math.max(...rows.map(r => r.h));
-    let one = `<svg viewBox="0 0 ${flatW} ${H1}" width="${flatW}" height="${H1}" style="max-width:100%;height:auto">`;
-    let x = 0;
-    for (const r of rows) { for (let i = 0; i < r.n; i++) one += r.draw(x + i * r.step, H1 - r.h); x += r.w + gapX; }
-    return one + '</svg>';
-  }
-  const W = Math.max(...rows.map(r => r.w), 60);
-  const H = rows.reduce((s, r) => s + r.h, 0) + (rows.length - 1) * gapY;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto">`;
-  let y = 0;
-  for (const r of rows) {
-    for (let i = 0; i < r.n; i++) svg += r.draw(i * r.step, y);
-    y += r.h + gapY;
+  const thSz = H_H;
+  if (th > 0) add('th', th, thSz, thSz, 2, 26, (x,y)=>svgThousand(x,y));
+  if (th > 0 || h > 0) add('h', h, H_W, H_H, 3, 24, (x,y)=>svgHundred(x,y));
+  if (th > 0 || h > 0 || t > 0) add('t', t, TEN_W, TEN_H, 10, 12, (x,y)=>svgTen(x,y));
+  add('o', o, BU, BU, 5, 7, (x,y)=>svgOne(x,y));
+  if (!cols.length) return '<svg viewBox="0 0 60 20" width="60" height="20"></svg>';
+
+  const labelled = cols.length > 1;          // a one-digit number needs no heading
+  const top = labelled ? headH : 0;
+  const bodyH = Math.max(...cols.map(c => c.height), BU);
+  const W = cols.reduce((s,c) => s + c.width, 0) + (cols.length - 1) * gapX;
+  const H = top + bodyH + padB;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto" font-family="Nunito,system-ui,sans-serif">`;
+  let x = 0;
+  for (const c of cols) {
+    if (labelled)
+      svg += `<text x="${x + c.width/2}" y="${headH - 6}" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text-dim)">${NAMES[c.key]}</text>`;
+    /* every place sits on the same baseline, so a rod and a cube line up at the bottom the way they do
+       on a desk — and an empty place still shows its heading, which is how a child sees the 0 in 405 */
+    for (let i = 0; i < c.count; i++) {
+      const col = i % c.per, row = Math.floor(i / c.per);
+      svg += c.draw(x + col * (c.w + c.gap), top + bodyH - c.hgt - row * (c.hgt + c.gap));
+    }
+    x += c.width + gapX;
   }
   return svg + '</svg>';
 }
