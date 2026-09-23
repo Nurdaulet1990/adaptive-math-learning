@@ -2139,12 +2139,17 @@ function genOps(ws) {
   const colIds=['ans-o','ans-t','ans-h','ans-th'];
 
   // Build vertical calc HTML
+  /* A blank is for a column the number does not REACH, not for a column where it happens to hold a zero.
+     `aDigits[...] || ''` could not tell those apart: the digit is a Number, so a genuine 0 fell into the
+     `||` branch and was printed as nothing. 1004 + 2852 arrived on screen as «1  4» with two holes in it,
+     and every level from a3 to s4d4 is built with this loop. The number's own length is what decides. */
+  const aLen = String(a).length, bLen = String(b).length;
   let carryHTML='', aHTML='', bHTML='', ansHTML='';
   for(let i=0;i<nd;i++) {
     const cid = i<4 ? `carry-${colIds[i].split('-')[1]}` : '';
     carryHTML = `<span class="vert-digit" id="${cid}">&nbsp;</span>` + carryHTML;
-    aHTML = `<span class="vert-digit">${aDigits[nd-1-i]||''}</span>` + aHTML;
-    bHTML = `<span class="vert-digit">${bDigits[nd-1-i]||''}</span>` + bHTML;
+    aHTML = `<span class="vert-digit">${i < aLen ? aDigits[nd-1-i] : ''}</span>` + aHTML;
+    bHTML = `<span class="vert-digit">${i < bLen ? bDigits[nd-1-i] : ''}</span>` + bHTML;
     const aid = i<4 ? colIds[i] : `ans-${i}`;
     if(i===0) ansHTML = `<input class="vert-input current" id="${aid}" maxlength="1">` + ansHTML;
     else ansHTML = `<input class="vert-input locked" id="${aid}" maxlength="1" disabled>` + ansHTML;
@@ -2436,7 +2441,11 @@ window.resetProgress = function() {
 function genPlacementQ(levelId) {
   // Generate a text-only question {q, sub, answer} for any level
   const lv=levelId;
-  if(lv==='c1') { const n=rand(1,9); return {q:`${n} — бұл қандай сан?`, sub:'Count the ones', answer:n}; }
+  /* c1 is «count the ones», and these questions are deliberately text-only — the placement test shows no
+     blocks, and the Түсіну levels reuse the same bank (genComprehension). «9 — бұл қандай сан?» with the
+     blocks taken away therefore prints the number and asks what the number is: the answer is in the
+     question. A run with a gap is a real counting question that survives having no picture. (2026-09-23) */
+  if(lv==='c1') { const n=rand(2,8); return {q:`${n-1}, ?, ${n+1} — жетпей тұрған сан?`, sub:'Which number is missing?', answer:n}; }
   if(lv==='c20') { const n=rand(11,19);   /* was rand(11,20): n=20 printed «1 ондық және 0 бірлік = ?» with 20 as the key */ return {q:`1 ондық және ${n%10} бірлік = ?`, sub:'1 ten and ? ones', answer:n}; }
   if(lv==='ct10') { const t=rand(1,9); return {q:`${t} ондық = ?`, sub:'Count by tens', answer:t*10}; }
   if(lv==='c2') { const t=rand(1,9),o=rand(0,9); return {q:`${t} ондық ${o} бірлік = ?`, sub:'Tens and ones', answer:t*10+o}; }
