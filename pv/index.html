@@ -1477,32 +1477,18 @@ function renderTenFrame(a, b, op) {
     // Make-10: show a blue dots + b orange dots → result in ten-frames
     // Row 1: original groups [a blue] + [b orange]  (simple cubes)
     // Row 2: regrouped into ten-frames showing the make-10 result
-    const fill10=10-a, overflow=b-fill10, total=a+b;
-    const cubeStep=BU+4, symW=28;
-    const row1W=a*cubeStep+symW+b*cubeStep+symW+total*cubeStep;
+    /* The ten-frames alone — owner, 2026-09-23: «只需要下面的». There used to be a strip of loose cubes above
+       them, «a blue + b orange = all of them in a row», and that third group was the answer laid out to be
+       counted. It also said nothing the frames do not say better: making ten is the whole method here, and
+       the frames are what show it. */
+    const fill10=10-a, overflow=b-fill10;
     const gap=16, labelH=18;
     const totalW=frameW+(overflow>0?gap+frameW:0);
-    const totalH=BU+12+frameH+labelH+6;
-    const svgW=Math.max(row1W,totalW);
-    let svg=`<svg viewBox="0 0 ${svgW} ${totalH}" width="${Math.min(svgW,440)}" height="${Math.min(totalH,120)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
-    // Row 1: cubes [a blue] + [b orange] = [total]
-    const r1y=0, r1cx=(svgW-row1W)/2;
-    let cx=r1cx;
-    for(let i=0;i<a;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="var(--primary)" opacity="0.85"/>`;
-    cx+=a*cubeStep;
-    svg+=`<text x="${cx+symW/2}" y="${r1y+BU/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" font-family="Fredoka" fill="var(--text)">+</text>`;
-    cx+=symW;
-    for(let i=0;i<b;i++) svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="var(--accent)" opacity="0.85"/>`;
-    cx+=b*cubeStep;
-    svg+=`<text x="${cx+symW/2}" y="${r1y+BU/2+1}" text-anchor="middle" dominant-baseline="middle" font-size="14" font-weight="700" font-family="Fredoka" fill="var(--text)">=</text>`;
-    cx+=symW;
-    for(let i=0;i<total;i++){
-      const col=i<a?'var(--primary)':'var(--accent)';
-      svg+=`<rect x="${cx+i*cubeStep}" y="${r1y}" width="${BU}" height="${BU}" rx="2.5" fill="${col}" opacity="0.85"/>`;
-    }
-    // Row 2: ten-frames showing the regrouping
-    const r2y=BU+12;
-    const tfx=(svgW-totalW)/2;
+    const totalH=frameH+labelH+6;
+    const svgW=totalW;
+    let svg=`<svg viewBox="0 0 ${svgW} ${totalH}" width="${Math.min(svgW,440)}" height="${Math.min(totalH,110)}" style="max-width:100%" preserveAspectRatio="xMidYMid meet">`;
+    const r2y=0;
+    const tfx=0;
     svg+=drawFrame(tfx,r2y);
     for(let i=0;i<a;i++) svg+=drawDot(tfx,r2y,i,'var(--primary)');
     for(let i=0;i<fill10;i++) svg+=drawDot(tfx,r2y,a+i,'var(--accent)');
