@@ -1029,7 +1029,7 @@ function renderMain() {
     <div class="header">
       <h2>${mod.icon} ${mod.name}</h2>
       <span class="level-tag">${lvl.name}</span>
-      <span style="font-size:13px;color:var(--text-dim);font-family:'Space Mono',monospace">${state.questionNum+1}/${state.questionsPerLevel}</span>
+      <span id="qCount" style="font-size:13px;color:var(--text-dim);font-family:'Space Mono',monospace">${state.questionNum+1}/${state.questionsPerLevel}</span>
     </div>
     <div class="workspace" id="workspace"></div>`;
   generateQuestion();
@@ -1042,6 +1042,12 @@ function generateQuestion() {
     showLevelComplete(ws);
     return;
   }
+  /* The counter lives in the header, and the header is written once, by renderMain, when the level is
+     opened. Every question after that replaces only #workspace — so state.questionNum kept climbing while
+     the screen kept saying «1 / 10» for all ten. It is the only thing telling a child how far through they
+     are, and it was lying for nine questions out of ten. Updated here, where the question changes. */
+  const qc=document.getElementById('qCount');
+  if(qc) qc.textContent=`${state.questionNum+1}/${state.questionsPerLevel}`;
   const lv=state.level;
   const entry = QUESTION_DISPATCH.find(d => d.levels.has(lv));
   if(entry) entry.generate(ws);
@@ -1529,7 +1535,10 @@ function genHorizOps(ws) {
     a=rand(2,9); b=rand(1,a);
     op='−';
   } else if(lv==='a2') {
-    do{a=rand(2,9);b=rand(2,9);}while(a+b<=9);
+    /* «Қосу, ауысумен» — the sum must CROSS the ten, not land on it. `<=9` let 5 + 5 through: no carry
+       happens, and the ten-frame caption then reads «5 + 5 = 10, 10 + 0 = ?», which hands over the
+       answer while the child is still reading the question. (2026-09-23) */
+    do{a=rand(2,9);b=rand(2,9);}while(a+b<=10);
     op='+';
   } else if(lv==='a20n') {
     do{a=rand(10,18);b=rand(1,9);}while(a%10+b>=10||a+b>20);
@@ -1539,7 +1548,12 @@ function genHorizOps(ws) {
     b=rand(1,a%10);
     op='−';
   } else if(lv==='s20b') {
-    do{a=rand(11,18);b=rand(a%10+1,9);}while(a-b<1);
+    /* The method here is «take the ones, then take the rest from the ten», and the picture has to name
+       that rest — it is the step. But the answer is 10 minus that rest, so when the rest is 5 the two
+       numbers are the same and the caption «10-нан 5 алу» is the answer. Same rule as the one the owner
+       set for the equation drawings: a demonstration number may not coincide. a − b = 5 is exactly that
+       case, so it is not drawn here. (2026-09-23) */
+    do{a=rand(11,18);b=rand(a%10+1,9);}while(a-b<1||a-b===5);
     op='−';
   }
   const answer=op==='+'?a+b:a-b;

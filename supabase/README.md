@@ -155,6 +155,7 @@ node supabase/test/e2e_stars.js    # 14 项：端到端 —— 真的 core/core.
 node supabase/test/e2e_tester.js  # 25 项：tester 账号 —— 五条路线各自按自己 index.html 的顺序真的启动一遍，看 129 个关卡是不是真开着
 node supabase/test/e2e_diag.js    # 19 项：诊断定位 —— 真 DOM（jsdom）里把整套诊断打完；核心是「只会 1..K 站的孩子必须落在第 K+1 站」，不需要数据库
 node tests/cachebust.js           # 3 项：所有页面对同一个 core/ 文件的 ?v 必须一致（不需要数据库，秒级）
+node tests/pv.js                  # 4 项：PV 老应用端到端 —— jsdom 里跑它自己的脚本，开关卡、答题、按「Келесі」
 ```
 
 只读排查：`supabase/q_ar_misplaced.sql` —— 2026-09-22 之前被诊断上限放低的孩子是谁。一条 SELECT，什么都不改；
