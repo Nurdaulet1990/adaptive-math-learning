@@ -761,6 +761,53 @@ const MODULES = [
 ];
 
 // ── Global level ordering for adaptive progression ──
+/* ── the no-picture twin of every add/sub level ────────────────────────────────────────
+   Owner, 2026-09-23: «每一个阶段（加减）后面要跟一个没有图的阶段». C→P→A: the concrete and the
+   pictorial were both here, the abstract was nowhere — a child was never once asked to work without
+   something to look at. Each add/sub level now has a twin right behind it that asks the same questions
+   with the aids taken away. Getting one wrong brings the picture back, and the answer still counts as
+   wrong (owner: «打错了要给提示图，不过不算对») — the picture is the consequence of the mistake, not a
+   second try, so the run resets and has to be built again. */
+const ADDSUB = new Set(['a1','s1','a20n','a2','s20n','s20b','a3','a4','a5','a6','s2','s3',
+                        'a7','a8','a9','a10','s4','s5','s6','s7',
+                        'a4d1','a4d2','a4d3','a4d4','s4d1','s4d2','s4d3','s4d4']);
+const NOFIG = new Set();
+for (const m of MODULES) {
+  const withTwins = [];
+  for (const l of m.levels) {
+    withTwins.push(l);
+    if (ADDSUB.has(l.id)) {
+      const nid = l.id + '_n'; NOFIG.add(nid);
+      withTwins.push({ id: nid, name: l.name + ' · суретсіз', desc: (l.desc || '') + ' — without the picture' });
+    }
+  }
+  m.levels = withTwins;
+}
+/* A twin generates its parent's questions: `generateQuestion` swaps state.level to the base for the
+   length of the call, so not one generator has to know twins exist. */
+const baseLevel = lv => NOFIG.has(lv) ? lv.slice(0, -2) : lv;
+
+/* ── station numbers, written out ──────────────────────────────────────────────────────
+   These used to be positions: stageId was 'PV-' + (index in LEVEL_ORDER + 1). Inserting 28 levels in
+   the middle would therefore have renumbered every station after them — and a station id may never be
+   renumbered (ROUTE_CONVENTION §3): a pupil's saved progress and every logged event point at stations
+   by that exact string, so the whole history would have slid onto the wrong stations, unrecoverably.
+   The first 48 keep the numbers they have always had; the twins take 49…76. Never reorder this table,
+   never reuse a number; a new level takes the next free one. */
+const STAGE_NO = {
+  c1:1, a1:2, s1:3, u1:4, c20:5, pv20:6, a20n:7, a2:8, s20n:9, s20b:10,
+  u2:11, ct10:12, c2:13, p1:14, m1:15, a3:16, a4:17, a5:18, a6:19, s2:20,
+  s3:21, u3:22, c3:23, p2:24, p3:25, m2:26, a7:27, a8:28, a9:29, a10:30,
+  s4:31, s5:32, s6:33, s7:34, u4:35, c4:36, pv4d:37, p4:38, m3:39, a4d1:40,
+  a4d2:41, a4d3:42, a4d4:43, s4d1:44, s4d2:45, s4d3:46, s4d4:47, u5:48,
+  // the no-picture twins, added 2026-09-23
+  a1_n:49, s1_n:50, a20n_n:51, a2_n:52, s20n_n:53, s20b_n:54, a3_n:55, a4_n:56,
+  a5_n:57, a6_n:58, s2_n:59, s3_n:60, a7_n:61, a8_n:62, a9_n:63, a10_n:64,
+  s4_n:65, s5_n:66, s6_n:67, s7_n:68, a4d1_n:69, a4d2_n:70, a4d3_n:71, a4d4_n:72,
+  s4d1_n:73, s4d2_n:74, s4d3_n:75, s4d4_n:76,
+};
+const stageNo = lv => STAGE_NO[lv];
+
 const LEVEL_ORDER = [];
 for(const m of MODULES) {
   for(const l of m.levels) {
@@ -817,6 +864,7 @@ let state = {
      level therefore does not end after a fixed ten questions — it ends when the run is complete, or when
      the child has had `streakCap` questions to build one. */
   streak: 0,
+  hiddenFig: null,                    // the aids lifted out on a no-picture level, ready to come back
   streakNeed: 8,
   streakCap: 20,
   diagnostic: false,
@@ -1060,6 +1108,28 @@ function renderMain() {
   generateQuestion();
 }
 
+/* The aids, and only the aids. The vertical column itself is not one — it is the notation being taught,
+   and a «no picture» level still asks the child to write in it. What goes is what is there to be looked
+   at and counted: the blocks, the ten-frames, the disc chart beside the column. Each is swapped for an
+   empty slot of the same identity, so putting it back is exact. */
+const AID_SELECTOR = '.block-display, .horiz-vis, .ops-pv-chart';
+function hideAids(ws) {
+  const kept = [];
+  ws.querySelectorAll(AID_SELECTOR).forEach(el => {
+    const slot = document.createElement('div');
+    slot.className = 'aid-slot';
+    el.parentNode.replaceChild(slot, el);
+    kept.push(el.outerHTML);
+  });
+  state.hiddenFig = kept.length ? kept : null;
+}
+function showAids() {
+  if(!state.hiddenFig) return;
+  const slots = document.querySelectorAll('.aid-slot');
+  state.hiddenFig.forEach((html, i) => { if(slots[i]) slots[i].outerHTML = html; });
+  state.hiddenFig = null;
+}
+
 function generateQuestion() {
   state.fbShown=false;   // one verdict per question — see showFeedback
   const ws=document.getElementById('workspace');
@@ -1073,10 +1143,19 @@ function generateQuestion() {
      are, and it was lying for nine questions out of ten. Updated here, where the question changes. */
   const qc=document.getElementById('qCount');
   if(qc) qc.textContent=`қатарынан ${state.streak}/${state.streakNeed}`;
-  const lv=state.level;
-  const entry = QUESTION_DISPATCH.find(d => d.levels.has(lv));
-  if(entry) entry.generate(ws);
-  else genOps(ws); // default: vertical ops with hints
+  /* A twin borrows its parent's generator whole: state.level is the base for the length of the call, so
+     the dispatch table, the level branches inside genOps/genHorizOps and everything they set up carry on
+     as they were. Then the aids are lifted out of the DOM that was just built — one place, no generator
+     needs to know. What was lifted is kept, because a wrong answer puts it back. */
+  const real = state.level, lv = baseLevel(real), noFig = real !== lv;
+  state.level = lv;
+  try {
+    const entry = QUESTION_DISPATCH.find(d => d.levels.has(lv));
+    if(entry) entry.generate(ws);
+    else genOps(ws); // default: vertical ops with hints
+  } finally { state.level = real; }
+  state.hiddenFig = null;
+  if(noFig) hideAids(ws);
 }
 
 // ╔═══════════════════════════════════════════════════════════════╗
@@ -2427,6 +2506,9 @@ function showFeedback(correct, hint) {
     state.streak=0;                       // a run is a run: one miss and it starts again
     fb.className='feedback show wrong shake';
     fb.innerHTML=`✗ ${hint||'Қайта ойланыңыз'}`;
+    /* On a no-picture level the aid comes back now — but the answer stays wrong and the run is already
+       gone. It is what the mistake earns, not a second attempt. */
+    showAids();
   }
   state.total++;
   state.questionNum++;
@@ -2751,6 +2833,6 @@ renderSidebar();
 renderMain();
 </script>
 <div id="app"></div>
-<script src="bridge.js?v=13"></script>
+<script src="bridge.js?v=14"></script>
 </body>
 </html>

@@ -96,6 +96,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   Object.assign(b2, {
     COMP_LVL: new Set(['u1']),
     LEVEL_ORDER: LEVELS.map(id => ({ moduleId:'m1', levelId:id })),
+    // bridge.js asks pv/index.html for a station's number; the stand-in numbers its own short list
+    stageNo: id => LEVELS.indexOf(id) + 1,
     MODULES: [{ id:'m1', name:'Санау', icon:'#', levels: LEVELS.map(id=>({id,name:id})) }],
     // streak/streakNeed/questionNum: since 2026-09-23 a PV level is passed by a RUN, and bridge.js reports
     // right answers over questions ASKED — so the stand-in state has to carry those, not questionsPerLevel.

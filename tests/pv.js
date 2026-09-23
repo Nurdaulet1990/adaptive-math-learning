@@ -125,6 +125,47 @@ setTimeout(() => {
   while (asked < 30 && !/Тамаша|Қайталап/.test(text())) { answer(asked % 2 === 0); asked++; }
   T('alternating right and wrong never passes, and the level does end', /Қайталап/.test(text()), { asked });
 
+  // ── 6 · the no-picture twins ────────────────────────────────────────────────────────
+  const AID = '.block-display, .horiz-vis, .ops-pv-chart';
+  const aids = () => doc.querySelectorAll(AID).length;
+  T('every add/sub level has a twin right behind it', ev(`
+      (() => { const ids=[]; MODULES.forEach(m=>m.levels.forEach(l=>ids.push(l.id)));
+        return ids.every((id,i) => !ADDSUB.has(id) || ids[i+1] === id + '_n'); })()`));
+  T('76 levels, 28 of them without a picture', ev('LEVEL_ORDER.length') === 76 && ev('NOFIG.size') === 28,
+    { levels: ev('LEVEL_ORDER.length'), twins: ev('NOFIG.size') });
+
+  /* The station number is the identity of a station, so the original 48 must still be exactly the numbers
+     they were before the twins were inserted — a saved stage row or a logged event from before today
+     points at PV-27 and has to keep meaning AR… meaning a7. */
+  T('the first 48 stations kept their numbers', ev(`
+      (() => { const было={c1:1,a1:2,s1:3,u1:4,c20:5,pv20:6,a20n:7,a2:8,s20n:9,s20b:10,u2:11,ct10:12,
+        c2:13,p1:14,m1:15,a3:16,a4:17,a5:18,a6:19,s2:20,s3:21,u3:22,c3:23,p2:24,p3:25,m2:26,a7:27,a8:28,
+        a9:29,a10:30,s4:31,s5:32,s6:33,s7:34,u4:35,c4:36,pv4d:37,p4:38,m3:39,a4d1:40,a4d2:41,a4d3:42,
+        a4d4:43,s4d1:44,s4d2:45,s4d3:46,s4d4:47,u5:48};
+        return Object.keys(было).every(k => STAGE_NO[k] === было[k]); })()`));
+  T('every level has a number, and no number is used twice', ev(`
+      (() => { const ids=[]; MODULES.forEach(m=>m.levels.forEach(l=>ids.push(l.id)));
+        const ns=ids.map(i=>STAGE_NO[i]);
+        return ns.every(n=>typeof n==='number') && new Set(ns).size===ns.length; })()`));
+
+  open('d1', 'a1');
+  const withPic = aids();
+  open('d1', 'a1_n');
+  T(`the parent level draws its aids (${withPic}) and the twin draws none`, withPic > 0 && aids() === 0,
+    { parent: withPic, twin: aids() });
+  T('…but it is the same question: the equation is still there',
+    !!doc.querySelector('.equation-row, .prompt-card'), text().slice(0, 50));
+
+  // a wrong answer brings the picture back — and is still wrong
+  ev('state.streak=5');
+  ev('showFeedback(false)');
+  T('a miss on a no-picture level puts the aid back', aids() === withPic, { now: aids(), want: withPic });
+  T('…and the answer still counts as wrong: the run is gone', ev('state.streak') === 0, ev('state.streak'));
+
+  // and the aid does not linger into the next question
+  ev('generateQuestion()');
+  T('the next question is bare again', aids() === 0, aids());
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   process.exit(failed ? 1 : 0);

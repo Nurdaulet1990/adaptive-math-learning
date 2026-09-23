@@ -145,6 +145,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const LEVELS = ['c1', 'c20', 'ct10', 'c2', 'u1', 'u2', 'a1'];
     Object.assign(b, { COMP_LVL: new Set(['u1']),
       LEVEL_ORDER: LEVELS.map(id => ({ moduleId: 'm1', levelId: id })),
+      // bridge.js asks pv/index.html for a station's number; the stand-in numbers its own short list
+      stageNo: id => LEVELS.indexOf(id) + 1,
       MODULES: [{ id: 'm1', name: 'Санау', icon: '#', levels: LEVELS.map(id => ({ id, name: id })) }],
       state: { level: null, module: null, score: 0, questionsPerLevel: 10, completed: {}, stars: 0, unlockedUpTo: 0, started: false, placement: null },
       saveProgress() {}, generateQuestion() {}, showVisualHint() {}, showFeedback() {}, showLevelComplete() {},

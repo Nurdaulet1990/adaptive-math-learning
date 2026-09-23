@@ -7,7 +7,11 @@
    The app's own functions are wrapped, not edited: saveProgress, showFeedback, showLevelComplete, finishPlacement, generateQuestion, showVisualHint. */
 (function(){
 'use strict';
-const stageId=lv=>{ const i=LEVEL_ORDER.findIndex(x=>x.levelId===lv); return 'PV-'+String(i+1).padStart(2,'0'); };
+/* A station's number is its IDENTITY, not its position. It used to be the index in LEVEL_ORDER, which
+   meant inserting the 28 no-picture twins would have renumbered every station after them — and every
+   saved stage row and every logged event points at a station by this exact string. STAGE_NO (pv/index.html)
+   is the written-out table; the first 48 keep the numbers they have always had. */
+const stageId=lv=>'PV-'+String(stageNo(lv)||0).padStart(2,'0');
 const levelName=lv=>{ for(const m of MODULES){ const l=m.levels.find(x=>x.id===lv); if(l) return m.name+' · '+l.name; } return lv; };
 let R=null, qT0=Date.now(), qHints=0;
 
@@ -23,10 +27,16 @@ let host=document.getElementById('app'); if(!host){ host=document.createElement(
 /* platform-format mirror of the progress (for portal + teacher) */
 function mirror(){
   const cur=Math.min(R.unlockedUpTo||0,LEVEL_ORDER.length-1); R.stages=R.stages||{};
-  LEVEL_ORDER.forEach((e,i)=>{ const id='PV-'+String(i+1).padStart(2,'0'); const s=R.stages[id]||(R.stages[id]={level:3,streak:0,wrong:0,l3streak:0,testUnlocked:true,tests:[],seenCard:true}); s.status=R.completed[e.levelId]?'passed':(i===cur&&R.started?'current':'locked'); s.level=3; });
-  if(R.started&&!R.diag) R.diag={t:Date.now(),placed:'PV-'+String(cur+1).padStart(2,'0'),results:{},n:0,manual:true};
+  LEVEL_ORDER.forEach((e,i)=>{ const id=stageId(e.levelId); const s=R.stages[id]||(R.stages[id]={level:3,streak:0,wrong:0,l3streak:0,testUnlocked:true,tests:[],seenCard:true}); s.status=R.completed[e.levelId]?'passed':(i===cur&&R.started?'current':'locked'); s.level=3; });
+  if(R.started&&!R.diag) R.diag={t:Date.now(),placed:stageId(LEVEL_ORDER[cur].levelId),results:{},n:0,manual:true};
 }
-function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.unlockedUpTo=R.unlockedUpTo!==undefined?R.unlockedUpTo:0; state.started=!!R.started;
+function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.started=!!R.started;
+  /* unlockedUpTo is a POSITION, and 28 levels were inserted into the middle of the order on 2026-09-23 —
+     every stored one now points somewhere else. `completed` is keyed by level id and is therefore safe,
+     so the position is recomputed from it rather than trusted. This also self-heals a saved value from
+     any future insertion. */
+  let u=0; LEVEL_ORDER.forEach((e,i)=>{ if(state.completed[e.levelId]) u=Math.max(u,i+1); });
+  state.unlockedUpTo=Math.min(u,LEVEL_ORDER.length-1);
   /* the tester account — see Core.tester in core/core.js. PV counts unlocked levels rather than
      marking each one, so here it is one number. */
   if(Core.tester){ state.unlockedUpTo=LEVEL_ORDER.length-1; state.started=true; } }
@@ -67,7 +77,7 @@ const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.leve
    so the ceiling is restored here. Same rule as core/runner.js and wp/diag_test.js. */
 const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const before=state.unlockedUpTo||0; const r=_fp.apply(this,arguments);
   if((state.unlockedUpTo||0)<before) state.unlockedUpTo=before;
-  if(R){ const results={}; hist.forEach(h=>{ results[stageId(LEVEL_ORDER[h.idx].levelId)]=h.correct?'pass':'fail'; }); const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1); R.diag={t:Date.now(),placed:'PV-'+String(cur+1).padStart(2,'0'),results,n:hist.length}; Core.event({ev:'diag',placed:R.diag.placed,results}); push(); } return r; };
+  if(R){ const results={}; hist.forEach(h=>{ results[stageId(LEVEL_ORDER[h.idx].levelId)]=h.correct?'pass':'fail'; }); const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1); R.diag={t:Date.now(),placed:stageId(LEVEL_ORDER[cur].levelId),results,n:hist.length}; Core.event({ev:'diag',placed:R.diag.placed,results}); push(); } return r; };
 
 /* ── the platform map as PV's home screen ──────────────────────────────────
    PV keeps its own question screens (48 levels of tested code), but the way in is the same as every
