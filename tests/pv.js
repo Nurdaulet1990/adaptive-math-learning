@@ -17,7 +17,12 @@ const { JSDOM } = require(process.env.JSDOM_MODULE || 'jsdom');
 const ROOT = path.join(__dirname, '..');
 const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' : 'FAIL', n, ok ? '' : JSON.stringify(x)); };
 
-const html = fs.readFileSync(path.join(ROOT, 'pv/index.html'), 'utf8');
+/* jsdom does not fetch <script src>, and a `const` injected later with w.eval is scoped to that eval —
+   it never reaches the page's global lexical scope, so the app would not see it. Inlining the file before
+   the DOM is built is what the browser actually does. */
+const html = fs.readFileSync(path.join(ROOT, 'pv/index.html'), 'utf8')
+  .replace(/<script src="discs\.js[^"]*"><\/script>/,
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/discs.js'), 'utf8') + '</script>');
 const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.org/pv/', pretendToBeVisual: true });
 const w = dom.window;
 w.addEventListener('error', () => {});
@@ -177,6 +182,51 @@ setTimeout(() => {
         return LEVEL_ORDER.every(e => {
           const hits = LEVEL_ORDER.filter(x => id(x) === id(e));
           return hits.length === 1 && hits[0].levelId === e.levelId; }); })()`));
+
+  // ── 7 · the disc chart, from three digits up ────────────────────────────────────────
+  // «两位数不需要» — two digits keep the plain two-row table; three and four get the chart that draws the
+  // exchange. The two are told apart by what they actually are, not by looking for an <svg>: the old
+  // table is full of them too (renderPVCell draws every cell as one).
+  const chartKind = () => { const el = doc.querySelector('.ops-pv-chart');
+    if (!el) return 'none';
+    if (/<table/.test(el.innerHTML)) return 'table';
+    if (/marker id="dq"/.test(el.innerHTML)) return 'discs';
+    return 'other'; };
+  const kinds = {};
+  for (const [mod, lvl] of [['d3','a3'], ['d3','s3'], ['d4','a7'], ['d4','s5'], ['d5','a4d3'], ['d5','s4d4']]) {
+    open(mod, lvl); kinds[lvl] = chartKind();
+  }
+  T('two-digit levels keep the plain chart', kinds.a3 === 'table' && kinds.s3 === 'table', kinds);
+  T('three- and four-digit levels get the exchange chart',
+    ['a7','s5','a4d3','s4d4'].every(l => kinds[l] === 'discs'), kinds);
+  open('d4', 's5');
+  const el = doc.querySelector('.ops-pv-chart').innerHTML;
+  T('…and it really draws the exchange: a dashed disc, an arrow and crossings',
+    /stroke-dasharray/.test(el) && /marker-end/.test(el) && /var\(--bad/.test(el.replace(/var\(--bad, #CF4B3E\)/g, 'var(--bad')),
+    el.slice(0, 120));
+
+  /* The picture has to be RIGHT, not merely present: what is left uncrossed in each column must be the
+     digit of the answer in that column. 4072 − 1385 caught the flaw this checks for — the hundreds
+     received a ten and then lent one of those on to the tens, and a loan made out of borrowed discs was
+     drawn solid, so the column read 7 where the answer says 6. */
+  const columnsOf = (a, b) => {
+    const svg = ev(`DISCS.sub(${a},${b})`);
+    const nP = String(Math.max(a, b)).length, colW = (340 - 8) / nP;
+    const col = x => Math.min(nP - 1, Math.max(0, Math.floor((x - 4) / colW)));
+    const left = new Array(nP).fill(0), crossLines = new Array(nP).fill(0);
+    for (const m of svg.matchAll(/<circle cx="([\d.]+)" cy="[\d.]+" r="\d+" fill="([^"]+)"/g))
+      if (m[2] !== 'none') left[col(+m[1])]++;                       // a dashed one is fill="none"
+    for (const m of svg.matchAll(/<line x1="([\d.]+)"[^>]*stroke="var\(--bad[^"]*"/g))
+      crossLines[col(+m[1])]++;                                     // two lines make one cross
+    return left.map((n, i) => n - crossLines[i] / 2);
+  };
+  const wrongCols = [];
+  for (const [a, b] of [[628,356],[274,92],[809,324],[715,682],[4072,1385],[2000,999],[500,271],[1000,1]]) {
+    const want = String(a - b).padStart(String(Math.max(a,b)).length, '0').split('').map(Number);
+    const got = columnsOf(a, b);
+    if (got.join() !== want.join()) wrongCols.push({ sum: `${a} − ${b} = ${a-b}`, want, got });
+  }
+  T('every column of the disc chart is left holding the answer', wrongCols.length === 0, wrongCols);
 
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);

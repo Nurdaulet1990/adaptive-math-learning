@@ -92,64 +92,60 @@ const DISCS = (function () {
       const A = digitsOf(a, nP), B = digitsOf(b, nP);
       const have = A.slice(), lent = new Array(nP).fill(0), got = new Array(nP).fill(0);
       for (let i = nP - 1; i >= 0; i--) {
-        if (have[i] < B[i]) { // borrow from the left
+        if (have[i] < B[i]) {
           let j = i - 1; while (j >= 0 && have[j] === 0) j--;
           if (j >= 0) { have[j]--; lent[j]++; for (let k = j + 1; k <= i; k++) { got[k] += 10; have[k] += (k === i ? 10 : 9); if (k < i) lent[k]++; } }
         }
         have[i] -= B[i];
       }
-      const { colW, headH } = frame(nP, 0);
-      let body = '', maxH = 0;
-      const anchors = [];
+      /* Each column's discs, as states, before anything is drawn. A column can lend from discs it never
+         had: 4072 − 1385 gives the hundreds ten from the thousand and then lends one of THOSE on to the
+         tens. Ghosting only the original discs left that loan invisible — the hundreds read 7 left when
+         6 was the truth. So the ghosts are taken from the original pile first and from the arrived pile
+         after it, and the crossings then fall on what is actually still there. */
+      const cols = [];
       for (let i = 0; i < nP; i++) {
-        const x = 4 + i * colW, place = P[i];
-        // the discs this column started with: A[i], of which `lent[i]` are being spent (dashed)
-        const orig = [];
-        for (let k = 0; k < A[i]; k++) orig.push(k < A[i] - lent[i] ? 'solid' : 'ghost');
-        const p1 = pile(x + 4, headH + 4, colW - 8, place, orig);
+        const fromOrig = Math.min(lent[i], A[i]), fromGot = lent[i] - fromOrig;
+        const orig = Array.from({ length: A[i] }, (_, k) => k < A[i] - fromOrig ? 'solid' : 'ghost');
+        const arrived = Array.from({ length: got[i] }, (_, k) => k < got[i] - fromGot ? 'solid' : 'ghost');
+        let toCross = B[i];                       // cross the last of what is still there, reading orig then arrived
+        for (const pile of [arrived, orig]) for (let k = pile.length - 1; k >= 0 && toCross > 0; k--)
+          if (pile[k] === 'solid') { pile[k] = 'gone'; toCross--; }
+        cols.push({ orig, arrived });
+      }
+
+      const { colW, headH } = frame(nP, 0);
+      let body = '', maxH = 0; const anchors = [];
+      for (let i = 0; i < nP; i++) {
+        const x = 4 + i * colW, place = P[i], c = cols[i];
+        const p1 = pile(x + 4, headH + 4, colW - 8, place, c.orig);
         let h = p1.h, col = p1.svg;
-        anchors.push({ x: x + colW / 2, yTop: headH + 6, yBot: headH + 4 + h });
-        if (got[i]) {  // the ten that arrived, in its own box
+        anchors.push({ x: x + colW / 2, yBot: headH + 4 + h });
+        if (c.arrived.length) {
           const boxY = headH + 8 + h;
-          const arrived = [];
-          for (let k = 0; k < got[i]; k++) arrived.push('solid');
-          const p2 = pile(x + 6, boxY + 4, colW - 12, place, arrived);
+          const p2 = pile(x + 6, boxY + 4, colW - 12, place, c.arrived);
           col += `<rect x="${x + 3}" y="${boxY}" width="${colW - 6}" height="${p2.h + 8}" rx="5" fill="none" stroke="var(--accent, #0E7C9B)" stroke-width="1.5" stroke-dasharray="5 3"/>` + p2.svg;
           h += p2.h + 12;
           anchors[i].yBox = boxY + 4 + R;
+          anchors[i].yBoxBot = boxY + p2.h;
         }
-        // cross out B[i] of whatever this column now holds, from the end
-        body += col;
-        maxH = Math.max(maxH, h);
+        body += col; maxH = Math.max(maxH, h);
       }
-      // crossings are drawn in a second pass so they sit on top
-      let crosses = '';
-      for (let i = 0; i < nP; i++) {
-        const x = 4 + i * colW, place = P[i];
-        const total = A[i] - lent[i] + got[i];
-        const solid = [];
-        for (let k = 0; k < total; k++) solid.push(k >= total - B[i] ? 'gone' : 'solid');
-        // redraw only the crossed ones, in the same slots
-        const startInOrig = A[i] - lent[i];
-        for (let k = 0; k < total; k++) {
-          if (solid[k] !== 'gone') continue;
-          const inOrig = k < startInOrig;
-          const idx = inOrig ? k : k - startInOrig;
-          const step = 2 * R + GAP, cols = Math.min(PER_ROW, Math.max(1, Math.floor(((inOrig ? colW - 8 : colW - 12)) / step)));
-          const c = idx % cols, r = Math.floor(idx / cols);
-          const bx = inOrig ? x + 4 : x + 6, by = inOrig ? headH + 4 : anchors[i].yBox - R;
-          crosses += disc(bx + c * step + R + 2, by + r * step + R, place, 'gone');
-        }
-      }
+      /* The arrow leaves from wherever the lent disc actually is — the original pile, or the box of ones
+         that arrived a moment ago. Starting it at the column's edge would hide exactly that. */
       let arrows = '';
-      for (let i = 0; i < nP; i++) if (lent[i] && anchors[i + 1] && anchors[i + 1].yBox !== undefined)
-        arrows += arrow(anchors[i].x, anchors[i].yBot - R, anchors[i + 1].x, anchors[i + 1].yBox - R - 4);
-      const H = headH + maxH + 14;
+      for (let i = 0; i < nP; i++) {
+        if (!lent[i] || !anchors[i + 1] || anchors[i + 1].yBox === undefined) continue;
+        const lentFromBox = lent[i] > A[i];
+        const y1 = lentFromBox ? anchors[i].yBoxBot - R : anchors[i].yBot - R;
+        arrows += arrow(anchors[i].x, y1, anchors[i + 1].x, anchors[i + 1].yBox - R - 4);
+      }
       const f = frame(nP, maxH + 10);
       let head = '';
       for (let i = 0; i < nP; i++) head += `<text x="${4 + i * colW + colW / 2}" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="var(--muted, #5E6B7A)">${esc(NAME[P[i]])}</text>`;
+      const H = headH + maxH + 14;
       return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito,system-ui,sans-serif" style="max-width:100%;height:auto">`
-        + DEFS + f.svg + head + body + crosses + arrows + '</svg>';
+        + DEFS + f.svg + head + body + arrows + '</svg>';
     },
 
     /* ── addition ─────────────────────────────────────────────────────────────────────
