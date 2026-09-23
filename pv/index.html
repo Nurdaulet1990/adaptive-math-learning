@@ -1417,13 +1417,17 @@ function renderDualWithTens(a, b, op) {
     // =
     svg+=`<text x="${cx+symW/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="18" font-weight="700" font-family="Fredoka" fill="var(--text)">=</text>`;
     cx+=symW;
-    /* The right-hand side used to be drawn out in full — the rod and every cube of a + b, in colour, next
-       to the question. A child can count it, and counting it IS the answer. The picture's job here is to
-       show the two amounts being put together; what they come to is the question. So the result side is an
-       empty dashed tray. (2026-09-23) */
-    const wR=Math.max(wRT+gapR+wRO,BU*3);
-    svg+=`<rect x="${cx}" y="${padY}" width="${wR}" height="${h-padY*2}" rx="6" fill="none" stroke="var(--text-dim)" stroke-width="2" stroke-dasharray="6 4"/>`;
-    svg+=`<text x="${cx+wR/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="20" font-weight="700" font-family="Fredoka" fill="var(--text-dim)">?</text>`;
+    /* The two amounts put together, drawn out — owner, 2026-09-23: «把两个数加起来的数量要画在空位置上,
+       不要空着». I had emptied this into a dashed «?» tray on the grounds that a countable result is the
+       answer. That is true where there is REGROUPING to be done — a2's ten-frames stop before the last
+       step, and rightly. Here there is none: 17 + 1 is «the ten does not move, the ones join», and the
+       joined ones ARE the thing the picture exists to say. An empty box says nothing at all. */
+    for(let i=0;i<tT;i++) svg+=drawRod(cx+i*(TEN_W+rodGap),padY,'var(--primary)');
+    cx+=wRT+gapR;
+    for(let i=0;i<tO;i++){
+      const col=i<aO?'var(--primary)':'var(--accent)';   // kept in the colour it came from
+      svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="${col}" opacity="0.85"/>`;
+    }
     svg+='</svg>';
     return svg;
   } else {
