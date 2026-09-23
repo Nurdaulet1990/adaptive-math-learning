@@ -97,15 +97,22 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     COMP_LVL: new Set(['u1']),
     LEVEL_ORDER: LEVELS.map(id => ({ moduleId:'m1', levelId:id })),
     MODULES: [{ id:'m1', name:'Санау', icon:'#', levels: LEVELS.map(id=>({id,name:id})) }],
-    state: { level:null, module:null, score:0, questionsPerLevel:10, completed:{}, stars:0, unlockedUpTo:0, started:true, placement:null },
+    // streak/streakNeed/questionNum: since 2026-09-23 a PV level is passed by a RUN, and bridge.js reports
+    // right answers over questions ASKED — so the stand-in state has to carry those, not questionsPerLevel.
+    state: { level:null, module:null, score:0, questionsPerLevel:10, questionNum:0, streak:0, streakNeed:8,
+             completed:{}, stars:0, unlockedUpTo:0, started:true, placement:null },
     saveProgress(){}, generateQuestion(){}, showVisualHint(){}, showFeedback(){}, showLevelComplete(){},
     finishPlacement(){}, startDiagnostic(){}, renderMain(){}, renderSidebar(){}, selectLevel(){}, isLevelUnlocked:()=>true,
   });
   vm.runInContext(JS('pv/bridge.js'), b2, { filename:'bridge.js' });
   await sleep(800);
-  b2.state.level='c20'; b2.state.score=10; b2.state.questionsPerLevel=10; b2.state.completed['c20']=true; b2.state.unlockedUpTo=2;
+  // a clean run: eight in a row, ten questions asked, ten right → 10/10 → three stars
+  b2.state.level='c20'; b2.state.score=10; b2.state.questionNum=10; b2.state.streak=8; b2.state.streakNeed=8;
+  b2.state.completed['c20']=true; b2.state.unlockedUpTo=2;
   b2.showLevelComplete({});
-  b2.state.level='u1'; b2.state.score=4; b2.state.questionsPerLevel=5; b2.state.completed['u1']=true;
+  // a Түсіну level: four in a row out of five asked → 4/5 = 0.8 → one star
+  b2.state.level='u1'; b2.state.score=4; b2.state.questionNum=5; b2.state.streak=4; b2.state.streakNeed=4;
+  b2.state.completed['u1']=true;
   b2.showLevelComplete({});
   await sleep(3200);
   row = (await pg.query(`select state from students where name='Дана К.'`)).rows[0];
