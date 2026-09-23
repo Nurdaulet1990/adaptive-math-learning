@@ -876,6 +876,12 @@ function renderBlocksSVG(th,h,t,o) {
      of its size: one smear of thin lines that cannot be counted. A child read it as 815.
      Rows keep the 1:10:100 proportion exactly (the same svgHundred / svgTen / svgOne), they
      just stop the picture from being one enormous line. (2026-09-22) */
+  /* One row while it fits, one place per row only when it does not. The wrap was put in for 895 (eight
+     flats, nine rods, five cubes — about 1750px of drawing squeezed into a phone). But «17 санын кестеге
+     жазыңыз» is one rod and seven cubes: it fits across easily, and the chart underneath it has its
+     columns side by side — Ондықтар then Бірліктер. Stacking the rod above the cubes put the picture at
+     right angles to the chart the child is filling in. (2026-09-23) */
+  const ONE_ROW_MAX = 420;
   const PER_ROW = 5;                 // flats per row; more than this and nothing is countable
   const gapX = 12, gapY = 14, thSz = H_H;
   const rows = [];                   // {draw:(x,y)=>svg, w, h, n} laid out left to right, top to bottom
@@ -897,6 +903,14 @@ function renderBlocksSVG(th,h,t,o) {
       rows.push({ n, w: n * (BU + 4) - 4, h: BU, draw: (x, y) => svgOne(x, y), step: BU + 4 }); }
   }
   if (!rows.length) return '<svg viewBox="0 0 60 20" width="60" height="20"></svg>';
+  const flatW = rows.reduce((t, r) => t + r.w, 0) + (rows.length - 1) * gapX;
+  if (rows.length > 1 && flatW <= ONE_ROW_MAX) {
+    const H1 = Math.max(...rows.map(r => r.h));
+    let one = `<svg viewBox="0 0 ${flatW} ${H1}" width="${flatW}" height="${H1}" style="max-width:100%;height:auto">`;
+    let x = 0;
+    for (const r of rows) { for (let i = 0; i < r.n; i++) one += r.draw(x + i * r.step, H1 - r.h); x += r.w + gapX; }
+    return one + '</svg>';
+  }
   const W = Math.max(...rows.map(r => r.w), 60);
   const H = rows.reduce((s, r) => s + r.h, 0) + (rows.length - 1) * gapY;
   let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="max-width:100%;height:auto">`;
@@ -1392,13 +1406,13 @@ function renderDualWithTens(a, b, op) {
     // =
     svg+=`<text x="${cx+symW/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="18" font-weight="700" font-family="Fredoka" fill="var(--text)">=</text>`;
     cx+=symW;
-    // Result: rod + all ones
-    for(let i=0;i<tT;i++) svg+=drawRod(cx+i*(TEN_W+rodGap),padY,'var(--primary)');
-    cx+=wRT+gapR;
-    for(let i=0;i<tO;i++){
-      const col=i<aO?'var(--primary)':'var(--accent)';
-      svg+=`<rect x="${cx+i*cubeStep}" y="${h-padY-BU}" width="${BU}" height="${BU}" rx="2.5" fill="${col}" opacity="0.85"/>`;
-    }
+    /* The right-hand side used to be drawn out in full — the rod and every cube of a + b, in colour, next
+       to the question. A child can count it, and counting it IS the answer. The picture's job here is to
+       show the two amounts being put together; what they come to is the question. So the result side is an
+       empty dashed tray. (2026-09-23) */
+    const wR=Math.max(wRT+gapR+wRO,BU*3);
+    svg+=`<rect x="${cx}" y="${padY}" width="${wR}" height="${h-padY*2}" rx="6" fill="none" stroke="var(--text-dim)" stroke-width="2" stroke-dasharray="6 4"/>`;
+    svg+=`<text x="${cx+wR/2}" y="${h/2}" text-anchor="middle" dominant-baseline="middle" font-size="20" font-weight="700" font-family="Fredoka" fill="var(--text-dim)">?</text>`;
     svg+='</svg>';
     return svg;
   } else {
