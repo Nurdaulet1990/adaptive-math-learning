@@ -313,6 +313,13 @@ h1,h2,h3,h4 { font-family: 'Fredoka', sans-serif; text-wrap: balance; }
   min-width:28px; text-align:center;
 }
 .ten-frame-area { display:flex; align-items:flex-end; gap:20px; flex-wrap:wrap; justify-content:center; }
+/* Comparison, stacked: number then its blocks, the two signs between the two numbers. */
+.cmp-stack { display:flex; flex-direction:column; align-items:stretch; gap:10px; max-width:520px; margin:0 auto; }
+.cmp-side { display:flex; align-items:center; gap:14px; }
+.cmp-num { font-family:'Space Mono',monospace; font-size:30px; font-weight:700; min-width:76px; text-align:right; flex:0 0 auto; }
+.cmp-blocks { flex:1 1 auto; min-width:0; padding:10px; display:flex; justify-content:flex-start; }
+.cmp-blocks svg { max-width:100%; height:auto; }
+.cmp-stack .compare-btns { display:flex; gap:14px; justify-content:center; }
 .tf-label {
   font-family:'Nunito'; font-size:12px; font-weight:700; color:var(--text-dim);
   text-align:center; margin-top:6px;
@@ -1477,7 +1484,10 @@ function renderTenFrame(a, b, op) {
     if(overflow>0)
       svg+=`<text x="${tfx+frameW+gap+frameW/2}" y="${r2y+frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">${overflow}</text>`;
     svg+='</svg>';
-    const hint=`${a} + ${fill10} = 10, 10 + ${overflow} = ${total}`;
+    /* This picture is drawn next to the question, not behind the hint button (genHorizOps sets visHTML
+       unconditionally). So the last step has to stay open: «10 + 3 = 6» told the child the answer while
+       they were still reading the question. The method is the scaffold; the result is the work. */
+    const hint=`${a} + ${fill10} = 10,  10 + ${overflow} = ?`;
     return `<div class="ten-frame-area">${svg}</div><div class="horiz-hint">${hint}</div>`;
   } else {
     // Break-10: show a as ten-frame(s), cross out b dots
@@ -1501,9 +1511,10 @@ function renderTenFrame(a, b, op) {
       // Cross out all ones
       for(let i=0;i<aOnes;i++) svg+=drawX(x2,0,i);
     }
-    svg+=`<text x="${frameW/2}" y="${frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">10 − ${fromTen} = ${10-fromTen}</text>`;
+    /* 10 − fromTen IS the answer (a − b = 10 − fromTen once the ones are gone), so it may not be printed. */
+    svg+=`<text x="${frameW/2}" y="${frameH+labelH}" text-anchor="middle" font-size="11" font-family="Nunito" font-weight="700" fill="var(--text-dim)">10 − ${fromTen} = ?</text>`;
     svg+='</svg>';
-    const hint=aOnes>0?`${a}: ${aOnes} алу, 10-нан ${fromTen} алу → ${a-b}`:`10 − ${b} = ${a-b}`;
+    const hint=aOnes>0?`${a}: алдымен ${aOnes} алу, сосын 10-нан ${fromTen} алу`:`10 − ${b} = ?`;
     return `<div class="ten-frame-area">${svg}</div><div class="horiz-hint">${hint}</div>`;
   }
 }
@@ -1569,6 +1580,9 @@ function genCompare(ws) {
   else if(state.level==='m2') maxN=999;
   else maxN=9999;
   const minN = maxN>=1000?100:maxN>=100?10:1;
+  /* a === b is excluded and the buttons are «>» and «<» only — owner's decision, 2026-09-23. These three
+     stages teach reading which pile is bigger; «=» is a different idea and gets its own stage when it
+     gets one. This is deliberate, not an oversight: do not "fix" it by adding an equals button. */
   do { a=rand(minN,maxN); b=rand(minN,maxN); } while(a===b);
   const correct = a>b?'>':'<';
 
@@ -1580,18 +1594,21 @@ function genCompare(ws) {
       <div class="question">Қай таңба қойылады: &gt; немесе &lt; ?</div>
       <div class="sub">Which sign goes in the circle: &gt; or &lt; ?</div>
     </div>
-    <div style="display:flex;align-items:center;gap:24px;justify-content:center;flex-wrap:wrap">
-      <div style="text-align:center">
-        <div class="block-display pop-in" style="min-height:100px;padding:16px">${renderBlocksSVG(dA[0],dA[1],dA[2],dA[3])}</div>
-        <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;margin-top:8px">${a}</div>
+    <!-- Stacked, not side by side. Two piles of three-digit blocks will not fit across a phone, so the row
+         wrapped and the sign buttons landed wherever there happened to be room — «ынгайсыз», «кыисык».
+         Down the page the reading order is the same as the sentence: this number, the sign, that number. -->
+    <div class="cmp-stack">
+      <div class="cmp-side">
+        <div class="cmp-num">${a}</div>
+        <div class="block-display pop-in cmp-blocks">${renderBlocksSVG(dA[0],dA[1],dA[2],dA[3])}</div>
       </div>
       <div class="compare-btns" id="cmpBtns">
         <button class="cmp-btn" onclick="pickCmp('>','${correct}')">&gt;</button>
         <button class="cmp-btn" onclick="pickCmp('<','${correct}')">&lt;</button>
       </div>
-      <div style="text-align:center">
-        <div class="block-display pop-in" style="min-height:100px;padding:16px">${renderBlocksSVG(dB[0],dB[1],dB[2],dB[3])}</div>
-        <div style="font-family:'Space Mono',monospace;font-size:28px;font-weight:700;margin-top:8px">${b}</div>
+      <div class="cmp-side">
+        <div class="cmp-num">${b}</div>
+        <div class="block-display pop-in cmp-blocks">${renderBlocksSVG(dB[0],dB[1],dB[2],dB[3])}</div>
       </div>
     </div>
     <div class="feedback" id="fb"></div>`;
