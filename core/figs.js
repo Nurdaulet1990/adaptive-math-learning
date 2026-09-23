@@ -38,7 +38,12 @@ function figBars(fp){ // "1-қатар:24;2-қатар:24,+6;3-қатар:?;Ба
   const totalRow=rows.find(r=>/Барлығы|Барлығында/i.test(r[0])); const data=rows.filter(r=>r!==totalRow);
   const nums=[]; data.forEach(([l,v])=>{ const parts=v.split(','); let base=isNaN(+parts[0])?null:+parts[0]; let groups=null; const gm=parts[0].match(/^(\d+)x(\d+)$/); if(gm){ groups=[+gm[1],+gm[2]]; base=groups[0]*groups[1]; } let delta=0; parts.slice(1).forEach(p=>{ const m=p.match(/^([+\-])(\d+)$/); if(m) delta+=(m[1]==='+'?1:-1)*+m[2]; }); nums.push({label:l,base,delta,groups,raw:v}); });
   const maxv=Math.max(...nums.map(n=>(n.base||0)+Math.max(0,n.delta)),10);
-  const W=340, rowH=42, H=rowH*data.length+ (totalRow?36:8), lx=110, scale=(W-lx-20)/maxv; let inner='';
+  /* The total's brace lives to the RIGHT of the bars, so the bars have to stop short of the edge and
+     leave it room. They used to run to W−20 while the brace was drawn at W−14 and its label pinned to
+     W−2 with text-anchor="end" — so the label sat on top of the bars and ran off the viewBox: «63 кг»
+     was simply not on the screen. The gutter is reserved before anything is scaled. (2026-09-22) */
+  const W=340, rowH=42, H=rowH*data.length+ (totalRow?36:8), lx=110;
+  const RG=totalRow?78:20, scale=(W-lx-RG)/maxv; let inner='';
   nums.forEach((n,i)=>{ const y=8+i*rowH; inner+=`<text x="${lx-8}" y="${y+20}" text-anchor="end" fill="var(--ink)" font-size="14">${esc(n.label)}</text>`;
     if(n.base===null){ inner+=`<rect x="${lx}" y="${y}" width="${Math.max(60,maxv*scale*0.5)}" height="28" fill="none" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${lx+Math.max(60,maxv*scale*0.5)/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)">?</text>`; return; }
     const bw=n.base*scale;
@@ -47,7 +52,8 @@ function figBars(fp){ // "1-қатар:24;2-қатар:24,+6;3-қатар:?;Ба
     if(n.delta>0){ const dw=n.delta*scale; inner+=`<rect x="${lx+bw}" y="${y}" width="${dw}" height="28" fill="none" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${lx+bw+dw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">+${n.delta}</text>`; }
     if(n.delta<0){ const dw=-n.delta*scale; inner+=`<rect x="${lx+bw-dw}" y="${y}" width="${dw}" height="28" fill="var(--fig)" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${lx+bw-dw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">−${-n.delta}</text>`; }
   });
-  if(totalRow){ const y=8+data.length*rowH-14; inner+=`<path d="M${W-14},8 q8,0 8,8 L${W-6},${y/2} q0,6 6,6 q-6,0 -6,6 L${W-6},${y} q0,8 -8,8" fill="none" stroke="var(--stroke)" stroke-width="1.5"/><text x="${W-2}" y="${y/2+14}" text-anchor="end" fill="var(--ink)" font-size="13">${esc(totalRow[1])}</text>`; }
+  if(totalRow){ const y=8+data.length*rowH-14, bx=W-RG+10;
+    inner+=`<path d="M${bx},8 q8,0 8,8 L${bx+8},${y/2} q0,6 6,6 q-6,0 -6,6 L${bx+8},${y} q0,8 -8,8" fill="none" stroke="var(--stroke)" stroke-width="1.5"/><text x="${bx+20}" y="${y/2+14}" text-anchor="start" fill="var(--ink)" font-size="13">${esc(totalRow[1])}</text>`; }
   return SVG(W,H,inner);
 }
 function figUnitBar(fp){ // "Дана:1;Әсем:3;Барлығы:8"
