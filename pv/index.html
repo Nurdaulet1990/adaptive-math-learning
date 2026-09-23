@@ -811,6 +811,14 @@ let state = {
   started: false,
   questionNum: 0,
   questionsPerLevel: 10,
+  /* Owner's rule, 2026-09-23: a level is passed by answering `streakNeed` questions CORRECTLY IN A ROW,
+     not by getting 8 of 10 right in any order with a retry allowed on each. A run is the only thing that
+     shows the method has stuck; a count lets a child stumble through on luck and second attempts. The
+     level therefore does not end after a fixed ten questions — it ends when the run is complete, or when
+     the child has had `streakCap` questions to build one. */
+  streak: 0,
+  streakNeed: 8,
+  streakCap: 20,
   diagnostic: false,
   diagStep: 0,
   diagResults: [],
@@ -987,6 +995,9 @@ function selectLevel(modId, lvlId) {
   state.score=0;
   state.total=0;
   state.questionsPerLevel = COMP_LVL.has(lvlId) ? 5 : 10;
+  state.streak = 0;
+  state.streakNeed = COMP_LVL.has(lvlId) ? 4 : 8;   // the old mastery thresholds, now as a RUN
+  state.streakCap  = state.streakNeed + 12;
   state.placement = null;
   renderSidebar();
   renderMain();
@@ -1043,7 +1054,7 @@ function renderMain() {
     <div class="header">
       <h2>${mod.icon} ${mod.name}</h2>
       <span class="level-tag">${lvl.name}</span>
-      <span id="qCount" style="font-size:13px;color:var(--text-dim);font-family:'Space Mono',monospace">${state.questionNum+1}/${state.questionsPerLevel}</span>
+      <span id="qCount" style="font-size:13px;color:var(--text-dim);font-family:'Space Mono',monospace">қатарынан ${state.streak}/${state.streakNeed}</span>
     </div>
     <div class="workspace" id="workspace"></div>`;
   generateQuestion();
@@ -1052,7 +1063,7 @@ function renderMain() {
 function generateQuestion() {
   state.fbShown=false;   // one verdict per question — see showFeedback
   const ws=document.getElementById('workspace');
-  if(state.questionNum>=state.questionsPerLevel) {
+  if(state.streak>=state.streakNeed || state.questionNum>=state.streakCap) {
     showLevelComplete(ws);
     return;
   }
@@ -1061,7 +1072,7 @@ function generateQuestion() {
      the screen kept saying «1 / 10» for all ten. It is the only thing telling a child how far through they
      are, and it was lying for nine questions out of ten. Updated here, where the question changes. */
   const qc=document.getElementById('qCount');
-  if(qc) qc.textContent=`${state.questionNum+1}/${state.questionsPerLevel}`;
+  if(qc) qc.textContent=`қатарынан ${state.streak}/${state.streakNeed}`;
   const lv=state.level;
   const entry = QUESTION_DISPATCH.find(d => d.levels.has(lv));
   if(entry) entry.generate(ws);
@@ -2418,10 +2429,12 @@ function showFeedback(correct, hint) {
   const fb=document.getElementById('fb');
   if(correct) {
     state.score++;
+    state.streak++;
     state.stars++;
     fb.className='feedback show correct pop-in';
     fb.innerHTML=`<span class="star-anim">★</span> Дұрыс! Жарайсың!`;
   } else {
+    state.streak=0;                       // a run is a run: one miss and it starts again
     fb.className='feedback show wrong shake';
     fb.innerHTML=`✗ ${hint||'Қайта ойланыңыз'}`;
   }
@@ -2688,10 +2701,11 @@ function showAbilityMap(lastCorrectIdx) {
 // ║  Functions: showLevelComplete, goNextLevel                  ║
 // ╚═══════════════════════════════════════════════════════════════╝
 function showLevelComplete(ws) {
-  // Mastery threshold: 4/5 for comprehension, 8/10 for regular
-  const mastery = COMP_LVL.has(state.level) ? 4 : 8;
-  const pct=Math.round(state.score/state.questionsPerLevel*100);
-  const passed=state.score >= mastery;
+  // Passed by a RUN, not by a count — see state.streakNeed
+  const mastery = state.streakNeed;
+  const asked = Math.max(state.questionNum, 1);
+  const pct=Math.round(state.score/asked*100);
+  const passed=state.streak >= mastery;
   let unlockMsg = '';
   if(passed) {
     state.completed[state.level]=true;
@@ -2713,16 +2727,16 @@ function showLevelComplete(ws) {
       <div style="font-size:64px;margin-bottom:16px" class="star-anim">${passed?'🎉':'📚'}</div>
       <h2 style="font-size:28px;font-family:'Fredoka'">${passed?'Тамаша!':'Қайталап көріңіз'}</h2>
       <p style="font-size:18px;color:var(--text-dim);margin:12px 0">
-        ${state.score} / ${state.questionsPerLevel} дұрыс (${pct}%)
+        ${state.score} / ${asked} дұрыс (${pct}%)
       </p>
-      <p style="font-size:13px;color:var(--text-dim)">Меңгеру табалдырығы: ${mastery}/${state.questionsPerLevel}</p>
-      ${!passed?`<p style="font-size:13px;color:var(--error);margin-top:4px">Келесі деңгейге өту үшін кемінде ${mastery} дұрыс жауап қажет</p>`:''}
+      <p style="font-size:13px;color:var(--text-dim)">Өту шарты: қатарынан ${mastery} дұрыс жауап</p>
+      ${!passed?`<p style="font-size:13px;color:var(--error);margin-top:4px">Ең ұзын қатарың: ${state.streak}. Қатарынан ${mastery} керек — қайта көр.</p>`:''}
       <div style="display:flex;gap:4px;font-size:32px;margin:8px 0">
-        ${'★'.repeat(state.score)}${'☆'.repeat(state.questionsPerLevel-state.score)}
+        ${'★'.repeat(Math.min(state.streak,mastery))}${'☆'.repeat(Math.max(0,mastery-state.streak))}
       </div>
       ${unlockMsg}
       <div style="display:flex;gap:12px;margin-top:24px">
-        <button class="check-btn" onclick="state.questionNum=0;state.score=0;state.total=0;generateQuestion();">Қайталау</button>
+        <button class="check-btn" onclick="state.questionNum=0;state.score=0;state.total=0;state.streak=0;generateQuestion();">Қайталау</button>
         ${passed?`<button class="next-btn" onclick="goNextLevel()">Келесі деңгей →</button>`:''}
       </div>
     </div>`;
@@ -2747,6 +2761,6 @@ renderSidebar();
 renderMain();
 </script>
 <div id="app"></div>
-<script src="bridge.js?v=12"></script>
+<script src="bridge.js?v=13"></script>
 </body>
 </html>

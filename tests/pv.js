@@ -29,8 +29,12 @@ setTimeout(() => {
      functions land on window, the `let`/`const` bindings do not. w.eval runs in the page's own global
      scope, which can see both — the same reason the other suites ask the vm context for STAGES by name. */
   const ev = code => w.eval(code);
+  // renderMain does not start a level — startLevel does, and that is where the run is reset. Reset it here
+  // too, or a level opened straight after a completed one inherits a finished run and ends immediately.
   const open = (mod, lvl) => ev(`state.module=${JSON.stringify(mod)};state.level=${JSON.stringify(lvl)};`
-    + `state.questionNum=0;state.score=0;state.total=0;renderMain();`);
+    + `state.questionNum=0;state.score=0;state.total=0;state.streak=0;`
+    + `state.streakNeed=${'COMP_LVL.has(' + JSON.stringify(lvl) + ')?4:8'};state.streakCap=state.streakNeed+12;`
+    + `renderMain();`);
   const text = () => (doc.getElementById('main') || doc.body).textContent.replace(/\s+/g, ' ');
 
   // ── 1 · the column keeps its zeros ──────────────────────────────────────────────────
@@ -51,15 +55,17 @@ setTimeout(() => {
       { a: withZero.a, b: withZero.b, rows });
   }
 
-  // ── 2 · the counter moves ───────────────────────────────────────────────────────────
+  // ── 2 · the header counts the RUN, and it moves ─────────────────────────────────────
+  // It used to be «1/10» written once by renderMain and never touched again. It is now the thing the child
+  // is actually working towards, so it has to follow every verdict.
   open('d3', 'a3');
   const seen = [];
   for (let i = 0; i < 4; i++) {
     seen.push(doc.getElementById('qCount').textContent.trim());
-    ev('state.questionNum++');         // what showFeedback does after a verdict
+    ev('showFeedback(true)');          // a right answer
     ev('generateQuestion()');          // what the «Келесі →» button does
   }
-  T('the question counter follows the questions', seen.join(' ') === '1/10 2/10 3/10 4/10', seen);
+  T('the header follows the run', seen.join(' ') === 'қатарынан 0/8 қатарынан 1/8 қатарынан 2/8 қатарынан 3/8', seen);
 
   // ── 3 · the ten-frame does not finish the sum ───────────────────────────────────────
   const leaks = [];
@@ -99,6 +105,25 @@ setTimeout(() => {
     }
   }
   T('no Түсіну question carries its own answer in the stem', selfAnswering.length === 0, selfAnswering.slice(0, 3));
+
+  // ── 5 · a level is passed by a RUN, not by a count ──────────────────────────────────
+  const answer = ok => { ev(`showFeedback(${ok});`); ev('generateQuestion()'); };
+  open('d3', 'a3');
+  ev('state.streakNeed=8');
+  for (let i = 0; i < 7; i++) answer(true);
+  answer(false);                                   // one miss at the eighth
+  T('a miss puts the run back to nothing', ev('state.streak') === 0, ev('state.streak'));
+  T('…and the level is still running', !/Тамаша|Қайталап/.test(text()), text().slice(0, 60));
+  for (let i = 0; i < 7; i++) answer(true);
+  T('seven in a row is not yet a pass', !/Тамаша/.test(text()), ev('state.streak'));
+  answer(true);
+  T('the eighth in a row passes it', /Тамаша/.test(text()) && ev('state.streak') === 8, ev('state.streak'));
+
+  open('d3', 'a3');
+  ev('state.streakNeed=8');
+  let asked = 0;
+  while (asked < 30 && !/Тамаша|Қайталап/.test(text())) { answer(asked % 2 === 0); asked++; }
+  T('alternating right and wrong never passes, and the level does end', /Қайталап/.test(text()), { asked });
 
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);

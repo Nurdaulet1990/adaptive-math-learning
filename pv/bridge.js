@@ -48,8 +48,13 @@ const _fb=showFeedback; showFeedback=function(correct,hint){
    worth nought stars anywhere but PV's own header, which kept a private counter of its own.
    Shape and rule are core/runner.js finishTest's: keep every attempt, the best ratio is what scores
    (10/10 → 3, ≥9/10 → 2, ≥8/10 → 1). PV's short levels are 5 questions to pass 4 — 0.8, so one star. */
-const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.level, score=state.score, n=state.questionsPerLevel; const r=_lc.apply(this,arguments);
-  if(R&&lv){ const id=stageId(lv), pass=score>=(COMP_LVL.has(lv)?4:8);
+/* Passing is a RUN now (state.streak >= state.streakNeed, owner 2026-09-23), so the level no longer ends
+   after a fixed ten questions and `questionsPerLevel` is the wrong denominator. What the platform's star
+   rule wants is accuracy — right answers over questions asked — so that a clean run of eight is 8/8 and
+   three stars, while eight right out of thirteen tries passes the level and earns none. */
+const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.level, score=state.score,
+    n=Math.max(state.questionNum,1), passed=state.streak>=state.streakNeed; const r=_lc.apply(this,arguments);
+  if(R&&lv){ const id=stageId(lv), pass=passed;
     Core.event({ev:'test',stage:id,ok:score,n,pass});
     push();                                                   // mirror() runs here, so the stage row exists below
     const st=R.stages&&R.stages[id];
