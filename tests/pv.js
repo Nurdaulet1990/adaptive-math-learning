@@ -166,6 +166,18 @@ setTimeout(() => {
   ev('generateQuestion()');
   T('the next question is bare again', aids() === 0, aids());
 
+  /* The bug this pair is for: the map card carries stageId(levelId), and the tap handler turned that
+     number back into a POSITION — `PV-16 → LEVEL_ORDER[15]`. That was the same thing until the numbers
+     were written out and 28 levels inserted; after that, tapping a two-digit station opened whatever had
+     slid into index 15. A number is an identity here, and the only safe way back is to look it up. */
+  T('a station number is no longer its position — so nothing may index by it',
+    ev('LEVEL_ORDER.some((e,i) => STAGE_NO[e.levelId] !== i+1)'));
+  T('every station id maps back to its own level, and to no other', ev(`
+      (() => { const id = e => 'PV-' + String(STAGE_NO[e.levelId]).padStart(2,'0');
+        return LEVEL_ORDER.every(e => {
+          const hits = LEVEL_ORDER.filter(x => id(x) === id(e));
+          return hits.length === 1 && hits[0].levelId === e.levelId; }); })()`));
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   process.exit(failed ? 1 : 0);

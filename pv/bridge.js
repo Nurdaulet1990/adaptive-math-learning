@@ -145,7 +145,11 @@ function showMap(){
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
     <p class="hint">Станцияны басып көр · <a href="../">барлық бағыттар</a></p></div>`;
   showBack(false); Core.mapScroll();
-  Core.mapBind(id=>{ const idx=parseInt(id.slice(3),10)-1; const e=LEVEL_ORDER[idx]; if(!e) return;
+  /* Look the station up BY ITS ID, not by turning the number back into a position. The number stopped
+     being the position the moment STAGE_NO was written out and 28 twins were inserted — this line still
+     did `PV-16 → LEVEL_ORDER[15]`, so tapping a two-digit station opened whatever now sits at index 15.
+     The card carries stageId(levelId); this is the same function, read backwards. (2026-09-23) */
+  Core.mapBind(id=>{ const e=LEVEL_ORDER.find(x=>stageId(x.levelId)===id); if(!e) return;
     selectLevel(e.moduleId,e.levelId); });
   const dg=document.getElementById('pvdiag'); if(dg) dg.onclick=()=>{ showBack(true); startDiagnostic(); };
 }
