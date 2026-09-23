@@ -289,6 +289,12 @@ dbl_wrap(p,lvl){
     const shown=[a,b,d,e];
     if(!clean(x,...shown,q0,inner)) return null;
     if(new Set(shown).size!==shown.length) return null;
+    /* «示范数字不许出现巧合» (多步方程画法, §03). The picture shows the bracket's contents on one row and
+       the b equal parts on another; the whole point is that the x∣a boundary falls INSIDE a part, not on a
+       dividing line. When a is a whole number of parts the two coincide and the drawing quietly teaches
+       «the bit you add on IS one part», which is true of nothing but this draw. 1.2% of draws did it,
+       including (x + 8) : 3 · 5 = 40 — one part 8, added 8. */
+    if(a % q0 === 0) return null;
     const qq={stem:`(x + ${a}) : ${b} · ${d} = ${e}. x-ті тап.`, ans:String(x),
       h1:'Сырттан ішке қарай аш: ең соңғы амалды бірінші қайтар.',
       h2:`Ортаңғы мән = ${e} : ${d} = ${q0}`,
