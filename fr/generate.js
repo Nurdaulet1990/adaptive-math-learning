@@ -6,6 +6,7 @@ const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const shuffle=a=>a.slice().sort(()=>Math.random()-.5);
 const range=(p,def)=>{ const r=p||def; return rnd(r[0],r[1]); };
+const gcdF=(a,b)=>{ a=Math.abs(a); b=Math.abs(b); while(b){ const t=a%b; a=b; b=t; } return a; };
 const F=(n,d)=>`${n}/${d}`;
 const shape=(d,n,lvl)=>lvl===1?pick([{type:'pie',d,n},{type:'bar',d,n}]):pick([{type:'grid',d,n},{type:'bar',d,n},{type:'pie',d,n}]);
 /* build choices: values + HTML; correct first, then distinct distractors */
@@ -15,8 +16,13 @@ const fc=(n,d)=>({v:F(n,d),h:fracHTML(n,d)});
 const numChoices=(ans,ds)=>{ const s=new Set([ans]); ds.forEach(x=>{ if(x>0&&s.size<4) s.add(x); }); while(s.size<4) s.add(ans+rnd(1,5)); const arr=shuffle([...s]); return {choices:arr.map(String)}; };
 
 const GENERATORS={
-  /* FR-01 shaded part → fraction */
+  /* FR-01 shaded part → fraction.  p.kinds widens the pool: ['proper'] is the
+     original station; adding 'improper' / 'mixed' / 'whole' turns it into the
+     Rocket Math "identifying fractions" pool, which mixes all four from the
+     start rather than teaching proper fractions as if they were the only kind. */
   shade(p,lvl){
+    const kinds=p.kinds||['proper'];
+    if(kinds.length>1||kinds[0]!=='proper') return GENERATORS._shadeKinds(p,lvl,kinds);
     const d=lvl===1?rnd(2,6):lvl===2?rnd(4,Math.max(6,(p.d||[2,10])[1])):range(p.d,[3,10]); const n=rnd(1,d-1);
     const q={ans:F(n,d), ansHTML:fracHTML(n,d), h1:'Бөлімі — барлық тең бөлік саны. Алымы — боялған бөлік саны.',
       steps:[{label:'Бөлімі',expr:'барлық бөлік саны',val:String(d)},{label:'Алымы',expr:'боялған бөлік саны',val:String(n)}],
@@ -27,22 +33,20 @@ const GENERATORS={
 
   /* FR-02 compare: same denominator (lvl1-2) or same numerator (lvl3 sometimes) */
   compare(p,lvl){
-    let d1,d2,n1,n2; const sameNum=lvl===3&&Math.random()<0.5;
+    if(p.mode&&p.mode!=='same_den') return GENERATORS._compareMode(p,lvl);
+    let d1,d2,n1,n2; const sameNum=!p.mode&&lvl===3&&Math.random()<0.5;
     if(sameNum){ n1=n2=rnd(1,4); d1=rnd(n1+1,9); do{ d2=rnd(n1+1,12); }while(d2===d1); }
-    else { d1=d2=lvl===1?rnd(3,8):range(p.d,[3,12]); n1=rnd(1,d1-1); n2=rnd(1,d1-1); if(lvl===1&&n1===n2) n2=n1===1?2:n1-1; }
+    /* '=' has to be reachable. кпр.html excluded equality outright, and a child
+       works out inside three rounds that the third button is never the answer. */
+    else { d1=d2=lvl===1?rnd(3,8):range(p.d,[3,12]); n1=rnd(1,d1-1); n2=Math.random()<0.15?n1:rnd(1,d1-1); if(lvl===1&&n1===n2&&Math.random()<0.5) n2=n1===1?2:n1-1; }
     const v1=n1/d1,v2=n2/d2; const ans=v1>v2?'>':v1<v2?'<':'=';
-    /* At level 3 the two fractions go INTO the stem, and that one line is the
-       whole fix.  core/runner.js's startTest draws ten items and dedupes them by
-       stem+ans; this station's variation lives in exprHTML, which that dedupe
-       never sees.  With one fixed sentence and an answer out of {>,<,=} the
-       station offers three distinct items — under startTest's floor of six — so
-       it refuses to open the level test and says only "not enough questions".
-       finishTest is the only place a stage is marked 'passed', so a pupil whose
-       current station is this one could not leave it, however long they
-       practised.  The diagnostic places by index, so anyone put at FR-03 or
-       later never met this; a beginner met it at the second station.
-       The numbers belong in the stem anyway: level 3 is the text-only level,
-       and a screen reader cannot see exprHTML either. */
+    /* At level 3 the numbers go INTO the stem. core/runner.js's startTest draws
+       ten items and dedupes them by stem+ans; this station's variation lives in
+       exprHTML, which that dedupe never sees, so with a constant sentence and an
+       answer from {>,<,=} the whole station collapses to three distinct items —
+       below startTest's floor of six, and it then refuses to open the level
+       test WITHOUT SAYING SO. Since finishTest is the only thing that marks a
+       stage passed, a child sitting on this station could never leave it. */
     const q={stem:lvl===3?`${n1}/${d1} және ${n2}/${d2} — салыстыр. Тиісті белгіні таңда.`:'Бос орынға тиісті белгіні таңда.', exprHTML:`${fracHTML(n1,d1)}<span class="q">?</span>${fracHTML(n2,d2)}`, kind:'choice', choices:['>','<','='], ans,
       h1:sameNum?'Алымдары бірдей: бөлімі кіші болса — бөлік үлкен, демек бөлшек үлкен.':'Бөлімдері бірдей: алымы үлкені — үлкен бөлшек.',
       h2:sameNum?`Бөлімдерін салыстыр: ${d1} және ${d2}`:`Алымдарын салыстыр: ${n1} және ${n2}`,
@@ -52,6 +56,7 @@ const GENERATORS={
 
   /* FR-03 equivalent fractions n1/d1 = ?/d2 */
   equiv(p,lvl){
+    if(p.mode&&p.mode!=='expand') return GENERATORS._reduce(p,lvl);
     const d1=lvl===1?rnd(2,4):range(p.d,[2,8]); const n1=rnd(1,d1-1); const k=lvl===1?2:range(p.k,[2,4]); const n2=n1*k,d2=d1*k;
     const askDen=lvl===3&&Math.random()<0.4; const ans=askDen?String(d2):String(n2);
     const q={stem:'Сұрақ белгісінің орнындағы санды тап.', exprHTML:askDen?`${fracHTML(n1,d1)} = <span class="frac"><b>${n2}</b><i class="q">?</i></span>`:`${fracHTML(n1,d1)} = <span class="frac"><b class="q">?</b><i>${d2}</i></span>`, ans,
@@ -78,21 +83,47 @@ const GENERATORS={
 
   /* FR-05 add / subtract with the same denominator */
   addsub(p,lvl){
-    const d=lvl===1?rnd(3,8):range(p.d,[4,15]); const add=Math.random()<0.5; let n1,n2,res;
-    if(add){ n1=rnd(1,d-2); n2=rnd(1,d-1-n1); res=n1+n2; } else { n1=rnd(2,d-1); n2=rnd(1,n1-1); res=n1-n2; }
-    const op=add?'+':'−';
-    const q={stem:add?'Қосындыны тап.':'Айырманы тап.', exprHTML:`${fracHTML(n1,d)}<span>${op}</span>${fracHTML(n2,d)}<span>=</span><span class="q">?</span>`, ans:F(res,d), ansHTML:fracHTML(res,d),
-      h1:'Бөлімдері бірдей: бөлімі сол күйінде қалады, тек алымдарын '+(add?'қосамыз':'азайтамыз')+'.', steps:[{label:'Алымы',expr:`${n1} ${op} ${n2}`,val:String(res)}],
-      expl:`${n1}/${d} ${op} ${n2}/${d} = (${n1} ${op} ${n2})/${d} = ${res}/${d}.`};
-    if(lvl===1){ q.fig={type:'twobars',d1:d,n1,d2:d,n2,label1:`${n1}/${d}`,label2:`${n2}/${d}`}; }
+    /* Class comes from the stage row, not from chance: FR-05 stays under 1 and
+       already in lowest terms, FR-15 lands exactly on 1, FR-16 subtracts, FR-17
+       takes a fraction off a whole, FR-25 is the one that has to be reduced,
+       FR-26 the one that crosses 1.  FR_UTIL enforces it; _selfcheck asserts it.
+       Operands are in lowest terms too — before this, half the items showed the
+       child 6/9 or 2/10 as a normal way to write a number. */
+    const it=FR_UTIL.pickSameDen({op:p.op,reduce:p.reduce,cross:p.cross,from:p.from,d:lvl===1?[3,8]:p.d});
+    const d=it.d, n1=it.n1, n2=it.n2, op=it.op==='+'?'+':'−';
+    const res=it.op==='+'?n1+n2:n1-n2;
+    const ans=it.ansWhole!==undefined?String(it.ansWhole):(it.ansW?(it.ansN?`${it.ansW} ${it.ansN}/${it.ansD}`:String(it.ansW)):F(it.ansN,it.ansD));
+    const ansHTML=it.ansWhole!==undefined?'1':(it.ansW?(it.ansN?mixedHTML(it.ansW,it.ansN,it.ansD):String(it.ansW)):fracHTML(it.ansN,it.ansD));
+    const left=p.from==='whole'?'1':fracHTML(n1,d);
+    const q={stem:lvl===3
+        ? `${p.from==='whole'?'1':n1+'/'+d}  ${op}  ${n2}/${d} — ${it.op==='+'?'қосындыны':'айырманы'} тап.`
+        : (it.op==='+'?'Қосындыны тап.':'Айырманы тап.'), form:it.form,
+      exprHTML:`${left}<span>${op}</span>${fracHTML(n2,d)}<span>=</span><span class="q">?</span>`, ans, ansHTML,
+      h1:p.from==='whole'?`Бір бүтінді ${d}/${d} деп жаз — сонда бөлімдері бірдей болады.`
+        :'Бөлімдері бірдей: бөлімі сол күйінде қалады, тек алымдарын '+(it.op==='+'?'қосамыз':'азайтамыз')+'.',
+      h2:p.from==='whole'?`${d}/${d} − ${n2}/${d}`:`${n1} ${op} ${n2} = ${res}`,
+      steps:[].concat(p.from==='whole'?[{label:'Бүтінді бөлшекке айналдыр',expr:'1',val:`${d}/${d}`}]:[],
+        [{label:'Алымы',expr:`${n1} ${op} ${n2}`,val:String(res)}],
+        it.form==='whole'?[{label:'Жауабы',expr:`${d}/${d}`,val:'1'}]:
+        it.form==='mixed'?[{label:'Бүтінге көш',expr:`${res}/${d}`,val:ans}]:
+        (p.reduce?[{label:'Қысқарт',expr:`${res}/${d}`,val:ans}]:[])),
+      expl:`${p.from==='whole'?`1 = ${d}/${d}, `:''}${n1}/${d} ${op} ${n2}/${d} = ${res}/${d}${ans!==F(res,d)?` = ${ans}`:''}.`};
+    if(lvl===1) q.fig={type:'twobars',d1:d,n1,d2:d,n2,label1:`${n1}/${d}`,label2:`${n2}/${d}`};
     else q.hfig={type:'twobars',d1:d,n1,d2:d,n2,label1:`${n1}/${d}`,label2:`${n2}/${d}`};
-    if(lvl<3) Object.assign(q,fracChoices(fc(res,d),[fc(res,2*d),fc(add?res+1:res-1||res+1,d),fc(add?n1:n1+n2,d),fc(res,d-1)])); else q.kind='input';
+    if(lvl<3) Object.assign(q,FR_CHOICES({v:ans,h:ansHTML},[
+      {v:F(res,2*d),h:fracHTML(res,2*d)},                       /* added the denominators too */
+      {v:F(res,d),h:fracHTML(res,d)},                           /* forgot to reduce / convert */
+      {v:F(it.op==='+'?res+1:Math.max(1,res-1),d),h:fracHTML(it.op==='+'?res+1:Math.max(1,res-1),d)},
+      {v:F(n1,d),h:fracHTML(n1,d)}]));
+    else q.kind='input';
     return q; },
 
   /* FR-06 improper → mixed */
   mixed(p,lvl){
-    const d=lvl===1?rnd(2,4):range(p.d,[3,8]); const whole=lvl===1?rnd(1,2):range(p.w,[1,5]); const rem=rnd(1,d-1); const top=whole*d+rem;
-    const q={stem:'Бұрыс бөлшекті аралас сан түрінде жаз.', exprHTML:`${fracHTML(top,d)}<span>=</span><span class="q">?</span>`, ans:`${whole} ${rem}/${d}`, ansHTML:mixedHTML(whole,rem,d),
+    const it=FR_UTIL.pickImproper({w:lvl===1?[1,2]:p.w,d:lvl===1?[2,4]:p.d,dir:p.dir||'to_mixed'});
+    if(it.dir==='to_improper') return GENERATORS._toImproper(it,lvl);
+    const d=it.d, whole=it.w, rem=it.n, top=it.top;
+    const q={form:'mixed', stem:'Бұрыс бөлшекті аралас сан түрінде жаз.', exprHTML:`${fracHTML(top,d)}<span>=</span><span class="q">?</span>`, ans:`${whole} ${rem}/${d}`, ansHTML:mixedHTML(whole,rem,d),
       h1:`${top}-де неше толық ${d} бар? Қалдығы — бөлшек бөлігінің алымы.`,
       steps:[{label:'Бүтін бөлігі',expr:`${top} : ${d} (толық бүтіндер)`,val:String(whole)},{label:'Қалдығы',expr:`${top} − ${whole} · ${d}`,val:String(rem)}],
       expl:`${top} : ${d} = ${whole} (қалдық ${rem}). Демек ${top}/${d} = ${whole} ${rem}/${d}.`};
@@ -103,7 +134,9 @@ const GENERATORS={
 
   /* FR-07 fraction of a number */
   part_of(p,lvl){
-    const d=lvl===1?rnd(2,4):range(p.d,[2,8]); const k=lvl===1?rnd(2,4):range(p.k,[2,9]); const total=d*k; const m=lvl===3?rnd(1,d-1):1; const ans=k*m;
+    const it=FR_UTIL.pickUnitOf({d:lvl===1?[2,4]:p.d,k:lvl===1?[2,4]:p.k,
+      num:p.num!==undefined?p.num:(lvl===3?[1,9]:1)});
+    const d=it.d, k=it.k, total=it.tot, m=it.num, ans=it.ans;
     const item=pick([['алма','🍎'],['кәмпит','🍬'],['шар','🎈'],['кітап','📚'],['қалам','✏️']]);
     const fr=m===1?`1/${d}`:`${m}/${d}`;
     const q={stem:`Себетте ${total} ${item[0]} бар. Оның ${fr} бөлігі берілді. Неше ${item[0]} берілді?`, ans:String(ans),
