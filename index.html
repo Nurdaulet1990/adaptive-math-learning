@@ -68,7 +68,7 @@
 </head>
 <body>
 <div id="app" class="app"></div>
-<script src="core/core.js?v=11"></script>
+<script src="core/core.js?v=12"></script>
 <script src="room/routes.js?v=1"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
@@ -222,7 +222,7 @@
       box.innerHTML=`<div class="card"><h2 style="margin:0 0 2px">Сыныбың көрсетілмеген</h2>
         <p class="note" style="margin:0 0 10px">Сыныбыңды таңда — сонда сынып тақтасынан өз орныңды көресің.</p>
         <div class="row"><select class="big" id="myKl" style="flex:1"><option value="">Сынып…</option>${
-          list.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('')}</select>
+          Core.klassOptions(list)}</select>
         <button class="btn" id="myKlGo" style="flex:none">Сақтау</button></div>
         <p class="note" id="myKlMsg" style="margin:8px 0 0"></p></div>`;
       document.getElementById('myKlGo').onclick=async()=>{

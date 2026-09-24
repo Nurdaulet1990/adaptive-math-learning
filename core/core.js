@@ -158,7 +158,7 @@
       /* The class is chosen, never typed: one child's «5 БАРЫС» and another's «БАРЫС5» used to be two classes,
          which split every class board into groups of one. The list is the teacher's, from esep_classes(). */
       rpc('esep_classes',{}).then(list=>{ const sel=$('c_kl'); if(!sel||!Array.isArray(list)||!list.length) return;
-        sel.innerHTML='<option value="">Сынып…</option>'+list.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');
+        sel.innerHTML='<option value="">Сынып…</option>'+klassOptions(list);
         const last=ls.get('esep_klass'); if(last&&list.indexOf(last)>=0) sel.value=last;
       }).catch(()=>{});
       async function go(){
@@ -186,10 +186,25 @@
     });
   }
 
+  /* <option> list for a class <select>, grouped by year.
+     The school has a Samuryq and a Qyran in grade 2 AND in grade 3, so four names that read almost alike sit
+     in one list. The grade is the front of the name («2 SAMURYQ») — that is also where esep_board reads it
+     from — so grouping needs no extra field: split on the leading digits. Classes without one (old free-text
+     names) keep their place at the end, ungrouped. With a single group the <optgroup> is dropped: a school
+     with one year does not need a heading saying so. */
+  function klassOptions(list){
+    const opt=k=>`<option value="${esc(k)}">${esc(k)}</option>`;
+    const gr=k=>{ const m=/^\d+/.exec(k); return m?+m[0]:null; };
+    const years=[...new Set(list.map(gr))].sort((a,b)=>(a==null?99:a)-(b==null?99:b));
+    if(years.length<2) return list.map(opt).join('');
+    return years.map(g=>{ const ks=list.filter(k=>gr(k)===g).map(opt).join('');
+      return g==null?ks:`<optgroup label="${g}-сынып">${ks}</optgroup>`; }).join('');
+  }
+
   /* ── public API ── */
   const Core={
     version:'1.0', online:true, student:null, config:CFG,
-    isCorrect, esc,
+    isCorrect, esc, klassOptions,
     /** Ensure a logged-in student and load the full state. Renders the login card into #app when needed. */
     async login(){
       let row=null;

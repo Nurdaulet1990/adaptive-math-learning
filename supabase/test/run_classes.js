@@ -135,6 +135,63 @@ const out = []; const T = (name, ok, extra) => { out.push(ok); console.log(ok ? 
   T('the teacher may still move anyone, placed or not',
     (await tcl('esep_t_set_class', { p_student: await one(`select id::text v from students where name='Малика'`).then(r => r.v), p_klass: '5' })) === true);
 
+  // ── 13: the class carries its grade ───────────────────────────────────
+  // The school has a Samuryq and a Qyran in grade 2 AND in grade 3. classes.name is the primary key, so
+  // without the grade in front of the name the two Samuryqs are one row: one board, one average, ~50 pupils.
+  await pg.query(`insert into esep_private.classes(name) values ('ARLAN') on conflict do nothing`);  // a name with no number in front, as a free-text era class could be
+  await file('13_grades.sql'); await file('13_grades.sql');          // additive and re-runnable
+  const gradeOf = async n => (await one(`select grade v from esep_private.classes where name=$1`, [n])).v;
+  T('the four classes of this school are there, two per year',
+    (await val(`select count(*)::int v from esep_private.classes where name in ('2 SAMURYQ','2 QYRAN','3 SAMURYQ','3 QYRAN')`)) === 4);
+  T('Samuryq in grade 2 and Samuryq in grade 3 are two different classes',
+    (await gradeOf('2 SAMURYQ')) === 2 && (await gradeOf('3 SAMURYQ')) === 3);
+  T('the classes that were already there kept their number as their grade', (await gradeOf('5')) === 5);
+  T('…and one whose name never began with a number has no grade, as before', (await gradeOf('ARLAN')) === null);
+
+  const badGrade = async () => { try { await pg.query(`insert into esep_private.classes(name,grade) values ('QYRAN',2)`); return false; }
+    catch (e) { return /classes_grade_matches_name/.test(e.message); } };
+  T('the column can never disagree with the name: «QYRAN» filed under grade 2 is refused', await badGrade());
+
+  T('the teacher types the name and picks the year; the stored name gets the year in front',
+    (await tcl('esep_t_class_add', { p_name: 'Bürkit', p_grade: 4 })) && (await gradeOf('4 BÜRKIT')) === 4);
+  T('a name that already starts with its year is not given a second one',
+    (await tcl('esep_t_class_add', { p_name: '4 Sunqar', p_grade: 4 })) && (await gradeOf('4 SUNQAR')) === 4 &&
+    (await val(`select count(*)::int v from esep_private.classes where name like '%SUNQAR%'`)) === 1);
+  T('a name and a year that contradict each other are refused, not guessed at',
+    (await tcl('esep_t_class_add', { p_name: '3Ә', p_grade: 2 })).error === 'grade' &&
+    (await val(`select count(*)::int v from esep_private.classes where name='3Ә'`)) === 0);
+  T('a cached teacher page that sends no year at all still works, and the year is read off the name',
+    (await tcl('esep_t_class_add', { p_name: '1А' })) && (await gradeOf('1А')) === 1);
+  T('a name login would refuse for length is refused here, not left for a pupil to fail on',
+    (await tcl('esep_t_class_add', { p_name: 'QARLYGASHTAR', p_grade: 2 })).error === 'long' &&
+    (await val(`select count(*)::int v from esep_private.classes where name like '%QARLYG%'`)) === 0);
+  T('the list a pupil picks from comes back in year order',
+    JSON.stringify((await rpc('esep_classes', {})).slice(0, 3)) === JSON.stringify(['1А', '2 QYRAN', '2 SAMURYQ']),
+    await rpc('esep_classes', {}));
+  T('the teacher\'s list reports the year for every class',
+    ((await tcl('esep_t_classes', {})) || []).filter(c => c.name === '2 QYRAN')[0].grade === 2);
+
+  // and the payoff: «2 SAMURYQ» is 9 characters, so a child can actually log into it, and the board then
+  // compares her class with the OTHER class of her year — not with the third-graders.
+  await pg.query(`insert into students(name,pin,klass) values
+    ('Аяна','1010','2 SAMURYQ'),('Бекзат','1011','2 SAMURYQ'),('Дамир','1012','2 SAMURYQ'),
+    ('Ерке','1013','2 QYRAN'),('Жанель','1014','2 QYRAN'),('Зере','1015','2 QYRAN'),
+    ('Иман','1016','3 SAMURYQ'),('Küläş','1017','3 SAMURYQ'),('Лаура','1018','3 SAMURYQ')`);
+  await pg.query(`update students s set last_seen = now(),
+    state = jsonb_build_object('AR', jsonb_build_object('stages', (
+      select jsonb_object_agg('AR-' || lpad(i::text,2,'0'),
+               jsonb_build_object('status','passed','tests', jsonb_build_array(jsonb_build_object('t', $1::bigint, 'ok', 10, 'n', 10))))
+        from generate_series(1, q.k) i)))
+    from (select id, row_number() over (order by name)::int as k from students where name !~* 'tester') q
+   where q.id = s.id`, [Date.now()]);
+  const ayanaLogin = await rpc('esep_login', { p_name: 'Аяна', p_pin: '1010', p_klass: '2 SAMURYQ', p_code: '' });
+  T('a nine-character class name passes the login check', !!ayanaLogin.token && ayanaLogin.student.klass === '2 SAMURYQ', ayanaLogin);
+  const brd2 = await rpc('esep_board', { p_token: ayanaLogin.token });
+  const seen = (brd2.classes || []).map(c => c.klass).sort();
+  T('her board compares her class with the other class of her year, and with no other year',
+    JSON.stringify(seen) === JSON.stringify(['2 QYRAN', '2 SAMURYQ']), seen);
+  T('and she is ranked inside her own three, not across the whole year', brd2.me.of === 3, brd2.me);
+
   // ── the 405: a public esep_* function must be VOLATILE ──────────────────
   // PostgREST serves a STABLE or IMMUTABLE function over GET only and answers a POST with 405, before the
   // function runs. core.js posts everything. On 2026-09-21 this took the class board and the star purse off

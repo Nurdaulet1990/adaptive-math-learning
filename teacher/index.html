@@ -10,7 +10,7 @@
 </head>
 <body>
 <div id="app" class="app wide"></div>
-<script src="../core/core.js?v=11"></script>
+<script src="../core/core.js?v=12"></script>
 <script src="../room/routes.js?v=1"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
@@ -115,24 +115,41 @@ async function renderClasses(){
     box.innerHTML=`<h2>Сыныптар</h2><p class="note">Бұл мүмкіндік әлі орнатылмаған (supabase/08_classes.sql).</p>`; return; }
   T.classes=list;
   const stray=list.filter(c=>!c.listed);
-  box.innerHTML=`<div class="rt-head" style="padding:0"><h2 style="margin:0">Сыныптар</h2><span class="note">оқушы тек тізімнен таңдайды</span></div>
-    <div style="overflow-x:auto"><table class="t3" style="margin-top:8px"><tr><th style="text-align:left">Сынып</th><th>Оқушы</th><th></th></tr>
-    ${list.map(c=>`<tr><td style="text-align:left"><b>${esc(c.name)}</b>${c.listed?'':' <span class="chip">тізімде жоқ</span>'}</td><td>${+c.pupils}</td>
+  /* Grouped by year, because the same class name lives in two years here — Samuryq and Qyran exist in both
+     grade 2 and grade 3. The grade is part of the name («2 SAMURYQ»), so the two are different classes to the
+     server; grouping is what makes that visible instead of looking like a duplicate. A class with no grade
+     (an old free-text one) is gathered under «деңгейсіз» — it also gets no class board, so it wants fixing. */
+  const grades=[...new Set(list.map(c=>c.grade==null?null:+c.grade))].sort((a,b)=>(a==null?99:a)-(b==null?99:b));
+  const row=c=>`<tr><td style="text-align:left"><b>${esc(c.name)}</b>${c.listed?'':' <span class="chip">тізімде жоқ</span>'}</td><td>${+c.pupils}</td>
       <td style="white-space:nowrap">${c.pupils?`<select data-merge="${esc(c.name)}" style="font-size:.85rem"><option value="">біріктіру →</option>${
         list.filter(x=>x.listed&&x.name!==c.name).map(x=>`<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}</select>`
-        :`<a href="#" data-del="${esc(c.name)}">өшіру</a>`}</td></tr>`).join('')}
+        :`<a href="#" data-del="${esc(c.name)}">өшіру</a>`}</td></tr>`;
+  box.innerHTML=`<div class="rt-head" style="padding:0"><h2 style="margin:0">Сыныптар</h2><span class="note">оқушы тек тізімнен таңдайды</span></div>
+    <div style="overflow-x:auto"><table class="t3" style="margin-top:8px"><tr><th style="text-align:left">Сынып</th><th>Оқушы</th><th></th></tr>
+    ${grades.map(g=>{ const cs=list.filter(c=>(c.grade==null?null:+c.grade)===g);
+      return `<tr><td colspan="3" style="text-align:left;background:var(--bg2,#f3f0e8);font-weight:600">${g==null?'деңгейсіз':g+'-сынып'} · ${cs.length} сынып · ${cs.reduce((s,c)=>s+ +c.pupils,0)} оқушы</td></tr>`
+        + cs.map(row).join(''); }).join('')}
     </table></div>
-    <p class="note" style="margin-top:10px">Жаңа сынып: <input class="big" id="clsNew" placeholder="3Ә" style="width:110px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" id="clsAdd">Қосу</button></p>
+    <p class="note" style="margin-top:10px">Жаңа сынып:
+      <select id="clsGr" class="big" style="width:110px;display:inline-block;font-size:1rem;padding:8px"><option value="">деңгей…</option>${
+        [1,2,3,4,5].map(g=>`<option value="${g}">${g}-сынып</option>`).join('')}</select>
+      <input class="big" id="clsNew" placeholder="Samuryq" style="width:130px;display:inline-block;font-size:1rem;padding:8px">
+      <button class="btn ghost" id="clsAdd">Қосу</button></p>
+    <p class="note">Деңгейді таңдасаң, аты «2 SAMURYQ» болып сақталады — сынып атының алдындағы сан оның деңгейі.
+      Ол сан болмаса, сынып тақтасы қай сыныптармен салыстыруды білмейді.
+      Бұрыннан бар сынып<b>тың атын өзгертпе</b>: жаңасын қосып, ескісін соған <b>біріктір</b> — оқушылар бірге көшеді.</p>
     ${stray.length?`<p class="note" style="color:var(--bad)">Тізімде жоқ ${stray.length} жазылым бар — оларды дұрыс сыныпқа біріктір, сонда сынып тақтасы қайта жұмыс істейді.</p>`:''}
     <p class="note" id="clsMsg"></p>`;
   const run=async(fn,args)=>{ try{ $('clsMsg').textContent=''; const r=await trpc(fn,args);
-      if(r&&r.error){ $('clsMsg').textContent=r.error==='not_empty'?'Ішінде оқушысы бар сыныпты өшіруге болмайды.':r.error==='into'?'Мұндай сынып жоқ.':'Болмады.'; return; }
+      if(r&&r.error){ $('clsMsg').textContent=r.error==='not_empty'?'Ішінде оқушысы бар сыныпты өшіруге болмайды.':r.error==='into'?'Мұндай сынып жоқ.'
+        :r.error==='grade'?'Деңгей мен аттың алдындағы сан сәйкес келмейді.':r.error==='long'?'Аты тым ұзын (12 таңбадан аспасын).':'Болмады.'; return; }
       await renderClasses(); await showTeacher(); }
     catch(e){ $('clsMsg').textContent='Қате: '+e.message; } };
   box.querySelectorAll('[data-merge]').forEach(sel=>sel.onchange=()=>{ if(!sel.value) return;
     run('esep_t_class_merge',{p_from:sel.dataset.merge,p_into:sel.value}); });
   box.querySelectorAll('[data-del]').forEach(a=>a.onclick=e=>{ e.preventDefault(); run('esep_t_class_delete',{p_name:a.dataset.del}); });
-  $('clsAdd').onclick=()=>{ const v=($('clsNew').value||'').trim(); if(v) run('esep_t_class_add',{p_name:v}); };
+  $('clsAdd').onclick=()=>{ const v=($('clsNew').value||'').trim(), g=($('clsGr').value||'').trim();
+    if(v) run('esep_t_class_add', g?{p_name:v,p_grade:+g}:{p_name:v}); };
 }
 async function renderClassDay(rows){
   const box=$('dayBody'); if(!box) return; if(!rows.length){ box.innerHTML='<p class="note">Оқушы жоқ.</p>'; return; }
