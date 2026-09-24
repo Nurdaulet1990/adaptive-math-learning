@@ -228,6 +228,42 @@ setTimeout(() => {
   }
   T('every column of the disc chart is left holding the answer', wrongCols.length === 0, wrongCols);
 
+  /* Every level has to yield its OWN placement question. genPlacementQ matches ids exactly, so the moment
+     twins existed they all fell through to the «1 + 1 = ?» at the bottom of the chain — shown under the
+     twin's own heading, and answered correctly by everyone, which sent the placement ladder climbing into
+     the four-digit levels on the strength of it. */
+  const fellThrough = ev(`
+    LEVEL_ORDER.map(e => e.levelId).filter(id => {
+      const q = genPlacementQ(id);
+      return q.q === '1 + 1 = ?' && id !== 'a1';
+    })`);
+  T('no level falls through to the placement fallback', fellThrough.length === 0, fellThrough.slice(0, 6));
+  T('a twin asks its parent\'s placement question', ev(`
+      LEVEL_ORDER.map(e=>e.levelId).filter(id=>NOFIG.has(id))
+        .every(id => genPlacementQ(id).sub === genPlacementQ(id.slice(0,-2)).sub)`));
+
+  // ── 8 · the placement test, driven to the top ───────────────────────────────────────
+  // Answer everything right and it should climb the PARENT levels only, ask a real question each time,
+  // and finish on the last one. This is the run that was showing «1 + 1 = ?» under a twin's heading and
+  // then, because everyone gets that right, carrying children into the four-digit levels.
+  ev('startDiagnostic()');
+  const probes = [], tags = [];
+  for (let i = 0; i < 40 && ev('state.placement && state.placement.active'); i++) {
+    probes.push((doc.querySelector('.pt-q') || {}).textContent || '');
+    tags.push(ev('PLACE_ORDER[Math.min(state.placement.currentIdx, PLACE_ORDER.length-1)].levelId'));
+    const btn = doc.querySelector('.check-btn');
+    const m = /checkPlacement\((-?\d+)\)/.exec(btn.getAttribute('onclick') || '');
+    const inp = doc.getElementById('pt-ans'); inp.value = m[1];
+    ev(`checkPlacement(${m[1]})`);
+  }
+  T('the ladder never asks the fallback question', !probes.includes('1 + 1 = ?'),
+    probes.filter(q => q === '1 + 1 = ?').length + ' of ' + probes.length);
+  T('…and it only ever probes parent levels', tags.every(t => !ev('NOFIG').has(t)),
+    tags.filter(t => ev('NOFIG').has(t)).slice(0, 4));
+  T(`…and a child who gets everything right lands on the last level (${probes.length} questions)`,
+    ev('state.unlockedUpTo') === ev('LEVEL_ORDER.length - 1'),
+    { at: ev('state.unlockedUpTo'), of: ev('LEVEL_ORDER.length - 1') });
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   process.exit(failed ? 1 : 0);

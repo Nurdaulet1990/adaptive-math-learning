@@ -824,6 +824,11 @@ for(const m of MODULES) {
 function getLevelGlobalIndex(levelId) {
   return LEVEL_ORDER.findIndex(x => x.levelId === levelId);
 }
+/* The placement ladder walks the PARENTS only. A twin asks its parent's question word for word, so
+   probing both spends a rung to learn nothing — and with twins in, a 48-rung ladder had become 76. The
+   result is translated back to a LEVEL_ORDER position at the end, where the unlocking happens, so the
+   twins still unlock along with their parents. (2026-09-23) */
+const PLACE_ORDER = LEVEL_ORDER.filter(e => !NOFIG.has(e.levelId));
 
 function isLevelUnlocked(levelId) {
   const idx = getLevelGlobalIndex(levelId);
@@ -2581,8 +2586,13 @@ window.resetProgress = function() {
 // No visual blocks, silent skip on wrong, ability map at the end.
 
 function genPlacementQ(levelId) {
-  // Generate a text-only question {q, sub, answer} for any level
-  const lv=levelId;
+  /* Text-only question for any level. The branches below match level ids exactly, so a no-picture twin
+     («s20b_n») matched none of them and fell through to the «1 + 1 = ?» fallback at the bottom — which the
+     placement test then showed under the heading «Азайту, алумен · суретсіз», and which every child got
+     right, so the ladder climbed all the way into the four-digit levels on the strength of it. A twin is
+     its parent's content; ask its parent's question. Both callers are covered here: the placement test and
+     genComprehension, neither of which goes through generateQuestion's level swap. (2026-09-23) */
+  const lv=baseLevel(levelId);
   /* c1 is «count the ones», and these questions are deliberately text-only — the placement test shows no
      blocks, and the Түсіну levels reuse the same bank (genComprehension). «9 — бұл қандай сан?» with the
      blocks taken away therefore prints the number and asks what the number is: the answer is in the
@@ -2653,8 +2663,8 @@ window.startDiagnostic = function() {
 function renderPlacementQuestion() {
   const p = state.placement;
   if(!p || !p.active) return;
-  const idx = Math.max(0, Math.min(p.currentIdx, LEVEL_ORDER.length-1));
-  const entry = LEVEL_ORDER[idx];
+  const idx = Math.max(0, Math.min(p.currentIdx, PLACE_ORDER.length-1));
+  const entry = PLACE_ORDER[idx];
   const mod = MODULES.find(m=>m.id===entry.moduleId);
   const lvl = mod.levels.find(l=>l.id===entry.levelId);
   const qData = genPlacementQ(entry.levelId);
@@ -2668,7 +2678,7 @@ function renderPlacementQuestion() {
     </div>
     <div class="diag-progress">
       <span class="pt-num">Сұрақ ${p.questionCount}</span>
-      <div class="diag-bar"><div class="diag-fill" style="width:${(idx/LEVEL_ORDER.length*100).toFixed(0)}%"></div></div>
+      <div class="diag-bar"><div class="diag-fill" style="width:${(idx/PLACE_ORDER.length*100).toFixed(0)}%"></div></div>
     </div>
     <div class="pt-question-area pop-in">
       <div class="pt-q">${qData.q}</div>
@@ -2698,9 +2708,9 @@ window.checkPlacement = function(correctAnswer) {
   if(correct) {
     p.consecutiveWrong = 0;
     p.maxReached = Math.max(p.maxReached, p.currentIdx);
-    p.currentIdx = Math.min(p.currentIdx + 3, LEVEL_ORDER.length - 1);
+    p.currentIdx = Math.min(p.currentIdx + 3, PLACE_ORDER.length - 1);
     // If already at the end, finish
-    if(p.currentIdx >= LEVEL_ORDER.length - 1 && p.maxReached >= LEVEL_ORDER.length - 1) {
+    if(p.currentIdx >= PLACE_ORDER.length - 1 && p.maxReached >= PLACE_ORDER.length - 1) {
       finishPlacement();
       return;
     }
@@ -2725,11 +2735,13 @@ function finishPlacement() {
   }
   // Unlock all levels up to and including lastCorrectIdx, start from next
   if(lastCorrectIdx >= 0) {
-    for(let i=0; i<=lastCorrectIdx; i++) {
+    // the ladder's rungs are PLACE_ORDER positions; unlocking happens in LEVEL_ORDER, twins included
+    const gi = LEVEL_ORDER.findIndex(x => x.levelId === PLACE_ORDER[lastCorrectIdx].levelId);
+    for(let i=0; i<=gi; i++) {
       state.completed[LEVEL_ORDER[i].levelId] = true;
     }
-    state.unlockedUpTo = Math.min(lastCorrectIdx + 1, LEVEL_ORDER.length - 1);
-    state.stars += (lastCorrectIdx + 1) * 3; // auto-award stars
+    state.unlockedUpTo = Math.min(gi + 1, LEVEL_ORDER.length - 1);
+    state.stars += (gi + 1) * 3; // auto-award stars
   } else {
     state.unlockedUpTo = 0;
   }

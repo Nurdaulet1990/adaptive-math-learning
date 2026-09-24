@@ -77,7 +77,7 @@ const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.leve
    so the ceiling is restored here. Same rule as core/runner.js and wp/diag_test.js. */
 const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const before=state.unlockedUpTo||0; const r=_fp.apply(this,arguments);
   if((state.unlockedUpTo||0)<before) state.unlockedUpTo=before;
-  if(R){ const results={}; hist.forEach(h=>{ results[stageId(LEVEL_ORDER[h.idx].levelId)]=h.correct?'pass':'fail'; }); const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1); R.diag={t:Date.now(),placed:stageId(LEVEL_ORDER[cur].levelId),results,n:hist.length}; Core.event({ev:'diag',placed:R.diag.placed,results}); push(); } return r; };
+  if(R){ const results={}; hist.forEach(h=>{ results[stageId(PLACE_ORDER[h.idx].levelId)]=h.correct?'pass':'fail'; }); const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1); R.diag={t:Date.now(),placed:stageId(LEVEL_ORDER[cur].levelId),results,n:hist.length}; Core.event({ev:'diag',placed:R.diag.placed,results}); push(); } return r; };
 
 /* ── the platform map as PV's home screen ──────────────────────────────────
    PV keeps its own question screens (48 levels of tested code), but the way in is the same as every
