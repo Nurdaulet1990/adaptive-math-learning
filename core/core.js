@@ -11,7 +11,7 @@
     SB_KEY:'sb_publishable_K489qSbIMCL7yXYrQwrDnQ_4LxZ1nkH',
     ROUTES:[ // code, Kazakh name, url (folder relative to repo root, or full url while a route is still hosted elsewhere), status, grades
       ['WP','Мәтінді есептер','wp/','live','1–5'],
-      ['FR','Бөлшектер','fr/','live','3–5'],
+      ['FR','Бөлшектер','fr/','live','3–6'],
       ['PV','Орын мәні','pv/','live','1–4'],
       ['AR','Көбейту мен бөлу','ar/','live','2–5'],
       ['TE','Теңдеулер','te/','live','1–4'],

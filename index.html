@@ -68,7 +68,7 @@
 </head>
 <body>
 <div id="app" class="app"></div>
-<script src="core/core.js?v=12"></script>
+<script src="core/core.js?v=13"></script>
 <script src="room/routes.js?v=1"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
@@ -166,9 +166,13 @@
   html+=`<div id="board"></div>`;
   html+=`<div id="noclass"></div>`;   // shown only when the pupil has no class: the board cannot exist without one   // filled after the first paint: the board is one extra request and must never hold the page up
   if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
+  /* how many stations a route has, for the card a child sees BEFORE the placement test —
+     after it, p.total is the real thing. Hard-coded because the portal does not load any
+     route's stages.js. Keep in step with <route>/stages.js. */
+  const COUNT={WP:13,FR:50,PV:48,AR:41,TE:20};
   Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
-    const total=p?p.total:(code==='PV'?48:code==='WP'?13:code==='TE'?20:7);
+    const total=p?p.total:(COUNT[code]||7);
     const at=p&&p.diag?p.cur:-1;
     html+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
       <div class="rt-head"><span class="rt-name">${esc(name)}</span><span class="rt-go">${live?(p&&p.diag?'жалғастыру':'бастау'):'жақында'}</span></div>
