@@ -13,7 +13,8 @@
      order, and `arr.sort(()=>Math.random()-.5)` would then eat the random stream differently in Chrome and Safari.
    Each browser also reports a fingerprint of its sheet, so a device that did get something else is flagged.
 
-   PV is a legacy single-file route with no generator module: it cannot be used here. */
+   PV is a legacy single-file route with no generator module: it cannot be used here (its station names can still
+   be read, from the generated pv/stages.js). */
 (function(){
   'use strict';
   const V='1';                                   // BUMP whenever ANY route's stages / figs / generators change: two devices holding
@@ -22,6 +23,7 @@
   const FILES=Object.assign(Object.create(null),{ AR:['stages.js','figs.js','figs2.js','generate.js','generate2.js'], FR:['stages.js','figs.js','generate.js'],
                 TE:['stages.js','figs.js','generate.js'], WP:['stages.js','bank.js','generate.js'] });
   const FOLDER={AR:'ar',FR:'fr',TE:'te',WP:'wp'};
+  const NAMES={AR:'ar',FR:'fr',TE:'te',WP:'wp',PV:'pv'};   // routes with a stages.js to read NAMES from: PV's is generated (pv/stages_gen.js), names only
   const NO_ROOM=new Set(['speed']);              // a whole timed drill inside one "question" — it is a game of its own
   const FAST=new Set(['table','divfact']);       // recall facts: ten of them, three minutes
   const cache=Object.create(null), names=Object.create(null);
@@ -45,8 +47,8 @@
   const once=(store,key,make)=>store[key]||(store[key]=make().catch(e=>{ delete store[key]; throw e; }));
   function load(route){ if(!FILES[route]) return Promise.reject(new Error('no such route'));
     return once(cache,route,()=>Promise.all(FILES[route].map(f=>get(ROOT+FOLDER[route]+'/'+f+'?r='+V))).then(src=>evalRoute(src.join('\n;\n')))); }
-  function stageNames(route){ if(!FILES[route]) return Promise.resolve({});
-    return once(names,route,()=>get(ROOT+FOLDER[route]+'/stages.js?r='+V).then(t=>{ const S=evalRoute(t).STAGES||[]; const o=Object.create(null); S.forEach(r=>{ o[r[0]]={name:r[1],type:r[2],grade:r[5]||''}; }); return o; })); }
+  function stageNames(route){ if(!NAMES[route]) return Promise.resolve({});
+    return once(names,route,()=>get(ROOT+NAMES[route]+'/stages.js?r='+V).then(t=>{ const S=evalRoute(t).STAGES||[]; const o=Object.create(null); S.forEach(r=>{ o[r[0]]={name:r[1],type:r[2],grade:r[5]||''}; }); return o; })); }
 
   const usable=(route,type)=>!!FILES[route]&&!NO_ROOM.has(type);
   /* how many questions, how long: recall facts are quick; a word problem has to be read */

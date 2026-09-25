@@ -9,7 +9,8 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 /* the names the report must print, read straight from the routes' own tables */
 const stages = r => { const c = {}; c.window = c; vm.createContext(c); vm.runInContext(fs.readFileSync(path.join(ROOT, r, 'stages.js'), 'utf8') + ';globalThis.__S = STAGES;', c); return Object.fromEntries(c.__S.map(s => [s[0], { name: s[1], type: s[2] }])); };
-const AR = stages('ar'), FR = stages('fr'), WP = stages('wp');
+const AR = stages('ar'), FR = stages('fr'), WP = stages('wp'), PV = stages('pv');
+const { execFileSync } = require('child_process');
 const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: [] });
 (async () => {
   const srv = http.createServer((q, s) => { let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith(path.sep) || fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
@@ -54,7 +55,8 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
 
   // 1 ─ the class table: id AND name, in «барлық бағыт» and in one route
   T('class table (all routes): a stage is shown with its name from the route\'s own table', new RegExp('AR-05 ' + AR['AR-05'].name).test(await rowText('Айгүл С.')) && new RegExp('FR-03 ' + FR['FR-03'].name).test(await rowText('Айгүл С.')), await rowText('Айгүл С.'));
-  T('class table: a PV stage stays a bare id (PV has no stage table yet), nothing invented', /PV-03(?! ·)/.test(await rowText('Нұрлан Б.')) && !/PV-03 [А-Яа-яӘәҚқҢңӨөҰұҮүІіҺһ]/.test(await rowText('Нұрлан Б.')), await rowText('Нұрлан Б.'));
+  T('class table: a PV stage gets its name from the generated pv/stages.js', new RegExp('PV-03 ' + PV['PV-03'].name.replace(/[()]/g, '\\$&')).test(await rowText('Нұрлан Б.')), await rowText('Нұрлан Б.'));
+  T('pv/stages.js is current with pv/index.html (node pv/stages_gen.js --check)', (() => { try { execFileSync('node', [path.join(ROOT, 'pv', 'stages_gen.js'), '--check']); return true; } catch (e) { return false; } })());
   T('class table: a stage id named «constructor» is shown bare — no «Object», nothing from the prototype', /constructor/.test(await rowText('Әлихан Ж.')) && !/Object|function/.test(await rowText('Әлихан Ж.')), await rowText('Әлихан Ж.'));
   await tp.selectOption('select >> nth=0', 'AR'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(400);
   T('class table (AR only): id and name', new RegExp('AR-12 ' + AR['AR-12'].name).test(await rowText('Дана К.')), await rowText('Дана К.'));
@@ -78,7 +80,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   T('report: the examples are at the pupil\'s own level (Айгүл level 2, Дана level 3, FR-03 level 1)', /AR-05 · 2-деңгей/.test((await ln('Айгүл С.', 'AR')).ex) && /AR-12 · 3-деңгей/.test((await ln('Дана К.', 'AR')).ex) && /FR-03 · 1-деңгей/.test((await ln('Айгүл С.', 'FR')).ex), [await ln('Айгүл С.', 'AR'), await ln('Айгүл С.', 'FR')]);
   T('report: Мадина is on AR-11, a ⚡ speed drill — it says so under her line, no examples', (await ln('Мадина Ә.', 'AR')).n === 0 && /уақытқа жаттығу/.test((await ln('Мадина Ә.', 'AR')).ex), await ln('Мадина Ә.', 'AR'));
   T('report: FR-03 (level 1 has only two distinct questions) and WP-02 get examples too', (await ln('Айгүл С.', 'FR')).n >= 2 && (await ln('Ерасыл Т.', 'WP')).n === 3, [await ln('Айгүл С.', 'FR'), await ln('Ерасыл Т.', 'WP')]);
-  T('report: the PV stage and the unknown TE id are listed bare, without examples; nothing executed', /PV-03 \(атауы жоқ\)/.test((await ln('Нұрлан Б.', 'PV')).t) && (await ln('Нұрлан Б.', 'PV')).n === 0 && /constructor \(атауы жоқ\)/.test((await ln('Әлихан Ж.', 'TE')).t) && (await ln('Әлихан Ж.', 'TE')).n === 0 && (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0, [await ln('Нұрлан Б.', 'PV'), await ln('Әлихан Ж.', 'TE')]);
+  T('report: the PV stage is named but has no examples (no generator); the unknown TE id is listed bare; nothing executed', new RegExp('PV-03 — ' + PV['PV-03'].name).test((await ln('Нұрлан Б.', 'PV')).t) && (await ln('Нұрлан Б.', 'PV')).n === 0 && (await ln('Нұрлан Б.', 'PV')).ex === '' && /constructor \(атауы жоқ\)/.test((await ln('Әлихан Ж.', 'TE')).t) && (await ln('Әлихан Ж.', 'TE')).n === 0 && (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0, [await ln('Нұрлан Б.', 'PV'), await ln('Әлихан Ж.', 'TE')]);
   const first = (await ln('Дана К.', 'AR')).ex;
   await tp.selectOption('.noprint select', '3'); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
   T('report: «3-деңгей» switches every pupil\'s examples to the stage-test level', /AR-05 · 3-деңгей/.test((await ln('Айгүл С.', 'AR')).ex) && /FR-03 · 3-деңгей/.test((await ln('Айгүл С.', 'FR')).ex) && (await ln('Айгүл С.', 'AR')).n === 3, [await ln('Айгүл С.', 'AR'), await ln('Айгүл С.', 'FR')]);
