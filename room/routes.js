@@ -59,17 +59,18 @@
     Array.prototype.sort=function(cmp){ const c=cmp||((x,y)=>{ x=String(x); y=String(y); return x<y?-1:x>y?1:0; }); const s=mergeSort(Array.prototype.slice.call(this),c); for(let i=0;i<s.length;i++) this[i]=s[i]; return this; };
     try{ return fn(); } finally{ Math.random=R; Array.prototype.sort=S; } }
 
-  function one(mod,route,row){
-    if(route==='WP'){ const all=mod.BANK.templates.filter(t=>t.stage===row[0]), l3=all.filter(t=>t.lvl===3), pool=l3.length?l3:all; if(!pool.length||!mod.generate) return null;
+  function one(mod,route,row,lvl){
+    if(route==='WP'){ const all=mod.BANK.templates.filter(t=>t.stage===row[0]), l3=all.filter(t=>t.lvl===lvl), pool=l3.length?l3:all; if(!pool.length||!mod.generate) return null;
       const q=mod.generate(pool[Math.floor(Math.random()*pool.length)]); if(!q) return null; q.kind=q.choices&&q.choices.length?'choice':'input'; q.choices=q.choices||[]; q.wpFig=q.fig?{type:q.fig,fp:q.fp||''}:null; q.fig=null; return q; }
     const gen=mod.GENERATORS&&mod.GENERATORS[row[2]]; if(!gen) return null;
-    const q=gen(row[3]||{},3); if(!q||q.stem===undefined||q.ans===undefined) return null;
+    const q=gen(row[3]||{},lvl); if(!q||q.stem===undefined||q.ans===undefined) return null;
     q.kind=q.kind||(q.choices&&q.choices.length?'choice':'input'); q.choices=q.choices||[]; return q; }
-  /* the sheet for (route, stage, seed): level 3, no two alike — the same rule as a stage test */
-  function sheet(mod,route,stageId,seed,n){ const row=(mod.STAGES||[]).find(s=>s[0]===stageId); if(!row||!usable(route,row[2])) return [];
+  /* the sheet for (route, stage, seed): level 3, no two alike — the same rule as a stage test. A room always takes
+     level 3; the teacher's printed report may ask for the level a pupil is actually on (1–3). */
+  function sheet(mod,route,stageId,seed,n,lvl){ const row=(mod.STAGES||[]).find(s=>s[0]===stageId); if(!row||!usable(route,row[2])) return []; lvl=[1,2,3].includes(lvl)?lvl:3;
     return withSeed(seed,()=>{ const out=[], seen=new Set();
-      for(let i=0;i<n;i++){ let q=null; for(let k=0;k<12&&!q;k++){ let c=null; try{ c=one(mod,route,row); }catch(e){ c=null; } if(c&&!seen.has(c.stem+'|'+c.ans)) q=c; }
-        if(q){ seen.add(q.stem+'|'+q.ans); q.stage=stageId; q.type=row[2]; q.lvl=3; out.push(q); } }
+      for(let i=0;i<n;i++){ let q=null; for(let k=0;k<12&&!q;k++){ let c=null; try{ c=one(mod,route,row,lvl); }catch(e){ c=null; } if(c&&!seen.has(c.stem+'|'+c.ans)) q=c; }
+        if(q){ seen.add(q.stem+'|'+q.ans); q.stage=stageId; q.type=row[2]; q.lvl=lvl; out.push(q); } }
       return out; }); }
   function figHTML(mod,q){ if(q.wpFig) return window.renderFig?window.renderFig(q.wpFig.type,q.wpFig.fp):''; const f=q.fig; if(!f) return ''; if(typeof f==='string') return f;
     if(mod.FIGS&&mod.FIGS[f.type]) return mod.FIGS[f.type](f); return window.renderFig?window.renderFig(f.type,f.fp||''):''; }
