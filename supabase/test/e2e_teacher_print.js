@@ -28,6 +28,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
     ['Нұрлан Б.', '3А', { AR: { nAns: 6, nOk: 3, nHint: 4, diag: { placed: 'AR-02', t: Date.now() }, stages: { 'AR-02': cur() } }, PV: { nAns: 9, nOk: 7, nHint: 0, diag: { placed: 'PV-03', t: Date.now() }, stages: { 'PV-03': cur(3) } } }],
     ['Мадина Ә.', '3А', { AR: { nAns: 20, nOk: 15, nHint: 1, diag: { placed: 'AR-11', t: Date.now() }, stages: { 'AR-11': cur() } } }],   // ⚡ a speed drill: no examples
     ['Әлихан Ж.', '3А', { TE: { nAns: 4, nOk: 1, nHint: 0, diag: { placed: 'x', t: 1 }, stages: { constructor: cur(), [evil]: { status: 'locked' } } } }],   // a stage id the route does not know, chosen to hit Object.prototype
+    ['Бекзат Р.', '3А', { PV: { nAns: 30, nOk: 28, nHint: 0, diag: { placed: 'PV-10', t: Date.now() }, stages: { 'PV-10': { status: 'passed', level: 3 }, 'PV-12': { status: 'passed', level: 3 }, 'PV-13': { status: 'locked', level: 3 } } }, AR: { nAns: 15, nOk: 14, nHint: 0, diag: { placed: 'AR-04', t: Date.now() }, stages: { 'AR-04': { status: 'passed', level: 3 }, 'AR-05': { status: 'passed', level: 3 } } } }],   // no «current» anywhere: PV marks the unlock position passed once done
     ['Сәуле М.', '3Ә', { AR: { nAns: 40, nOk: 39, nHint: 0, diag: { placed: 'AR-13', t: Date.now() }, stages: { 'AR-13': cur(3) } } }],   // another class: not in the 3А report
   ];
   for (const [n, k, st] of pupils) await pg.query(`insert into students(name,pin,klass,state) values ($1,'1111',$2,$3::jsonb)`, [n, k, JSON.stringify(st)]);
@@ -58,12 +59,13 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   T('class table: a PV stage gets its name from the generated pv/stages.js', new RegExp('PV-03 ' + PV['PV-03'].name.replace(/[()]/g, '\\$&')).test(await rowText('Нұрлан Б.')), await rowText('Нұрлан Б.'));
   T('pv/stages.js is current with pv/index.html (node pv/stages_gen.js --check)', (() => { try { execFileSync('node', [path.join(ROOT, 'pv', 'stages_gen.js'), '--check']); return true; } catch (e) { return false; } })());
   T('class table: a stage id named «constructor» is shown bare — no «Object», nothing from the prototype', /constructor/.test(await rowText('Әлихан Ж.')) && !/Object|function/.test(await rowText('Әлихан Ж.')), await rowText('Әлихан Ж.'));
+  T('class table: a pupil with no «current» station shows the highest PASSED one, marked ✓ өтті — never a dash', new RegExp('PV-12 ' + PV['PV-12'].name.replace(/[()]/g, '\\$&') + ' ✓ өтті').test(await rowText('Бекзат Р.')) && /AR-05 Кесте 5 ✓ өтті/.test(await rowText('Бекзат Р.')), await rowText('Бекзат Р.'));
   await tp.selectOption('select >> nth=0', 'AR'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(400);
   T('class table (AR only): id and name', new RegExp('AR-12 ' + AR['AR-12'].name).test(await rowText('Дана К.')), await rowText('Дана К.'));
 
   // 2 ─ CSV: a name column next to the id
   const csv = await tp.evaluate(() => new Promise(res => { const o = URL.createObjectURL; URL.createObjectURL = b => { b.text().then(res); URL.createObjectURL = o; return o.call(URL, b); }; exportCSV(); }));
-  T('CSV has a «Кезең атауы» column and the AR-12 line carries the name', /;Кезең;Кезең атауы;Деңгей;/.test(csv) && new RegExp('"AR";"AR-12";"' + AR['AR-12'].name + '"').test(csv), csv.slice(0, 400));
+  T('CSV has a «Кезең атауы» column and the AR-12 line carries the name', /;Кезең;Кезең атауы;Деңгей;/.test(csv) && new RegExp('"AR";"AR-12";"' + AR['AR-12'].name + '"').test(csv) && /"AR";"AR-05";"Кесте 5 \(өтті\)";"3"/.test(csv), csv.slice(0, 400));
 
   // 3 ─ the printed report, class 3А, all routes: after each pupil's stage its name; under every pupil three examples of that stage at the pupil's level
   await tp.selectOption('select >> nth=0', 'ALL'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
@@ -75,6 +77,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   const ln = async (name, route) => { const tr = tp.locator('table.prt tr', { hasText: name }).filter({ hasText: route }).first(); const t = (await tr.innerText()).replace(/\s+/g, ' ');
     const nx = tr.locator('xpath=following-sibling::tr[1]'); const isEx = (await nx.count()) && (await nx.getAttribute('class')) === 'pex'; return { t, n: isEx ? await nx.locator('ol li').count() : 0, ex: isEx ? (await nx.innerText()).replace(/\s+/g, ' ') : '' }; };
   T('report: after each pupil\'s stage comes its name and grade', new RegExp('AR-05 — ' + AR['AR-05'].name + ' · 2-сынып').test((await ln('Айгүл С.', 'AR')).t) && new RegExp('WP-02 — ' + WP['WP-02'].name).test((await ln('Ерасыл Т.', 'WP')).t), [await ln('Айгүл С.', 'AR'), await ln('Ерасыл Т.', 'WP')]);
+  T('report: a pupil who passed everything he unlocked gets the examples of his highest passed station, marked ✓', /AR-05 — Кесте 5 · 2-сынып ✓ өтті/.test((await ln('Бекзат Р.', 'AR')).t) && (await ln('Бекзат Р.', 'AR')).n === 3 && /AR-05 · 3-деңгей/.test((await ln('Бекзат Р.', 'AR')).ex) && /PV-12 — .* ✓ өтті/.test((await ln('Бекзат Р.', 'PV')).t), [await ln('Бекзат Р.', 'AR'), await ln('Бекзат Р.', 'PV')]);
   T('report: the other class is not in it', !/Сәуле М\./.test(await rep()) && !/AR-13/.test(await rep()));
   T('report: EVERY pupil gets three examples of the stage they are on, with answers — Айгүл AR-05, Дана AR-12, Ерасыл AR-08, Нұрлан AR-02', (await ln('Айгүл С.', 'AR')).n === 3 && (await ln('Дана К.', 'AR')).n === 3 && (await ln('Ерасыл Т.', 'AR')).n === 3 && (await ln('Нұрлан Б.', 'AR')).n === 3 && /Мысал есептер · AR-12.*→/.test((await ln('Дана К.', 'AR')).ex), [await ln('Айгүл С.', 'AR'), await ln('Нұрлан Б.', 'AR')]);
   T('report: the examples are at the pupil\'s own level (Айгүл level 2, Дана level 3, FR-03 level 1)', /AR-05 · 2-деңгей/.test((await ln('Айгүл С.', 'AR')).ex) && /AR-12 · 3-деңгей/.test((await ln('Дана К.', 'AR')).ex) && /FR-03 · 1-деңгей/.test((await ln('Айгүл С.', 'FR')).ex), [await ln('Айгүл С.', 'AR'), await ln('Айгүл С.', 'FR')]);
