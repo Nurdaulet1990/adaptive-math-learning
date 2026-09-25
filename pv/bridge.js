@@ -73,6 +73,16 @@ const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.leve
       if(st.tests.length>20) st.tests.splice(0,st.tests.length-20);   // one row per station, not a diary
       Core.save(R); } }
   return r; };
+/* The placement test asks its own questions (checkPlacement) and never goes through showFeedback, so until
+   2026-09-25 not one of them was logged: a child who spent half an hour on the placement showed «3 есеп» on the
+   teacher page — the three practice answers after it. Logged now like core/runner.js logs a diagnostic answer
+   (mode 'diag'), so they count and appear in the pupil's answer list. */
+if(typeof renderPlacementQuestion==='function'){ const _rpq=renderPlacementQuestion; renderPlacementQuestion=function(){ qT0=Date.now(); return _rpq.apply(this,arguments); }; }
+if(typeof checkPlacement==='function'){ const _cp=checkPlacement; checkPlacement=function(correctAnswer){ const p=state.placement, before=p&&p.history?p.history.length:0; const r=_cp.apply(this,arguments);
+  if(R&&p&&p.history&&p.history.length>before){ const h=p.history[p.history.length-1], e=PLACE_ORDER[h.idx]; if(e){
+    const ws=document.getElementById('workspace'); const stem=ws?(ws.querySelector('.question,.q-text,h2,h3,p')||ws).textContent.trim().replace(/\s+/g,' ').slice(0,160):'';
+    Core.answer({stage:stageId(e.levelId),lvl:3,ok:!!h.correct,mode:'diag',hints:0,ms:Date.now()-qT0,type:e.levelId,stem:levelName(e.levelId)+(stem?' — '+stem:''),ans:h.correct?undefined:String(correctAnswer),given:undefined}); } }
+  return r; }; }
 /* the re-diagnostic may only move a pupil forward — PV's own placement is free to land lower,
    so the ceiling is restored here. Same rule as core/runner.js and wp/diag_test.js. */
 const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placement&&state.placement.history)||[]; const before=state.unlockedUpTo||0; const r=_fp.apply(this,arguments);
