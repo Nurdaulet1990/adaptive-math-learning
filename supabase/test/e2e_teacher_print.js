@@ -24,7 +24,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   const pupils = [
     ['Айгүл С.', '3А', { AR: { nAns: 30, nOk: 24, nHint: 3, diag: { placed: 'AR-05', t: Date.now() }, stages: { 'AR-04': { status: 'passed' }, 'AR-05': cur() } }, FR: { nAns: 8, nOk: 6, nHint: 0, diag: { placed: 'FR-03', t: Date.now() }, stages: { 'FR-03': cur(1) } } }],
     ['Дана К.', '3А', { AR: { nAns: 50, nOk: 45, nHint: 2, diag: { placed: 'AR-12', t: Date.now() }, stages: { 'AR-12': cur(3) } } }],
-    ['Ерасыл Т.', '3А', { AR: { nAns: 12, nOk: 9, nHint: 1, diag: { placed: 'AR-08', t: Date.now() }, stages: { 'AR-08': cur() } }, WP: { nAns: 5, nOk: 5, nHint: 0, diag: { placed: 'WP-02', t: Date.now() }, stages: { 'WP-02': cur() } } }],
+    ['Ерасыл Т.', '3А', { AR: { nAns: 12, nOk: 9, nHint: 1, diag: { placed: 'AR-08', t: Date.now() }, stages: { 'AR-08': cur() } }, WP: { nAns: 5, nOk: 5, nHint: 0, diag: { placed: 'WP-02', t: Date.now() }, stages: { 'WP-02': cur(1) } } }],
     ['Нұрлан Б.', '3А', { AR: { nAns: 6, nOk: 3, nHint: 4, diag: { placed: 'AR-02', t: Date.now() }, stages: { 'AR-02': cur() } }, PV: { nAns: 9, nOk: 7, nHint: 0, diag: { placed: 'PV-03', t: Date.now() }, stages: { 'PV-03': cur(3) } } }],
     ['Мадина Ә.', '3А', { AR: { nAns: 20, nOk: 15, nHint: 1, diag: { placed: 'AR-11', t: Date.now() }, stages: { 'AR-11': cur() } } }],   // ⚡ a speed drill: no examples
     ['Әлихан Ж.', '3А', { TE: { nAns: 4, nOk: 1, nHint: 0, diag: { placed: 'x', t: 1 }, stages: { constructor: cur(), [evil]: { status: 'locked' } } } }],   // a stage id the route does not know, chosen to hit Object.prototype

@@ -12,7 +12,9 @@
 table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width:200px}
 .pex td{font-weight:600;background:var(--bg,#faf8f3)!important;border-top:0}
 .pex ol{margin:2px 0 0 22px;padding:0} .pex li{margin:2px 0}
-.pex .fig{display:inline-block;vertical-align:middle;margin:0 8px} .pex .fig svg{height:64px!important;width:auto!important;max-width:260px!important;display:block}   /* a route's own inline size is for a phone screen, not a line on paper */
+/* a figure under its question, small: a route's own sizes (padding, 1.7rem emoji, full-width svg) are for a phone screen, not a line on paper */
+.pex .fig{display:block;max-width:360px;padding:4px 8px;margin:2px 0 4px} .pex .fig svg{height:64px!important;width:auto!important;max-width:100%!important;display:block}
+.pex .fig .emoji-row{font-size:1rem;gap:2px;line-height:1.1} .pex .fig .emoji-row .lbl{font-size:.75rem;min-width:48px}
 .pex .expr{font-family:var(--disp);display:inline-block;vertical-align:middle;font-size:.7em}
 @page{margin:12mm}
 @media print{ .top,.noprint{display:none!important} body{background:#fff;color:#000} .app{max-width:none;padding:0;margin:0}
@@ -280,7 +282,7 @@ async function printReport(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const
   const qHTML=q=>esc(q.stem)+(q.exprHTML?` <span class="expr">${q.exprHTML}</span>`:''), aHTML=q=>q.ansHTML||esc(q.ans);
   const exHTML=(c,id,l)=>{ const qs=EX[c+' '+id+'|'+l]; const i=stInfo(c,id);
     if(qs&&qs.length) return `<ol>${qs.map(q=>{ let f=''; try{ f=RoomRoutes.figHTML(MOD[c],q); }catch(e){ f=''; }
-      return `<li>${qHTML(q)}${f?`<div class="fig">${f}</div>`:''} <span class="muted">→</span> <b>${aHTML(q)}</b>${q.kind==='choice'&&q.choices.length?` <span class="muted">(нұсқалар: ${q.choices.map(x=>esc(x)).join(' · ')})</span>`:''}</li>`; }).join('')}</ol>`;
+      return `<li>${qHTML(q)} <span class="muted">→</span> <b>${aHTML(q)}</b>${q.kind==='choice'&&q.choices.length?` <span class="muted">(нұсқалар: ${q.choices.map(x=>esc(x)).join(' · ')})</span>`:''}${f?`<div class="fig">${f}</div>`:''}</li>`; }).join('')}</ol>`;
     if(qs&&i&&i.type==='speed') return '<span class="note">⚡ уақытқа жаттығу — мысал берілмейді</span>';
     return ''; };
   const stCell=(c,id)=>{ const i=stInfo(c,id); return `<b>${esc(id)}</b>${i?' — '+esc(i.name)+(i.grade?` <span class="muted">· ${esc(i.grade)}-сынып</span>`:''):' <span class="muted">(атауы жоқ)</span>'}`; };
