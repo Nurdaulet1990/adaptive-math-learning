@@ -102,6 +102,7 @@ node supabase/test/run.js    # 56 项：迁移可重复跑（含第 3 步之后�
 node supabase/test/run_challenges.js   # 21 项：挑战函数（资格、保密、服务端判分、平局、每日上限、过期）
 node supabase/test/e2e_challenge.js   # 11 项：两个浏览器各扮一个学生，走完一整场
 node supabase/test/e2e.js    # 22 项：真页面 → 拦截所有 supabase 请求 → 以 anon 角色打到本地库；含恶意 state / 事件、离线、教师页
+node supabase/test/e2e_teacher_print.js   # 20 项：教师页关卡带名称（表格、CSV、学生卡）、整班打印报告（每条路线最高几关附 3 道例题、⚡ 速度关不出题、PV / 未知关卡只列编号、同种子同例题）
 ```
 
 `test/00_baseline_guess.sql` 是我**猜的**现有表结构，只用于演练，绝不要在线上跑。

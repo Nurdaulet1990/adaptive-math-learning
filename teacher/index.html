@@ -7,10 +7,23 @@
 <!-- teacher page is Kazakh only: never translated -->
 <meta name="google" content="notranslate">
 <link rel="stylesheet" href="../core/ui.css?v=9">
+<style>
+/* the printable class report (printReport): on paper only the report, no bar, no buttons, no card frames */
+table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width:200px}
+.pex td{font-weight:600;background:var(--bg,#faf8f3)!important;border-top:0}
+.pex ol{margin:2px 0 0 22px;padding:0} .pex li{margin:2px 0}
+.pex .fig{max-width:280px;margin:4px 0} .pex .fig svg{max-width:100%;height:auto}
+.pex .expr{font-family:var(--disp);display:inline-block;vertical-align:middle;font-size:.7em}
+@page{margin:12mm}
+@media print{ .top,.noprint{display:none!important} body{background:#fff;color:#000} .app{max-width:none;padding:0;margin:0}
+  .card{border:0;border-radius:0;padding:0 0 14px;margin:0;background:#fff;box-shadow:none} table.t3 th,table.t3 td{padding:4px 6px;font-size:.8rem;background:#fff}
+  tr.phead,tr.pex{break-inside:avoid} h1{font-size:1.4rem} }
+</style>
 </head>
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/core.js?v=13"></script>
+<script src="../core/figs.js?v=8"></script>
 <script src="../room/routes.js?v=1"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
@@ -47,11 +60,19 @@ const isAll=()=>T.route===ALL;
 const hasData=(r,c)=>Object.keys(RS(r,c)).length>0;
 const routesOf=r=>ROUTES.filter(c=>hasData(r,c));
 function agg(r){ const rs=routesOf(r); let a=0,ok=0,h=0; const cur=[];
-  rs.forEach(c=>{ const s=RS(r,c); a+=s.nAns||0; ok+=s.nOk||0; h+=s.nHint||0; const st=stOf(r,c); if(st) cur.push(st); });
+  rs.forEach(c=>{ const s=RS(r,c); a+=s.nAns||0; ok+=s.nOk||0; h+=s.nHint||0; const st=stOf(r,c); if(st) cur.push([c,st]); });
   return {rs,a,ok,h,cur}; }
 const mainRoute=r=>routesOf(r).sort((x,y)=>(RS(r,y).nAns||0)-(RS(r,x).nAns||0))[0]||ROUTES[0];
+/* A stage id alone («AR-03») says nothing to a parent or to a colleague, so wherever a stage is shown it carries the
+   name from the route's own stage table (room/routes.js reads it; PV has no such table yet and stays a bare id).
+   The id comes from the pupil's own state, so it is looked up with hasOwnProperty — never as a plain property. */
+const RNM={}; const roomNames=async r=>{ if(RNM[r]) return RNM[r]; if(!window.RoomRoutes) return {}; try{ RNM[r]=await RoomRoutes.stageNames(r); }catch(e){ return {}; } return RNM[r]; };   // a failed download is not remembered
+const loadNames=()=>Promise.all(ROUTES.map(roomNames));
+const stInfo=(route,id)=>{ const t=RNM[route]; return t&&Object.prototype.hasOwnProperty.call(t,String(id))?t[id]:null; };
+const nmOf=(route,id)=>{ const i=stInfo(route,id); return i?String(i.name||''):''; };
+const stHTML=(route,id)=>{ const n=nmOf(route,id); return esc(id)+(n?` <small class="muted" style="font-weight:600">${esc(n)}</small>`:''); };
 function stageCell(r,c){ if(!hasData(r,c)) return '<span class="muted">жоқ</span>';
-  return esc(stOf(r,c)||(RS(r,c).diag?'—':'диагн. жоқ')); }   // stage keys are written by the pupil's browser
+  const st=stOf(r,c); return st?stHTML(c,st):esc(RS(r,c).diag?'—':'диагн. жоқ'); }   // stage keys are written by the pupil's browser
 let SR=null;   // the route the open student card is showing (in «барлығы» it is picked per pupil)
 function verdict(n,acc,h){ if(!n||n<5) return ['—','var(--muted)']; if(acc>=0.8&&h<1) return ['Меңгерді','var(--good)']; if(acc>=0.7&&h>=2) return ['Кеңеспен','var(--gold)']; if(acc<0.5&&h<1) return ['Болжайды','var(--bad)']; if(acc<0.6&&h>=2) return ['Қиналады','var(--bad)']; return ['Үйреніп жатыр','var(--accent)']; }
 const vcell=(n,acc,h)=>{ const [t,c]=verdict(n,acc,h); return `<td style="color:${c};font-weight:800;white-space:nowrap">${t}</td>`; };
@@ -67,12 +88,13 @@ function login(note){ T.app.innerHTML=tbar('кіру')+`<div class="card"><h2>М
     $('tgo').disabled=false; };
   $('tgo').onclick=go; $('tpin').onkeydown=e=>{ if(e.key==='Enter') go(); }; setTimeout(()=>$('tpin').focus(),50); }
 
-async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
+async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view;
   if(!T.tok) return login();
   if(!T.crange) T.crange=rangePreset('today');
   T.app.innerHTML=tbar()+`<div class="card"><p>Жүктелуде…</p></div>`;
   try{ T.rows=((await trpc('esep_t_students'))||[]).filter(r=>r&&/^[0-9a-f-]{1,40}$/i.test(String(r.id))).map(r=>Object.assign(r,{time_ms:num(r.time_ms),name:String(r.name??''),klass:String(r.klass??'')})); }
   catch(e){ if(!T.tok) return; T.app.innerHTML=tbar()+`<div class="card"><p>Базаға қосылу мүмкін болмады.</p><p class="note">${esc(e.message)}</p><button class="btn" onclick="showTeacher()">Қайталау</button></div>`; return; }
+  await loadNames(); if(gen!==T.view||!T.tok) return;   // stage names for the table (static files; a miss just leaves bare ids)
   const classes=[...new Set(T.rows.map(r=>r.klass||'—'))].sort(); const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass); const route=T.route;
   const tot={n:rows.length,min:rows.reduce((a,r)=>a+(r.time_ms||0),0)/60000,
              ans:rows.reduce((a,r)=>a+(isAll()?agg(r).a:(RS(r,route).nAns||0)),0)};
@@ -84,12 +106,12 @@ async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
     <div style="overflow-x:auto"><table class="t3"><tr><th>Оқушы</th><th>Сынып</th><th>${isAll()?'Кезеңдер':'Кезең'}</th><th>${isAll()?'Бағыт':'Деңгей'}</th><th>Мин</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th><th>Қорытынды</th><th>Соңғы кіру</th></tr>
     ${rows.map(r=>{ try{ const stale=Date.now()-new Date(r.last_seen).getTime()>7*864e5; let cStage,cLvl,a,ok,h;
       if(isAll()){ const g=agg(r); a=g.a; ok=g.ok; h=g.h;
-        cStage=g.cur.map(esc).join(' · ')||(g.rs.length?'—':'<span class="muted">жұмыс істемеген</span>'); cLvl=g.rs.join(' ')||'—'; }
+        cStage=g.cur.map(([c,st])=>stHTML(c,st)).join('<br>')||(g.rs.length?'—':'<span class="muted">жұмыс істемеген</span>'); cLvl=g.rs.join(' ')||'—'; }
       else { const s=RS(r,route); const cur=stOf(r,route); a=s.nAns||0; ok=s.nOk||0; h=s.nHint||0;
         cStage=stageCell(r,route); cLvl=cur?s.stages[cur].level:'—'; }
       return `<tr style="cursor:pointer" onclick="showStudent('${r.id}')"><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td>${cStage}</td><td>${esc(cLvl)}</td><td>${Math.round((r.time_ms||0)/60000)}</td><td>${a}</td><td>${a?Math.round(100*ok/a)+'%':'—'}</td><td>${a?(h/a).toFixed(1):'—'}</td>${vcell(a,a?ok/a:0,a?h/a:0)}<td style="${stale?'color:var(--bad)':''}">${fmtDT(r.last_seen)}</td></tr>`; }catch(e){ return `<tr><td style="text-align:left"><b>${esc(r.name)}</b></td><td colspan="9" class="muted">бұл жолды көрсету мүмкін болмады</td></tr>`; } }).join('')}
     ${rows.length?'':'<tr><td colspan="10">Әлі оқушы жоқ</td></tr>'}</table></div>
-    <p class="note" style="margin-top:10px">${isAll()?'«жұмыс істемеген» — бұл оқушының ешқандай бағытта деректері жоқ. Бір бағытты таңдасаң, «жоқ» — сол бағытқа кірмеген, «диагн. жоқ» — кірген, бірақ диагностика өтпеген. ':''}${VLEGEND} Оқушыға басу — толық есеп. <a href="#" onclick="exportCSV();return false">CSV жүктеу (Excel)</a> · <a href="#" onclick="showTeacher();return false">жаңарту</a></p></div>`;
+    <p class="note" style="margin-top:10px">${isAll()?'«жұмыс істемеген» — бұл оқушының ешқандай бағытта деректері жоқ. Бір бағытты таңдасаң, «жоқ» — сол бағытқа кірмеген, «диагн. жоқ» — кірген, бірақ диагностика өтпеген. ':''}${VLEGEND} Оқушыға басу — толық есеп. <a href="#" onclick="printReport();return false">Басып шығару</a> (кезең атаулары мен мысал есептермен) · <a href="#" onclick="exportCSV();return false">CSV жүктеу (Excel)</a> · <a href="#" onclick="showTeacher();return false">жаңарту</a></p></div>`;
   if(isAll()){ const d={}; let none=0;
     rows.forEach(r=>{ const rs=routesOf(r); if(!rs.length){ none++; return; } rs.forEach(c=>d[c]=(d[c]||0)+1); });
     html+=`<div class="card"><h2>Бағыт бойынша: неше оқушының деректері бар</h2><div class="kv">${ROUTES.filter(c=>d[c]).map(c=>`<span>${c} ${esc(ROUTE_NAME[c])}</span><span>${d[c]}</span>`).join('')}${none?`<span>Ешқандай бағытта жұмыс істемеген</span><span>${none}</span>`:''}</div></div>`;
@@ -180,6 +202,7 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const route=isAll()?(sub||mainRoute(r)):T.route; SR=route;
   T.app.innerHTML=tbar(r.name)+`<div class="card"><p>Жүктелуде…</p></div>`;
   let ev=[]; try{ ev=await trpc('esep_t_events',Object.assign({p_students:[id],p_limit:3000},rangeISO(T.range))); }catch(e){ if(!T.tok) return; }
+  await loadNames();
   const s=RS(r,route); const stages=s.stages||{}; const cur=stOf(r,route);
   const evs=ev.map(e=>Object.assign({T:new Date(e.t)},e.ev)).filter(e=>evRoute(e)===route);
   const ans=evs.filter(e=>e.ev==='answer'); const per={};
@@ -191,13 +214,13 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const otherRoutes=ROUTES.filter(c=>c!==route&&Object.keys(RS(r,c)).length).map(c=>`${c}: ${stOf(r,c)||'—'} (${RS(r,c).nAns||0} есеп)`).join(' · ');
   let html=tbar(r.name)+`<div class="card"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a><span class="chip">${esc(r.klass||'—')}</span></div><h2>${esc(r.name)} · ${route}</h2>
     ${isAll()?`<p class="note" style="margin:0 0 10px">Бағыт: ${ROUTES.map(c=>hasData(r,c)?(c===route?`<b>${c}</b>`:`<a href="#" onclick="showStudent('${id}','${c}');return false">${c}</a>`):`<span class="muted">${c}</span>`).join(' · ')}</p>`:''}
-    <div class="kv"><span>Диагностика</span><span>${s.diag?esc(s.diag.placed)+(s.diag.manual?' (қолмен)':'')+' · '+esc(fmtDT(s.diag.t)):'—'}</span><span>Қазіргі кезең</span><span>${esc(cur?cur+' · деңгей '+stages[cur].level+' · қатарынан '+(stages[cur].streak||0):'—')}</span><span>Барлық уақыт (${route})</span><span>${s.nAns||0} есеп · ${s.nAns?Math.round(100*(s.nOk||0)/s.nAns):0}%</span><span>Соңғы кіру</span><span>${fmtDT(r.last_seen)}</span>${otherRoutes?`<span>Басқа бағыттар</span><span>${esc(otherRoutes)}</span>`:''}</div></div>
+    <div class="kv"><span>Диагностика</span><span>${s.diag?esc(s.diag.placed)+(s.diag.manual?' (қолмен)':'')+' · '+esc(fmtDT(s.diag.t)):'—'}</span><span>Қазіргі кезең</span><span>${cur?stHTML(route,cur)+esc(' · деңгей '+stages[cur].level+' · қатарынан '+(stages[cur].streak||0)):'—'}</span><span>Барлық уақыт (${route})</span><span>${s.nAns||0} есеп · ${s.nAns?Math.round(100*(s.nOk||0)/s.nAns):0}%</span><span>Соңғы кіру</span><span>${fmtDT(r.last_seen)}</span>${otherRoutes?`<span>Басқа бағыттар</span><span>${esc(otherRoutes)}</span>`:''}</div></div>
   <div class="card"><h2>Кезең бойынша: ${esc(rangeLabel)}</h2>
     <div class="row" style="margin-bottom:8px"><input type="date" id="rfrom" value="${esc(from)}" class="big" style="font-size:1rem;padding:8px;flex:1"><input type="date" id="rto" value="${esc(to)}" class="big" style="font-size:1rem;padding:8px;flex:1"><button class="btn ghost" onclick="applyRange('${id}')">Көрсету</button></div>
     <div class="row" style="margin-bottom:12px">${[['today','Бүгін'],['yest','Кеше'],['7','7 күн'],['30','30 күн'],['all','Барлығы']].map(([k,l])=>`<button class="btn plain" style="min-height:36px;padding:6px 10px" onclick="setRange('${id}','${k}')">${l}</button>`).join('')}</div>
     <div class="stat"><div><b>${Math.round(act/60000)}</b><span>белсенді мин</span></div><div><b>${ans.length}</b><span>есеп</span></div><div><b>${ans.length?Math.round(100*okN/ans.length):0}%</b><span>дұрыс</span></div></div>
     <p class="note">Кеңес ⌀ ${ans.length?(hintSum/ans.length).toFixed(1):'—'} · «Білмеймін» ${evs.filter(e=>e.ev==='dontknow').length} рет · тест: ${esc(evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n+' '+e.stage).join(', ')||'—')}</p>
-    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td>${esc(k)}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
+    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td style="text-align:left">${stHTML(route,k)}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
     ${Object.keys(days).length>1?`<table class="t3" style="margin-top:10px"><tr><th>Күн</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${esc(d)}</td><td>${v.n}</td><td>${Math.round(100*v.ok/v.n)}%</td><td>${(v.h/v.n).toFixed(1)}</td></tr>`).join('')}</table>`:''}
   </div>`;
   if(ans.length){ html+=`<div class="card"><h2>Есептер ретімен</h2><div style="overflow-x:auto"><table class="t3" style="font-size:.85rem"><tr><th>Уақыт</th><th>Кезең</th><th>Реж.</th><th></th><th>Кеңес</th><th>с</th><th style="text-align:left">Есеп</th></tr>
@@ -225,18 +248,56 @@ async function delStudent(id){ try{ await trpc('esep_t_delete',{p_student:id}); 
 /* In «барлық бағыт» the sheet gets ONE LINE PER ROUTE a pupil has data in (a pupil with none gets a
    single line marked «—»), so it can be pivoted. A single route exports exactly as before. */
 function exportCSV(){ const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass);
-  const head=['Оқушы','Сынып','Бағыт','Кезең','Деңгей','Минут','Есеп','Дұрыс %','Кеңес ⌀','Қорытынды','Соңғы кіру','Тіркелген']; const lines=[head.join(';')];
+  const head=['Оқушы','Сынып','Бағыт','Кезең','Кезең атауы','Деңгей','Минут','Есеп','Дұрыс %','Кеңес ⌀','Қорытынды','Соңғы кіру','Тіркелген']; const lines=[head.join(';')];
   const q=a=>a.map(v=>{ v=String(v); if(/^[=+\-@\t\r]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; }).join(';');   // a cell that starts with = + - @ would run as a formula in Excel
   const line=(r,route)=>{ const s=RS(r,route); const cur=stOf(r,route); const a=s.nAns||0;
-    return q([r.name,r.klass||'',route,cur||'',cur?s.stages[cur].level:'',Math.round((r.time_ms||0)/60000),a,a?Math.round(100*(s.nOk||0)/a):'',a?((s.nHint||0)/a).toFixed(1):'',verdict(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)[0],fmtDT(r.last_seen),fmtDT(r.created_at)]); };
+    return q([r.name,r.klass||'',route,cur||'',cur?nmOf(route,cur):'',cur?s.stages[cur].level:'',Math.round((r.time_ms||0)/60000),a,a?Math.round(100*(s.nOk||0)/a):'',a?((s.nHint||0)/a).toFixed(1):'',verdict(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)[0],fmtDT(r.last_seen),fmtDT(r.created_at)]); };
   rows.forEach(r=>{ const rs=isAll()?routesOf(r):[T.route];
-    if(!rs.length){ lines.push(q([r.name,r.klass||'','—','','',Math.round((r.time_ms||0)/60000),0,'','','—',fmtDT(r.last_seen),fmtDT(r.created_at)])); return; }
+    if(!rs.length){ lines.push(q([r.name,r.klass||'','—','','','',Math.round((r.time_ms||0)/60000),0,'','','—',fmtDT(r.last_seen),fmtDT(r.created_at)])); return; }
     rs.forEach(c=>lines.push(line(r,c))); });
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`esep_${isAll()?'barlygy':T.route}_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); }
+/* ── the printable class report ─────────────────────────────────────────────────────────────────────
+   What the teacher takes to a parents' meeting or pins in the staff room: one line per pupil (and route), and
+   after each pupil's stage its NAME and grade, then — for pupils standing on the highest few stages of a route —
+   three example questions of that stage with answers, right under the pupil's line. The examples are built here
+   from the route's own generator (room/routes.js, level 3 = the stage test) under a fixed seed, so a report
+   printed twice reads the same, and two pupils on the same stage get the same three.
+   Stage ids come from the pupils' own state: an id the route does not know is listed bare and gets no examples. ── */
+const PSEED=2026;
+const PK_OPTS=[[3,'ең жоғарғы 3 кезеңдегілерге'],[5,'ең жоғарғы 5 кезеңдегілерге'],[99,'бәріне'],[0,'мысалсыз']];
+async function printReport(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view; if(!T.tok) return login();
+  const K=PK_OPTS.some(o=>o[0]===T.pk)?T.pk:3; const route=T.route;
+  const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass).slice().sort((x,y)=>(x.klass||'').localeCompare(y.klass||'')||x.name.localeCompare(y.name));
+  T.app.innerHTML=tbar('басып шығару')+`<div class="card"><p>Жүктелуде…</p></div>`;
+  await loadNames(); if(gen!==T.view||!T.tok) return;
+  /* which stages the class stands on, per route */
+  const pres={}; rows.forEach(r=>(isAll()?routesOf(r):[route]).forEach(c=>{ const st=stOf(r,c); if(!st) return; pres[c]=pres[c]||Object.create(null); pres[c][st]=(pres[c][st]||0)+1; }));
+  const EX={}, MOD={};
+  for(const c of ROUTES){ if(!pres[c]||!K||!window.RoomRoutes||!RoomRoutes.ROUTES.includes(c)) continue;
+    const ids=Object.keys(pres[c]).sort().reverse().slice(0,K);   // ids are zero-padded, so text order is stage order
+    let mod=null; try{ mod=await RoomRoutes.load(c); }catch(e){ mod=null; } if(gen!==T.view||!T.tok) return; if(!mod) continue; MOD[c]=mod;
+    ids.forEach(id=>{ try{ EX[c+' '+id]=RoomRoutes.sheet(mod,c,id,PSEED,3); }catch(e){ EX[c+' '+id]=[]; } }); }
+  const qHTML=q=>esc(q.stem)+(q.exprHTML?` <span class="expr">${q.exprHTML}</span>`:''), aHTML=q=>q.ansHTML||esc(q.ans);
+  const exHTML=(c,id)=>{ const qs=EX[c+' '+id]; const i=stInfo(c,id);
+    if(qs&&qs.length) return `<ol>${qs.map(q=>{ let f=''; try{ f=RoomRoutes.figHTML(MOD[c],q); }catch(e){ f=''; }
+      return `<li>${qHTML(q)}${f?`<div class="fig">${f}</div>`:''} <span class="muted">→</span> <b>${aHTML(q)}</b>${q.kind==='choice'&&q.choices.length?` <span class="muted">(нұсқалар: ${q.choices.map(x=>esc(x)).join(' · ')})</span>`:''}</li>`; }).join('')}</ol>`;
+    if(qs&&i&&i.type==='speed') return '<span class="note">⚡ уақытқа жаттығу — мысал берілмейді</span>';
+    return ''; };
+  const stCell=(c,id)=>{ const i=stInfo(c,id); return `<b>${esc(id)}</b>${i?' — '+esc(i.name)+(i.grade?` <span class="muted">· ${esc(i.grade)}-сынып</span>`:''):' <span class="muted">(атауы жоқ)</span>'}`; };
+  const line=(r,c)=>{ const s=RS(r,c); const cur=stOf(r,c); const a=s.nAns||0; const ex=cur?exHTML(c,cur):'';
+    return `<tr class="${ex?'phead':''}"><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td>${c}</td><td style="text-align:left">${cur?stCell(c,cur):'<span class="muted">'+(s.diag?'—':'диагн. жоқ')+'</span>'}</td><td>${cur?esc(s.stages[cur].level):'—'}</td><td>${a}</td><td>${a?Math.round(100*(s.nOk||0)/a)+'%':'—'}</td>${vcell(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)}</tr>`
+      +(ex?`<tr class="pex"><td colspan="8" style="text-align:left"><span class="muted">Мысал есептер · ${esc(cur)}:</span>${ex}</td></tr>`:''); };
+  const trs=rows.map(r=>{ const rs=isAll()?routesOf(r):[route]; if(!rs.length) return `<tr><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td colspan="6" class="muted">жұмыс істемеген</td></tr>`; return rs.map(c=>line(r,c)).join(''); }).join('');
+  T.app.innerHTML=tbar('басып шығару')+`<div class="card noprint"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a>
+      <span>Мысал есептер: <select onchange="T.pk=+this.value;printReport()">${PK_OPTS.map(([k,l])=>`<option value="${k}" ${k===K?'selected':''}>${l}</option>`).join('')}</select> &nbsp; <button class="btn gold" onclick="window.print()">Басып шығару</button></span></div>
+      <p class="note" style="margin:8px 0 0">Қағазға шығарғанда тек төмендегі кесте шығады. Әр оқушының кезеңінен кейін — оның атауы; мысал есептер — әр бағыттың ең жоғарғы кезеңдерінде тұрған оқушыларға, кезең тестінің деңгейінде (3-деңгей). Бір кезеңдегі оқушыларға бірдей есептер; қайта шығарғанда да сол есептер.</p></div>
+    <div class="card"><h1>Есеп жолы · ${esc(T.klass||'барлық сынып')}</h1><p class="note">${esc(isAll()?'барлық бағыт':route+' · '+(ROUTE_NAME[route]||''))} · ${ymd(new Date())} · ${rows.length} оқушы</p>
+      <div style="overflow-x:auto"><table class="t3 prt"><tr><th>Оқушы</th><th>Сынып</th><th>Бағыт</th><th>Кезең</th><th>Деңгей</th><th>Есеп</th><th>Дұрыс</th><th>Қорытынды</th></tr>${trs||'<tr><td colspan="8">Оқушы жоқ</td></tr>'}</table></div>
+      <p class="note" style="margin-top:8px">${VLEGEND}</p></div>`;
+}
 /* ── challenge rooms (supabase/05_rooms.sql). The teacher opens a room on ANY station of AR / FR / TE / WP, shows the
       code on the board, starts the race and — unlike the pupils, who see the top three and their own place — gets the
       whole ranking, every answer, and the questions the class missed. Station names come from the routes' own tables. ── */
-const RNM={}; const roomNames=async r=>{ if(RNM[r]) return RNM[r]; if(!window.RoomRoutes) return {}; try{ RNM[r]=await RoomRoutes.stageNames(r); }catch(e){ return {}; } return RNM[r]; };   // a failed download is not remembered
 const stName=x=>{ const n=(RNM[x.route]||{})[x.stage]; return x.stage+(n?' · '+n.name:''); };
 const RWHY={alone:'Кемінде екі ойыншы керек.',too_many:'Ашық бөлме тым көп — біреуін жабыңыз.',busy:'Бос код табылмады, қайталаңыз.',stage:'Бұл станция бойынша жарыс өткізуге болмайды.',thin:'Бұл станцияда жарысқа есеп жеткіліксіз.',not_found:'Бөлме табылмады.'};
 const mmss=ms=>{ const x=Math.max(0,Math.round(num(ms)/1000)); return Math.floor(x/60)+':'+pad2(x%60); };
