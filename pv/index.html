@@ -576,6 +576,13 @@ h1,h2,h3,h4 { font-family: 'Fredoka', sans-serif; text-wrap: balance; }
 }
 .vis-block-group.strike { opacity:0.3; }
 .vis-arrow { font-size:16px; color:var(--accent); font-weight:700; }
+/* the three-row block chart in a two-digit hint (blockChart2): a, b, and what comes of them */
+.bc2 { margin:0 auto; }
+.bc2 .pv-cell { min-width:70px; min-height:40px; padding:6px 8px; }
+.bc2 .pv-row-r .pv-cell { border-top:3px solid var(--primary); background:var(--success-light); }
+.bc2 .bc2-q { color:var(--text-dim); font-size:18px; font-weight:700; }
+.bc2 .bc2-arrow { display:inline-block; vertical-align:middle; font-size:18px; font-weight:700; color:var(--accent); margin:0 4px; }
+.bc2 svg { vertical-align:middle; }
 .vis-equals { font-family:'Space Mono',monospace; font-size:16px; font-weight:700; color:var(--text-dim); }
 
 .vis-hint-text {
@@ -1970,7 +1977,9 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
 
   // Blocks: simplified — show the active column's blocks
   let blocks='';
-  if(s.showRegroup) {
+  if(nd===2 && !DISC_LVL.has(baseLevel(state.level))) {
+    blocks=blockChart2(a,b,op,s);   // the owner's three-row table: a, b, and what comes of them, exchange drawn
+  } else if(s.showRegroup) {
     const fromName=['бірлік','ондық','жүздік'][s.regroupFrom]||'';
     const toName=['бірлік','ондық','жүздік'][s.regroupTo]||'';
     if(s.regroupFrom<s.regroupTo) {
@@ -2038,6 +2047,59 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
   </div>`;
 }
 
+/* The two-digit hint chart — the owner's notebook page of 2026-09-25: a place-value table «Ондық | Бірлік» with
+   three rows, a, b, and underneath them what comes of it, the exchange DRAWN: in addition the ten ones that
+   become a ten sit in a dashed box (spent, faded) and the new rod appears in the tens column with an arrow;
+   in subtraction the rod given away is faded where it stood, the ten ones it became arrive in a dashed box,
+   and every block taken away is crossed, never removed — what is left uncrossed is the answer. The row grows
+   with the steps of the hint (blocks appear as the step reaches that column), so the child watches the
+   column method happen to the blocks in the same order as to the digits.
+   Subtraction is ONE row, not three (owner, second page, 2026-09-25: «减法的不用三行，在一行里»): only the
+   number being taken from is laid out, and the taking happens on it — a crossed rod is the ten subtracted,
+   crossed cubes the ones. Addition keeps a, b and the row under them.
+   Two-digit levels only; from three digits up the disc chart (pv/discs.js) does this job. */
+function blockChart2(a,b,op,s) {
+  const sc=0.45, rodStep=TEN_W+12, cubeStep=BU+4;   // rods 12 apart, cubes 4: a gap must beat the gaps inside a rod, or ten rods read as one slab
+  const cross=(x,y,w,h)=>`<path d="M${x-2},${y-2} L${x+w+2},${y+h+2} M${x+w+2},${y-2} L${x-2},${y+h+2}" stroke="var(--error)" stroke-width="${h>BU?5:3}" stroke-linecap="round" opacity="0.85"/>`;
+  const dashed=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="5 3"/>`;
+  /* rods: array of 'solid' | 'spent' | 'new' | 'cross' */
+  const rods=list=>{ if(!list.length) return '<span class="bc2-q">—</span>';
+    const w=list.length*rodStep-6+8, h=TEN_H+8; let g='';
+    list.forEach((k,i)=>{ const x=4+i*rodStep, y=4; if(k==='spent') g+=`<g opacity="0.3">${svgTen(x,y)}</g>`+dashed(x-3,y-3,TEN_W+6,TEN_H+6); else g+=svgTen(x,y);
+      if(k==='new') g+=dashed(x-3,y-3,TEN_W+6,TEN_H+6); if(k==='cross') g+=cross(x,y,TEN_W,TEN_H); });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${Math.round(w*sc)}" height="${Math.round(h*sc)}">${g}</svg>`; };
+  /* cubes: array of 'solid' | 'spent' | 'new' | 'cross', laid out five to a row; `box` = [from,to) drawn in a dashed box */
+  const cubes=(list,box)=>{ if(!list.length) return '<span class="bc2-q">—</span>';
+    const per=5, rowsN=Math.ceil(list.length/per), w=Math.min(list.length,per)*cubeStep-4+8, h=rowsN*cubeStep-4+8; let g='', boxes='';
+    if(box){ const r0=Math.floor(box[0]/per), r1=Math.floor((box[1]-1)/per); boxes=dashed(1,1+r0*cubeStep,w-2,(r1-r0+1)*cubeStep-4+6); }
+    list.forEach((k,i)=>{ const x=4+(i%per)*cubeStep, y=4+Math.floor(i/per)*cubeStep; if(k==='spent') g+=`<g opacity="0.3">${svgOne(x,y)}</g>`; else g+=svgOne(x,y); if(k==='cross') g+=cross(x,y,BU,BU); });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${Math.round(w*sc)}" height="${Math.round(h*sc)}">${boxes}${g}</svg>`; };
+  const fill=(n,k)=>new Array(n).fill(k);
+  const digs=n=>[n%10,Math.floor(n/10)%10]; const [ao,at]=digs(a), [bo,bt]=digs(b);
+  const q='<span class="bc2-q">?</span>', L='<span class="bc2-arrow">⟵</span>', R='<span class="bc2-arrow">⟶</span>';
+  let rT, rO;
+  if(op==='+'){
+    const carry=ao+bo>=10, onesDone=s.filledUpTo>=0, tensDone=s.filledUpTo>=1||s.isFinal, showCarry=carry&&(s.showRegroup||tensDone);
+    rO=!onesDone?q:carry?cubes(fill(10,'spent').concat(fill(ao+bo-10,'solid')),[0,10]):cubes(fill(ao+bo,'solid'));
+    rT=!tensDone?(showCarry?rods(['new'])+L:q):rods(fill(at+bt,'solid').concat(carry?['new']:[]))+(carry?L:'');
+  } else {
+    const borrow=ao<bo, onesDone=s.filledUpTo>=0, tensDone=s.filledUpTo>=1||s.isFinal, showBorrow=borrow&&(s.showRegroup||onesDone);
+    const t=fill(at,'solid'); if(showBorrow) t[at-1]='spent';
+    if(tensDone){ let left=bt; for(let i=t.length-1;i>=0&&left>0;i--) if(t[i]==='solid'){ t[i]='cross'; left--; } }
+    const o=fill(ao,'solid').concat(showBorrow?fill(10,'new'):[]);
+    if(onesDone){ let left=bo; for(let i=o.length-1;i>=0&&left>0;i--){ o[i]='cross'; left--; } }
+    rT=rods(t); rO=(showBorrow?R:'')+cubes(o,showBorrow?[ao,ao+10]:null);
+  }
+  const cell=(t,o,cls)=>`<tr class="${cls}"><td class="pv-cell">${t}</td><td class="pv-cell">${o}</td></tr>`;
+  const head=`<thead><tr><th>Ондық</th><th>Бірлік</th></tr></thead>`;
+  if(op!=='+') return `<table class="pv-table bc2">${head}<tbody>${cell(rT,rO,'pv-row-s')}</tbody></table>`;
+  return `<table class="pv-table bc2">${head}<tbody>
+    ${cell(rods(fill(at,'solid')),cubes(fill(ao,'solid')),'pv-row-a')}
+    <tr><td colspan="2" class="pv-op-row">${op}</td></tr>
+    ${cell(rods(fill(bt,'solid')),cubes(fill(bo,'solid')),'pv-row-b')}
+    ${cell(rT,rO,'pv-row-r')}
+  </tbody></table>`;
+}
 // Render blocks for a specific column level (0=ones, 1=tens, 2=hundreds)
 function miniBlocksN(col,count) {
   if(count<=0) return '<span style="color:var(--text-dim);font-size:11px">—</span>';

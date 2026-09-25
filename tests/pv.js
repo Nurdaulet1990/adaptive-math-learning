@@ -264,6 +264,33 @@ setTimeout(() => {
     ev('state.unlockedUpTo') === ev('LEVEL_ORDER.length - 1'),
     { at: ev('state.unlockedUpTo'), of: ev('LEVEL_ORDER.length - 1') });
 
+  /* 5. the two-digit hint chart (blockChart2, owner's notebook page 2026-09-25): three rows, exchange drawn.
+        Counted from the SVG: a rod is ten <rect>s, a cube one; a spent block sits in <g opacity="0.3">;
+        a crossed block has a <path> with the error stroke over it. What stays uncrossed must be the answer. */
+  try {
+    const stepsA = w.buildVisualSteps(36, 26, '+'), stepsS = w.buildVisualSteps(62, 26, '−');
+    const fin = st => st[st.length - 1];
+    const row = (h, cls) => { const d = new w.DOMParser().parseFromString('<table>' + h + '</table>', 'text/html'); return d.querySelector('tr.' + cls); };
+    const cells = tr => [...tr.querySelectorAll('td')];
+    const cnt = (td, sel) => td.querySelectorAll(sel).length;
+    const rA = row(w.blockChart2(36, 26, '+', fin(stepsA)), 'pv-row-r'), [tA, oA] = cells(rA);
+    T('36 + 26, last step: the ones cell holds 12 cubes, ten of them faded in a dashed box, two solid', cnt(oA, 'rect[rx="2"]') === 12 && cnt(oA, 'g[opacity] rect[rx="2"]') === 10 && cnt(oA, 'rect[stroke-dasharray]') === 1, { cubes: cnt(oA, 'rect[rx="2"]'), faded: cnt(oA, 'g[opacity] rect[rx="2"]') });
+    T('…and the tens cell holds 3 + 2 + the carried rod = 6 rods, the new one in a dashed box, with the arrow', cnt(tA, 'rect[rx="1.5"]') === 60 && cnt(tA, 'rect[stroke-dasharray]') === 1 && /⟵/.test(tA.textContent), { rods: cnt(tA, 'rect[rx="1.5"]') / 10 });
+    const first = w.blockChart2(36, 26, '+', stepsA[0]);
+    T('36 + 26, first step (ones only): the tens result cell is still a «?»', /bc2-q">\?/.test(cells(row(first, 'pv-row-r'))[0].innerHTML), cells(row(first, 'pv-row-r'))[0].innerHTML.slice(0, 80));
+    const subChart = w.blockChart2(62, 26, '−', fin(stepsS));
+    T('subtraction is ONE row: no a-row, no b-row, no operator row', !/pv-row-a|pv-row-b|pv-op-row/.test(subChart) && /pv-row-s/.test(subChart));
+    const rS = row(subChart, 'pv-row-s'), [tS, oS] = cells(rS);
+    const rodsLeft = cnt(tS, 'rect[rx="1.5"]') / 10 - cnt(tS, 'g[opacity] rect[rx="1.5"]') / 10 - cnt(tS, 'path[stroke="var(--error)"]');
+    const cubesLeft = cnt(oS, 'rect[rx="2"]') - cnt(oS, 'path[stroke="var(--error)"]');
+    T('62 − 26, last step: one rod faded (given away), two crossed, three left; ten cubes arrived, six crossed, six left = 36', cnt(tS, 'g[opacity] rect[rx="1.5"]') === 10 && cnt(tS, 'path[stroke="var(--error)"]') === 2 && rodsLeft === 3 && cnt(oS, 'rect[rx="2"]') === 12 && cubesLeft === 6 && /⟶/.test(oS.textContent), { rodsLeft, cubesLeft, cubes: cnt(oS, 'rect[rx="2"]') });
+    const s0 = row(w.blockChart2(62, 26, '−', stepsS[0]), 'pv-row-s');
+    T('62 − 26, first step («2 < 6»): the result row is still just a — 6 rods, 2 cubes, nothing faded or crossed', cnt(s0, 'rect[rx="1.5"]') === 60 && cnt(s0, 'rect[rx="2"]') === 2 && cnt(s0, 'g[opacity]') === 0 && cnt(s0, 'path') === 0);
+    const noRe = row(w.blockChart2(42, 31, '+', fin(w.buildVisualSteps(42, 31, '+'))), 'pv-row-r');
+    T('42 + 31 (no exchange): 7 rods and 3 cubes, no dashed box, no arrow', cnt(noRe, 'rect[rx="1.5"]') === 70 && cnt(noRe, 'rect[rx="2"]') === 3 && cnt(noRe, 'rect[stroke-dasharray]') === 0 && !/⟵|⟶/.test(noRe.textContent));
+    T('the hint of a two-digit column level uses the chart; a three-digit one does not', /class="pv-table bc2"/.test(w.renderVisualHint(36, 26, '+', 0, 5, stepsA[0])) && !/bc2/.test(w.renderVisualHint(436, 226, '+', 0, 5, w.buildVisualSteps(436, 226, '+')[0])));
+  } catch (e) { T('two-digit hint chart', false, e.message); }
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   process.exit(failed ? 1 : 0);
