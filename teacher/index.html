@@ -12,19 +12,19 @@
 table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width:200px}
 .pex td{font-weight:600;background:var(--bg,#faf8f3)!important;border-top:0}
 .pex ol{margin:2px 0 0 22px;padding:0} .pex li{margin:2px 0}
-.pex .fig{max-width:280px;margin:4px 0} .pex .fig svg{max-width:100%;height:auto}
+.pex .fig{display:inline-block;vertical-align:middle;margin:0 8px} .pex .fig svg{height:64px!important;width:auto!important;max-width:260px!important;display:block}   /* a route's own inline size is for a phone screen, not a line on paper */
 .pex .expr{font-family:var(--disp);display:inline-block;vertical-align:middle;font-size:.7em}
 @page{margin:12mm}
 @media print{ .top,.noprint{display:none!important} body{background:#fff;color:#000} .app{max-width:none;padding:0;margin:0}
   .card{border:0;border-radius:0;padding:0 0 14px;margin:0;background:#fff;box-shadow:none} table.t3 th,table.t3 td{padding:4px 6px;font-size:.8rem;background:#fff}
-  tr.phead,tr.pex{break-inside:avoid} h1{font-size:1.4rem} }
+  tr.phead,tr.pex{break-inside:avoid} h1{font-size:1.4rem} table.prt td:nth-child(4){min-width:0} table.prt td:first-child{white-space:normal} .pex .fig svg{height:52px!important} }
 </style>
 </head>
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/core.js?v=13"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="../room/routes.js?v=1"></script>
+<script src="../room/routes.js?v=2"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -258,39 +258,39 @@ function exportCSV(){ const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`esep_${isAll()?'barlygy':T.route}_${new Date().toISOString().slice(0,10)}.csv`; document.body.appendChild(a); a.click(); a.remove(); }
 /* ── the printable class report ─────────────────────────────────────────────────────────────────────
    What the teacher takes to a parents' meeting or pins in the staff room: one line per pupil (and route), and
-   after each pupil's stage its NAME and grade, then — for pupils standing on the highest few stages of a route —
-   three example questions of that stage with answers, right under the pupil's line. The examples are built here
-   from the route's own generator (room/routes.js, level 3 = the stage test) under a fixed seed, so a report
-   printed twice reads the same, and two pupils on the same stage get the same three.
+   after each pupil's stage its NAME and grade, then — right under the line — three example questions of that
+   stage AT THE LEVEL THE PUPIL IS ON, with answers: the teacher sees what every child is working on. The examples
+   are built here from the route's own generator (room/routes.js) under a fixed seed, so a report printed twice
+   reads the same, and two pupils on the same stage and level get the same three.
    Stage ids come from the pupils' own state: an id the route does not know is listed bare and gets no examples. ── */
 const PSEED=2026;
-const PK_OPTS=[[3,'ең жоғарғы 3 кезеңдегілерге'],[5,'ең жоғарғы 5 кезеңдегілерге'],[99,'бәріне'],[0,'мысалсыз']];
+const PK_OPTS=[[1,'әр оқушыға, өз деңгейінде'],[3,'әр оқушыға, 3-деңгей (кезең тесті)'],[0,'мысалсыз']];
 async function printReport(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view; if(!T.tok) return login();
-  const K=PK_OPTS.some(o=>o[0]===T.pk)?T.pk:3; const route=T.route;
+  const K=PK_OPTS.some(o=>o[0]===T.pk)?T.pk:1; const route=T.route;
   const rows=T.rows.filter(r=>!T.klass||(r.klass||'—')===T.klass).slice().sort((x,y)=>(x.klass||'').localeCompare(y.klass||'')||x.name.localeCompare(y.name));
   T.app.innerHTML=tbar('басып шығару')+`<div class="card"><p>Жүктелуде…</p></div>`;
   await loadNames(); if(gen!==T.view||!T.tok) return;
-  /* which stages the class stands on, per route */
-  const pres={}; rows.forEach(r=>(isAll()?routesOf(r):[route]).forEach(c=>{ const st=stOf(r,c); if(!st) return; pres[c]=pres[c]||Object.create(null); pres[c][st]=(pres[c][st]||0)+1; }));
+  /* every (route, stage, level) the class is working on */
+  const lvlOf=(s,cur)=>{ const l=num(s.stages[cur]&&s.stages[cur].level); return K===3?3:[1,2,3].includes(l)?l:3; };
+  const need={}; rows.forEach(r=>(isAll()?routesOf(r):[route]).forEach(c=>{ const s=RS(r,c); const st=stOf(r,c); if(!st) return; need[c]=need[c]||Object.create(null); need[c][st+'|'+lvlOf(s,st)]=1; }));
   const EX={}, MOD={};
-  for(const c of ROUTES){ if(!pres[c]||!K||!window.RoomRoutes||!RoomRoutes.ROUTES.includes(c)) continue;
-    const ids=Object.keys(pres[c]).sort().reverse().slice(0,K);   // ids are zero-padded, so text order is stage order
+  for(const c of ROUTES){ if(!need[c]||!K||!window.RoomRoutes||!RoomRoutes.ROUTES.includes(c)) continue;
     let mod=null; try{ mod=await RoomRoutes.load(c); }catch(e){ mod=null; } if(gen!==T.view||!T.tok) return; if(!mod) continue; MOD[c]=mod;
-    ids.forEach(id=>{ try{ EX[c+' '+id]=RoomRoutes.sheet(mod,c,id,PSEED,3); }catch(e){ EX[c+' '+id]=[]; } }); }
+    Object.keys(need[c]).forEach(k=>{ const [id,l]=k.split('|'); try{ EX[c+' '+k]=RoomRoutes.sheet(mod,c,id,PSEED+ +l,3,+l); }catch(e){ EX[c+' '+k]=[]; } }); }
   const qHTML=q=>esc(q.stem)+(q.exprHTML?` <span class="expr">${q.exprHTML}</span>`:''), aHTML=q=>q.ansHTML||esc(q.ans);
-  const exHTML=(c,id)=>{ const qs=EX[c+' '+id]; const i=stInfo(c,id);
+  const exHTML=(c,id,l)=>{ const qs=EX[c+' '+id+'|'+l]; const i=stInfo(c,id);
     if(qs&&qs.length) return `<ol>${qs.map(q=>{ let f=''; try{ f=RoomRoutes.figHTML(MOD[c],q); }catch(e){ f=''; }
       return `<li>${qHTML(q)}${f?`<div class="fig">${f}</div>`:''} <span class="muted">→</span> <b>${aHTML(q)}</b>${q.kind==='choice'&&q.choices.length?` <span class="muted">(нұсқалар: ${q.choices.map(x=>esc(x)).join(' · ')})</span>`:''}</li>`; }).join('')}</ol>`;
     if(qs&&i&&i.type==='speed') return '<span class="note">⚡ уақытқа жаттығу — мысал берілмейді</span>';
     return ''; };
   const stCell=(c,id)=>{ const i=stInfo(c,id); return `<b>${esc(id)}</b>${i?' — '+esc(i.name)+(i.grade?` <span class="muted">· ${esc(i.grade)}-сынып</span>`:''):' <span class="muted">(атауы жоқ)</span>'}`; };
-  const line=(r,c)=>{ const s=RS(r,c); const cur=stOf(r,c); const a=s.nAns||0; const ex=cur?exHTML(c,cur):'';
+  const line=(r,c)=>{ const s=RS(r,c); const cur=stOf(r,c); const a=s.nAns||0; const l=cur?lvlOf(s,cur):0; const ex=cur?exHTML(c,cur,l):'';
     return `<tr class="${ex?'phead':''}"><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td>${c}</td><td style="text-align:left">${cur?stCell(c,cur):'<span class="muted">'+(s.diag?'—':'диагн. жоқ')+'</span>'}</td><td>${cur?esc(s.stages[cur].level):'—'}</td><td>${a}</td><td>${a?Math.round(100*(s.nOk||0)/a)+'%':'—'}</td>${vcell(a,a?(s.nOk||0)/a:0,a?(s.nHint||0)/a:0)}</tr>`
-      +(ex?`<tr class="pex"><td colspan="8" style="text-align:left"><span class="muted">Мысал есептер · ${esc(cur)}:</span>${ex}</td></tr>`:''); };
+      +(ex?`<tr class="pex"><td colspan="8" style="text-align:left"><span class="muted">Мысал есептер · ${esc(cur)} · ${l}-деңгей:</span>${ex}</td></tr>`:''); };
   const trs=rows.map(r=>{ const rs=isAll()?routesOf(r):[route]; if(!rs.length) return `<tr><td style="text-align:left"><b>${esc(r.name)}</b></td><td>${esc(r.klass||'—')}</td><td colspan="6" class="muted">жұмыс істемеген</td></tr>`; return rs.map(c=>line(r,c)).join(''); }).join('');
   T.app.innerHTML=tbar('басып шығару')+`<div class="card noprint"><div class="qbar"><a href="#" onclick="showTeacher();return false">← тізім</a>
       <span>Мысал есептер: <select onchange="T.pk=+this.value;printReport()">${PK_OPTS.map(([k,l])=>`<option value="${k}" ${k===K?'selected':''}>${l}</option>`).join('')}</select> &nbsp; <button class="btn gold" onclick="window.print()">Басып шығару</button></span></div>
-      <p class="note" style="margin:8px 0 0">Қағазға шығарғанда тек төмендегі кесте шығады. Әр оқушының кезеңінен кейін — оның атауы; мысал есептер — әр бағыттың ең жоғарғы кезеңдерінде тұрған оқушыларға, кезең тестінің деңгейінде (3-деңгей). Бір кезеңдегі оқушыларға бірдей есептер; қайта шығарғанда да сол есептер.</p></div>
+      <p class="note" style="margin:8px 0 0">Қағазға шығарғанда тек төмендегі кесте шығады. Әр оқушының кезеңінен кейін — оның атауы, астында — сол кезеңнің оқушы тұрған деңгейдегі 3 мысал есебі (жауабымен). Бір кезең мен деңгейдегі оқушыларға бірдей есептер; қайта шығарғанда да сол есептер.</p></div>
     <div class="card"><h1>Есеп жолы · ${esc(T.klass||'барлық сынып')}</h1><p class="note">${esc(isAll()?'барлық бағыт':route+' · '+(ROUTE_NAME[route]||''))} · ${ymd(new Date())} · ${rows.length} оқушы</p>
       <div style="overflow-x:auto"><table class="t3 prt"><tr><th>Оқушы</th><th>Сынып</th><th>Бағыт</th><th>Кезең</th><th>Деңгей</th><th>Есеп</th><th>Дұрыс</th><th>Қорытынды</th></tr>${trs||'<tr><td colspan="8">Оқушы жоқ</td></tr>'}</table></div>
       <p class="note" style="margin-top:8px">${VLEGEND}</p></div>`;

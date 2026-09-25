@@ -10,7 +10,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 /* the names the report must print, read straight from the routes' own tables */
 const stages = r => { const c = {}; c.window = c; vm.createContext(c); vm.runInContext(fs.readFileSync(path.join(ROOT, r, 'stages.js'), 'utf8') + ';globalThis.__S = STAGES;', c); return Object.fromEntries(c.__S.map(s => [s[0], { name: s[1], type: s[2] }])); };
 const AR = stages('ar'), FR = stages('fr'), WP = stages('wp');
-const cur = (id, level) => ({ status: 'current', level: level || 2, streak: 1, tests: [] });
+const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: [] });
 (async () => {
   const srv = http.createServer((q, s) => { let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (f.endsWith(path.sep) || fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
     fs.readFile(f, (e, b) => e ? (s.writeHead(404), s.end()) : (s.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }), s.end(b))); }).listen(8767);
@@ -63,7 +63,7 @@ const cur = (id, level) => ({ status: 'current', level: level || 2, streak: 1, t
   const csv = await tp.evaluate(() => new Promise(res => { const o = URL.createObjectURL; URL.createObjectURL = b => { b.text().then(res); URL.createObjectURL = o; return o.call(URL, b); }; exportCSV(); }));
   T('CSV has a «Кезең атауы» column and the AR-12 line carries the name', /;Кезең;Кезең атауы;Деңгей;/.test(csv) && new RegExp('"AR";"AR-12";"' + AR['AR-12'].name + '"').test(csv), csv.slice(0, 400));
 
-  // 3 ─ the printed report, class 3А, all routes: after each pupil's stage its name; examples under the pupils on the top three stages of each route
+  // 3 ─ the printed report, class 3А, all routes: after each pupil's stage its name; under every pupil three examples of that stage at the pupil's level
   await tp.selectOption('select >> nth=0', 'ALL'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
   await tp.selectOption('select >> nth=1', '3А'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
   await tp.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
@@ -74,14 +74,15 @@ const cur = (id, level) => ({ status: 'current', level: level || 2, streak: 1, t
     const nx = tr.locator('xpath=following-sibling::tr[1]'); const isEx = (await nx.count()) && (await nx.getAttribute('class')) === 'pex'; return { t, n: isEx ? await nx.locator('ol li').count() : 0, ex: isEx ? (await nx.innerText()).replace(/\s+/g, ' ') : '' }; };
   T('report: after each pupil\'s stage comes its name and grade', new RegExp('AR-05 — ' + AR['AR-05'].name + ' · 2-сынып').test((await ln('Айгүл С.', 'AR')).t) && new RegExp('WP-02 — ' + WP['WP-02'].name).test((await ln('Ерасыл Т.', 'WP')).t), [await ln('Айгүл С.', 'AR'), await ln('Ерасыл Т.', 'WP')]);
   T('report: the other class is not in it', !/Сәуле М\./.test(await rep()) && !/AR-13/.test(await rep()));
-  T('report: AR-12, AR-11, AR-08 are the three highest AR stages → Дана (AR-12) and Ерасыл (AR-08) get three examples with answers right under their line', (await ln('Дана К.', 'AR')).n === 3 && (await ln('Ерасыл Т.', 'AR')).n === 3 && /Мысал есептер · AR-12.*→/.test((await ln('Дана К.', 'AR')).ex), [await ln('Дана К.', 'AR'), await ln('Ерасыл Т.', 'AR')]);
+  T('report: EVERY pupil gets three examples of the stage they are on, with answers — Айгүл AR-05, Дана AR-12, Ерасыл AR-08, Нұрлан AR-02', (await ln('Айгүл С.', 'AR')).n === 3 && (await ln('Дана К.', 'AR')).n === 3 && (await ln('Ерасыл Т.', 'AR')).n === 3 && (await ln('Нұрлан Б.', 'AR')).n === 3 && /Мысал есептер · AR-12.*→/.test((await ln('Дана К.', 'AR')).ex), [await ln('Айгүл С.', 'AR'), await ln('Нұрлан Б.', 'AR')]);
+  T('report: the examples are at the pupil\'s own level (Айгүл level 2, Дана level 3, FR-03 level 1)', /AR-05 · 2-деңгей/.test((await ln('Айгүл С.', 'AR')).ex) && /AR-12 · 3-деңгей/.test((await ln('Дана К.', 'AR')).ex) && /FR-03 · 1-деңгей/.test((await ln('Айгүл С.', 'FR')).ex), [await ln('Айгүл С.', 'AR'), await ln('Айгүл С.', 'FR')]);
   T('report: Мадина is on AR-11, a ⚡ speed drill — it says so under her line, no examples', (await ln('Мадина Ә.', 'AR')).n === 0 && /уақытқа жаттығу/.test((await ln('Мадина Ә.', 'AR')).ex), await ln('Мадина Ә.', 'AR'));
-  T('report: Айгүл (AR-05) and Нұрлан (AR-02) are below the top three → name, no examples', (await ln('Айгүл С.', 'AR')).n === 0 && (await ln('Айгүл С.', 'AR')).ex === '' && (await ln('Нұрлан Б.', 'AR')).n === 0 && new RegExp(AR['AR-02'].name).test((await ln('Нұрлан Б.', 'AR')).t), [await ln('Айгүл С.', 'AR'), await ln('Нұрлан Б.', 'AR')]);
-  T('report: FR-03 and WP-02 (the only stage of their route) get examples', (await ln('Айгүл С.', 'FR')).n === 3 && (await ln('Ерасыл Т.', 'WP')).n === 3, [await ln('Айгүл С.', 'FR'), await ln('Ерасыл Т.', 'WP')]);
+  T('report: FR-03 (level 1 has only two distinct questions) and WP-02 get examples too', (await ln('Айгүл С.', 'FR')).n >= 2 && (await ln('Ерасыл Т.', 'WP')).n === 3, [await ln('Айгүл С.', 'FR'), await ln('Ерасыл Т.', 'WP')]);
   T('report: the PV stage and the unknown TE id are listed bare, without examples; nothing executed', /PV-03 \(атауы жоқ\)/.test((await ln('Нұрлан Б.', 'PV')).t) && (await ln('Нұрлан Б.', 'PV')).n === 0 && /constructor \(атауы жоқ\)/.test((await ln('Әлихан Ж.', 'TE')).t) && (await ln('Әлихан Ж.', 'TE')).n === 0 && (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0, [await ln('Нұрлан Б.', 'PV'), await ln('Әлихан Ж.', 'TE')]);
   const first = (await ln('Дана К.', 'AR')).ex;
-  await tp.selectOption('.noprint select', '5'); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
-  T('report: «top 5» reaches Айгүл (AR-05) and Нұрлан (AR-02) too', (await ln('Айгүл С.', 'AR')).n === 3 && (await ln('Нұрлан Б.', 'AR')).n === 3, [await ln('Айгүл С.', 'AR'), await ln('Нұрлан Б.', 'AR')]);
+  await tp.selectOption('.noprint select', '3'); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
+  T('report: «3-деңгей» switches every pupil\'s examples to the stage-test level', /AR-05 · 3-деңгей/.test((await ln('Айгүл С.', 'AR')).ex) && /FR-03 · 3-деңгей/.test((await ln('Айгүл С.', 'FR')).ex) && (await ln('Айгүл С.', 'AR')).n === 3, [await ln('Айгүл С.', 'AR'), await ln('Айгүл С.', 'FR')]);
+  await tp.selectOption('.noprint select', '1'); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
   T('report: the same seed → the same examples on every print', (await ln('Дана К.', 'AR')).ex === first, { first, again: (await ln('Дана К.', 'AR')).ex });
   await tp.selectOption('.noprint select', '0'); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
   T('report: «мысалсыз» — names only, not one example', (await tp.locator('table.prt ol').count()) === 0 && (await tp.locator('tr.pex').count()) === 0 && /AR-12 — /.test(await rep()));
