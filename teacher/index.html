@@ -64,7 +64,7 @@ function agg(r){ const rs=routesOf(r); let a=0,ok=0,h=0; const cur=[];
   return {rs,a,ok,h,cur}; }
 const mainRoute=r=>routesOf(r).sort((x,y)=>(RS(r,y).nAns||0)-(RS(r,x).nAns||0))[0]||ROUTES[0];
 /* A stage id alone («AR-03») says nothing to a parent or to a colleague, so wherever a stage is shown it carries the
-   name from the route's own stage table (room/routes.js reads it; PV has no such table yet and stays a bare id).
+   name from the route's own stage table (room/routes.js reads it; PV's table is generated from its page by pv/stages_gen.js).
    The id comes from the pupil's own state, so it is looked up with hasOwnProperty — never as a plain property. */
 const RNM={}; const roomNames=async r=>{ if(RNM[r]) return RNM[r]; if(!window.RoomRoutes) return {}; try{ RNM[r]=await RoomRoutes.stageNames(r); }catch(e){ return {}; } return RNM[r]; };   // a failed download is not remembered
 const loadNames=()=>Promise.all(ROUTES.map(roomNames));
