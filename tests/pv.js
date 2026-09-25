@@ -278,11 +278,13 @@ setTimeout(() => {
     T('…and the tens cell holds 3 + 2 + the carried rod = 6 rods, the new one in a dashed box, with the arrow', cnt(tA, 'rect[rx="1.5"]') === 60 && cnt(tA, 'rect[stroke-dasharray]') === 1 && /⟵/.test(tA.textContent), { rods: cnt(tA, 'rect[rx="1.5"]') / 10 });
     const first = w.blockChart2(36, 26, '+', stepsA[0]);
     T('36 + 26, first step (ones only): the tens result cell is still a «?»', /bc2-q">\?/.test(cells(row(first, 'pv-row-r'))[0].innerHTML), cells(row(first, 'pv-row-r'))[0].innerHTML.slice(0, 80));
-    const rS = row(w.blockChart2(62, 26, '−', fin(stepsS)), 'pv-row-r'), [tS, oS] = cells(rS);
+    const subChart = w.blockChart2(62, 26, '−', fin(stepsS));
+    T('subtraction is ONE row: no a-row, no b-row, no operator row', !/pv-row-a|pv-row-b|pv-op-row/.test(subChart) && /pv-row-s/.test(subChart));
+    const rS = row(subChart, 'pv-row-s'), [tS, oS] = cells(rS);
     const rodsLeft = cnt(tS, 'rect[rx="1.5"]') / 10 - cnt(tS, 'g[opacity] rect[rx="1.5"]') / 10 - cnt(tS, 'path[stroke="var(--error)"]');
     const cubesLeft = cnt(oS, 'rect[rx="2"]') - cnt(oS, 'path[stroke="var(--error)"]');
     T('62 − 26, last step: one rod faded (given away), two crossed, three left; ten cubes arrived, six crossed, six left = 36', cnt(tS, 'g[opacity] rect[rx="1.5"]') === 10 && cnt(tS, 'path[stroke="var(--error)"]') === 2 && rodsLeft === 3 && cnt(oS, 'rect[rx="2"]') === 12 && cubesLeft === 6 && /⟶/.test(oS.textContent), { rodsLeft, cubesLeft, cubes: cnt(oS, 'rect[rx="2"]') });
-    const s0 = row(w.blockChart2(62, 26, '−', stepsS[0]), 'pv-row-r');
+    const s0 = row(w.blockChart2(62, 26, '−', stepsS[0]), 'pv-row-s');
     T('62 − 26, first step («2 < 6»): the result row is still just a — 6 rods, 2 cubes, nothing faded or crossed', cnt(s0, 'rect[rx="1.5"]') === 60 && cnt(s0, 'rect[rx="2"]') === 2 && cnt(s0, 'g[opacity]') === 0 && cnt(s0, 'path') === 0);
     const noRe = row(w.blockChart2(42, 31, '+', fin(w.buildVisualSteps(42, 31, '+'))), 'pv-row-r');
     T('42 + 31 (no exchange): 7 rods and 3 cubes, no dashed box, no arrow', cnt(noRe, 'rect[rx="1.5"]') === 70 && cnt(noRe, 'rect[rx="2"]') === 3 && cnt(noRe, 'rect[stroke-dasharray]') === 0 && !/⟵|⟶/.test(noRe.textContent));

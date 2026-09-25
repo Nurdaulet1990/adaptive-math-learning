@@ -2051,10 +2051,13 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
    three rows, a, b, and underneath them what comes of it, the exchange DRAWN: in addition the ten ones that
    become a ten sit in a dashed box (spent, faded) and the new rod appears in the tens column with an arrow;
    in subtraction the rod given away is faded where it stood, the ten ones it became arrive in a dashed box,
-   and every block taken away is crossed, never removed — what is left uncrossed is the answer. The third row
-   grows with the steps of the hint (blocks appear as the step reaches that column), so the child watches the
-   column method happen to the blocks in the same order as to the digits. Two-digit levels only; from three
-   digits up the disc chart (pv/discs.js) does this job. */
+   and every block taken away is crossed, never removed — what is left uncrossed is the answer. The row grows
+   with the steps of the hint (blocks appear as the step reaches that column), so the child watches the
+   column method happen to the blocks in the same order as to the digits.
+   Subtraction is ONE row, not three (owner, second page, 2026-09-25: «减法的不用三行，在一行里»): only the
+   number being taken from is laid out, and the taking happens on it — a crossed rod is the ten subtracted,
+   crossed cubes the ones. Addition keeps a, b and the row under them.
+   Two-digit levels only; from three digits up the disc chart (pv/discs.js) does this job. */
 function blockChart2(a,b,op,s) {
   const sc=0.45, rodStep=TEN_W+12, cubeStep=BU+4;   // rods 12 apart, cubes 4: a gap must beat the gaps inside a rod, or ten rods read as one slab
   const cross=(x,y,w,h)=>`<path d="M${x-2},${y-2} L${x+w+2},${y+h+2} M${x+w+2},${y-2} L${x-2},${y+h+2}" stroke="var(--error)" stroke-width="${h>BU?5:3}" stroke-linecap="round" opacity="0.85"/>`;
@@ -2088,7 +2091,9 @@ function blockChart2(a,b,op,s) {
     rT=rods(t); rO=(showBorrow?R:'')+cubes(o,showBorrow?[ao,ao+10]:null);
   }
   const cell=(t,o,cls)=>`<tr class="${cls}"><td class="pv-cell">${t}</td><td class="pv-cell">${o}</td></tr>`;
-  return `<table class="pv-table bc2"><thead><tr><th>Ондық</th><th>Бірлік</th></tr></thead><tbody>
+  const head=`<thead><tr><th>Ондық</th><th>Бірлік</th></tr></thead>`;
+  if(op!=='+') return `<table class="pv-table bc2">${head}<tbody>${cell(rT,rO,'pv-row-s')}</tbody></table>`;
+  return `<table class="pv-table bc2">${head}<tbody>
     ${cell(rods(fill(at,'solid')),cubes(fill(ao,'solid')),'pv-row-a')}
     <tr><td colspan="2" class="pv-op-row">${op}</td></tr>
     ${cell(rods(fill(bt,'solid')),cubes(fill(bo,'solid')),'pv-row-b')}
