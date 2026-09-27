@@ -12,6 +12,7 @@
   --hill:#C6D5AE; --hill2:#B2C596;
   --g1:#E9E0C4; --g2:#DED2B0;
   --road:#F1E1BE; --road-edge:#D9C395; --road-line:#FFFBF0;
+  --road-side:#BFA877; --tree:#7FA35E; --tree-d:#5E8544; --trunk:#8B6A45; --plinth:rgba(60,45,20,.28);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -23,6 +24,7 @@
     --hill:#20342F; --hill2:#1A2A26;
     --g1:#212927; --g2:#191F1E;
     --road:#4E4430; --road-edge:#372F21; --road-line:#8B7B57;
+    --road-side:#241E14; --tree:#2F4A36; --tree-d:#243A2A; --trunk:#4A3A28; --plinth:rgba(0,0,0,.45);
   }
 }
 .mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
@@ -66,3 +68,34 @@
   background:var(--plate);border-radius:999px;padding:4px 12px;white-space:nowrap}
 .stn .fox .pet{display:block}
 @media (prefers-reduced-motion: reduce){.stn .fox{animation:none}}
+
+/* ── v4 · depth (look v3, step 3) ───────────────────────────────────────────────────────────────────────
+   Each station is a thick coin on a soft ground shadow; the pressed state sinks it into its own rim.
+   Only transform/opacity/stroke-dashoffset animate. «Reduce motion» stops all of it (last rule). */
+.stn .plinth{position:absolute;left:-38px;top:26px;width:76px;height:22px;border-radius:50%;background:radial-gradient(closest-side,var(--plinth),transparent);pointer-events:none}
+.stn.cur .plinth{left:-46px;top:34px;width:92px;height:26px}
+.stn .dot{box-shadow:0 9px 0 var(--line),inset 0 4px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.1);animation:mp-pop .45s cubic-bezier(.2,.9,.3,1.3) var(--d,0ms) backwards}
+.stn[data-stn] .dot:active{transform:translateY(8px);box-shadow:0 1px 0 var(--line),inset 0 4px 0 rgba(255,255,255,.35)}
+.stn.passed .dot{box-shadow:0 9px 0 var(--good-d),inset 0 4px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.12)}
+.stn.passed .dot:active{box-shadow:0 1px 0 var(--good-d),inset 0 4px 0 rgba(255,255,255,.35)}
+.stn.cur .dot{box-shadow:0 10px 0 var(--rc-d),inset 0 4px 0 rgba(255,255,255,.35),inset 0 -7px 0 rgba(0,0,0,.14)}
+.stn.cur .dot:active{box-shadow:0 1px 0 var(--rc-d),inset 0 4px 0 rgba(255,255,255,.35)}
+.stn.cur .dot::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:4px solid var(--gold);animation:mp-ring 1.7s ease-out infinite;pointer-events:none}
+.stn.locked .dot{box-shadow:0 8px 0 var(--line),inset 0 3px 0 rgba(255,255,255,.3)}
+.stn .lk{position:absolute;left:14px;top:-40px;width:28px;height:28px;border-radius:50%;background:var(--card);color:var(--muted);display:grid;place-items:center;
+  box-shadow:0 3px 0 var(--line);pointer-events:none}
+.stn .lk svg{width:16px;height:16px;fill:currentColor}
+.stn .stars{display:flex;gap:1px;top:44px;text-shadow:none}
+.stn.cur .stars{top:52px}
+.stn .stars svg{width:18px;height:18px;fill:var(--line);stroke:rgba(0,0,0,.15);stroke-width:1.2}
+.stn .stars svg.on{fill:var(--gold);stroke:var(--gold-d,#AC7813)}
+.stn .stars svg:nth-child(2){transform:translateY(-4px)}
+.stn .bub .btn{box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28)}
+.stn .bub .btn:active{transform:translateY(5px);box-shadow:0 0 0 var(--rc-d)}
+.stn.open .bub{animation:mp-bub .28s cubic-bezier(.2,.9,.3,1.3)}
+.mp-done{stroke-dasharray:100;animation:mp-draw 1.1s cubic-bezier(.3,.7,.3,1) .15s backwards}
+@keyframes mp-pop{0%{transform:scale(.5) translateY(14px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mp-ring{0%{transform:scale(.92);opacity:.85}100%{transform:scale(1.35);opacity:0}}
+@keyframes mp-draw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+@keyframes mp-bub{from{transform:translateX(-50%) scale(.6)}to{transform:translateX(-50%) scale(1)}}
+@media (prefers-reduced-motion: reduce){.stn .dot,.stn.cur .dot::after,.mp-done,.stn.open .bub{animation:none!important}}

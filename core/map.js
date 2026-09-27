@@ -1,4 +1,7 @@
-/* Есеп жолы · core/map.js v3 — the route map: a road through the steppe, one big station per stage.
+/* Есеп жолы · core/map.js v4 — the route map: a mountain road through the steppe, one big station per stage.
+   v4 (look v3, step 3): the road has a side, stations stand on plinths, hills and trees line the road,
+   stars are drawn, locked stations carry a lock, the walked part of the road draws itself in, the current
+   station pulses. Same API and markup hooks (.stn[data-stn], [data-go], .bub) as v3.
    Owner: platform owner. Used by core/runner.js and wp/screens.js. Routes never draw it themselves.
 
    Landscape + road are one SVG (scales with the width); stations are HTML on top in the same coordinate
@@ -48,18 +51,29 @@ function map(o){
     const y=pts[i].y+STEP*0.58;
     units+=`<div class="unit" style="top:${(y/H*100).toFixed(3)}%"><span>${esc(u)}</span></div>`; });
 
+  /* hills and trees on the side of the road the zig-zag is away from; the same map always looks the same */
+  let deco='';
+  pts.forEach((p,i)=>{ if(i%2) return; const left=p.x>W/2, x=left?Math.max(34,p.x-150):Math.min(W-34,p.x+150), y=p.y+STEP*0.42, s=0.8+((i*37)%5)/10;
+    deco+=`<g transform="translate(${x},${y.toFixed(0)}) scale(${s.toFixed(2)})"><path d="M-46,0 C-34,-34 34,-34 46,0Z" fill="var(--hill)"/><path d="M0,-25 C18,-24 34,-16 46,0 L0,0Z" fill="var(--hill2)" opacity=".7"/>`
+      +(i%4===0?`<g transform="translate(${left?-16:16},-22)"><rect x="-2.5" y="0" width="5" height="12" rx="2" fill="var(--trunk)"/><circle r="12" cy="-4" fill="var(--tree)"/><circle r="12" cy="-4" cx="4" fill="var(--tree-d)" opacity=".55"/><circle r="4" cx="-4" cy="-9" fill="#fff" opacity=".22"/></g>`:'')
+      +`</g>`; });
+  const STAR='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
+  const LOCK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>';
+
   const nodes=st.map((s,i)=>{
     const p=pts[i], cur=s.status==='current', passed=s.status==='passed', open=cur;
     const cls=`stn ${cur?'cur':passed?'passed':'locked'}${open?' open':''}`;
     // stars:null means "this route keeps no star score" (PV) — draw nothing rather than three empty stars
-    const stars=(passed&&s.stars!=null)?`<span class="stars">${'★'.repeat(s.stars)}${'☆'.repeat(3-s.stars)}</span>`:'';
+    const stars=(passed&&s.stars!=null)?`<span class="stars" aria-label="${s.stars} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<s.stars?'on':''}" aria-hidden="true">${STAR}</svg>`).join('')}</span>`:'';
     const icon=s.icon||`<span class="num">${i+1}</span>`;
     const tap=cur||passed;
-    return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%"${tap?` data-stn="${esc(s.id)}"`:''}>
+    const d=Math.max(0,Math.min(18,i-Math.max(0,doneIdx-6)))*45;   // stations pop in from the pupil's part of the road upward
+    return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%;--d:${d}ms"${tap?` data-stn="${esc(s.id)}"`:''}>
+      <span class="plinth" aria-hidden="true"></span>
       ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:40}):ava}</span>`:''}
       <div class="bub"><b>${esc(s.name)}</b><i>${esc(s.sub||s.id)}</i>${tap?`<button type="button" class="btn" data-go="${esc(s.id)}">${esc(go)}</button>`:''}</div>
       <span class="dot"${tap?' role="button" tabindex="0"':''}><svg viewBox="-24 -24 48 48" aria-hidden="true">${icon}</svg></span>
-      ${stars}</div>`;
+      ${s.status==='locked'?`<span class="lk">${LOCK}</span>`:''}${stars}</div>`;
   }).join('');
 
   return `<div class="mapbox"><div class="mapinner" style="--rc:${C};--rc-d:${CD}">
@@ -89,10 +103,12 @@ function map(o){
       <path d="M0,-7 L0,-18 L10,-14 L0,-10" fill="var(--tulip)" stroke="var(--ink)" stroke-width=".9" stroke-linejoin="round"/>
     </g>
 
+    ${deco}
+    <path d="${road}" transform="translate(0,10)" fill="none" stroke="var(--road-side)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="${road}" fill="none" stroke="var(--road-edge)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>
     <path d="${road}" fill="none" stroke="var(--road)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="${road}" fill="none" stroke="var(--road-line)" stroke-width="2.4" stroke-dasharray="10 14" stroke-linecap="round" opacity=".75"/>
-    ${done?`<path d="${done}" fill="none" stroke="${C}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>`:''}
+    ${done?`<path class="mp-done" d="${done}" pathLength="100" fill="none" stroke="${C}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>`:''}
 
     <g transform="translate(26,${H-30})"><use href="#mp-tulip"/></g>
     <g transform="translate(336,${H-110}) scale(.85)"><use href="#mp-tulip"/></g>
