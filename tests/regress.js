@@ -118,7 +118,7 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
 
   // ── 4b · portal: a pupil who has FINISHED a short route must still be able to open the portal ──
   for (const [pre, n] of [['FR', 7], ['WP', 13]]) { const st = stages(pre, n, n + 1); const { page, ctx, errs } = await open('', { [pre]: { diag: { placed: pre + '-01', t: 1 }, stages: st } });
-    await page.waitForTimeout(1200); const strips = await page.locator('.rt').count();
+    await page.waitForTimeout(1200); const strips = await page.locator('.rt, .rcard').count();   // strips before 2026-09-27, big cards since
     T(`portal: all ${n} ${pre} stations passed → the portal still renders (it used to crash on the road marker)`, strips >= 4 && errs.length === 0, { strips, errs }); await ctx.close(); }
 
   // ── 5 · WP-12-P01 answer key ──
