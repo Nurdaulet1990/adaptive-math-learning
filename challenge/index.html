@@ -3,10 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#0E7C9B">
+<link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Есеп жолы">
 <title>Есеп жолы · Жарыс</title>
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="../core/ui.css?v=9">
+<link rel="stylesheet" href="../core/ui.css?v=15">
 <style>
 /* challenge/ — a classmate challenge («жарыс»). Owner: platform owner. All rules live on the server
    (supabase/04_challenges.sql); this page only shows what the functions return and collects ten answers. */
@@ -39,7 +46,8 @@
 </head>
 <body>
 <div id="app" class="app"></div>
-<script src="../core/core.js?v=13"></script>
+<script src="../core/pets.js?v=1"></script>
+<script src="../core/core.js?v=17"></script>
 <script>
 (async function(){
   'use strict';
@@ -94,7 +102,7 @@
   async function accept(id){ let c; try{ c=await Core.call('esep_ch_open',{p_id:id}); }catch(e){ return fail(); } if(!c||c.error) return fail(c&&c.error);
     G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:true}; ready(); }
 
-  function ready(){ app.innerHTML=top()+`<div class="card"><div class="duo"><div><i class="me">${Core.avatar()}</i>Сен</div><span>пен</span><div><i>${esc(first(G.opp).charAt(0))}</i>${esc(first(G.opp))}</div></div>
+  function ready(){ app.innerHTML=top()+`<div class="card"><div class="duo"><div><i class="me">${Core.pet?Core.pet(null,{head:true,size:40}):Core.avatar()}</i>Сен</div><span>пен</span><div><i>${esc(first(G.opp).charAt(0))}</i>${esc(first(G.opp))}</div></div>
       <h1 class="center" style="margin:0">${esc(tbl(G.table))}</h1><p class="note center" style="margin:2px 0 0">Екеуің де өткен станция</p></div>
     <div class="card" style="padding-top:6px;padding-bottom:6px"><div class="rule"><b>10</b>10 есеп. Екеуіңе де дәл осы есептер беріледі.</div><div class="rule"><b>1</b>Алдымен дұрыс жауап саны, тең болса — уақыт.</div><div class="rule"><b>★</b>Жеңген 3 жұлдыз, жеңілген 1 жұлдыз алады.</div></div>
     <button class="btn gold wide" id="goBtn">Бастау</button>`; document.getElementById('goBtn').onclick=play; }

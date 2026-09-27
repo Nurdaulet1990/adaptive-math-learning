@@ -2,7 +2,7 @@
    v2: chunky pressable buttons, one primary action at the bottom of a question, feedback sheet,
    bigger map stations, quieter landscape. Every colour is a token so light/dark both work. */
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;900&display=swap');
-@import url('map.css?v=6');
+@import url('map.css?v=12');
 :root{
   --bg:#F6F4EE; --card:#FFFFFF; --panel:#FFFFFF; --ink:#1B2733; --muted:#5E6B7A; --line:#DDE1E6;
   --accent:#0E7C9B; --accent-d:#0A5E76; --accent-ink:#FFFFFF; --accent-soft:#E3F1F6;
@@ -211,3 +211,82 @@ textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 .tile{display:block;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-decoration:none;color:inherit}
 .tile.soon{opacity:.55;pointer-events:none}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ── v3 · depth and motion ────────────────────────────────────────────────────────────────────────────────
+   Everything pressable has a thickness underneath and sinks into it when pressed; cards sit on a rim; a card
+   slides up when it appears (a new question, a new result). Only transform and opacity move, so it stays smooth
+   on school tablets; «reduce motion» (above) switches all of it off. */
+:root{--depth:5px;--shine:inset 0 2px 0 rgba(255,255,255,.28);--rim:0 4px 0 var(--line),0 12px 22px -16px rgba(20,30,40,.35)}
+.btn{box-shadow:0 var(--depth) 0 var(--rc-d),var(--shine);transition:transform .09s cubic-bezier(.3,.7,.4,1),box-shadow .09s cubic-bezier(.3,.7,.4,1)}
+.btn:active{transform:translateY(var(--depth));box-shadow:0 0 0 var(--rc-d),var(--shine)}
+.btn.gold{box-shadow:0 var(--depth) 0 var(--gold-d),var(--shine)}
+.btn.gold:active{box-shadow:0 0 0 var(--gold-d),var(--shine)}
+.btn.good{box-shadow:0 var(--depth) 0 var(--good-d),var(--shine)}
+.btn.good:active{box-shadow:0 0 0 var(--good-d),var(--shine)}
+.btn.ghost{box-shadow:0 var(--depth) 0 var(--line)}
+.btn.ghost:active{box-shadow:0 0 0 var(--line)}
+.btn.plain,.btn.plain:active{box-shadow:none}
+.btn:disabled,.btn:disabled:active{transform:none;box-shadow:0 var(--depth) 0 var(--line)}
+.card{box-shadow:var(--rim);animation:v3-rise .32s cubic-bezier(.2,.8,.2,1) both}
+.choice{box-shadow:0 var(--depth) 0 var(--line),var(--shine);transition:transform .09s cubic-bezier(.3,.7,.4,1),box-shadow .09s cubic-bezier(.3,.7,.4,1)}
+.choice:active{transform:translateY(var(--depth));box-shadow:0 0 0 var(--line)}
+.choice.pick{transform:translateY(3px);box-shadow:0 2px 0 var(--rc-d)}
+.choice.ok{box-shadow:0 var(--depth) 0 var(--good-d);animation:v3-pop .38s cubic-bezier(.2,.9,.3,1.4)}
+.choice.no{box-shadow:0 var(--depth) 0 var(--bad-d);animation:v3-shake .36s ease-in-out}
+#fb:not(:empty){animation:v3-up .26s cubic-bezier(.2,.8,.2,1)}
+.avarow .ava{display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 var(--line),var(--shine);transition:transform .09s}
+.avarow .ava:active{transform:translateY(4px);box-shadow:none}
+.avarow .ava.on{transform:translateY(2px);box-shadow:0 2px 0 var(--accent-d),inset 0 0 0 2px var(--accent)}
+.avarow .ava .pet{display:block}
+.avachip{border:0;background:var(--accent-soft);border-radius:50%;width:46px;height:46px;padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 0 var(--line);transition:transform .09s}
+.avachip:active{transform:translateY(4px);box-shadow:none}
+.pet-emoji{font-size:28px;line-height:1}
+@keyframes v3-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes v3-up{from{transform:translateY(100%)}to{transform:none}}
+@keyframes v3-pop{0%{transform:scale(.9)}55%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes v3-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* the companion (core.js · pal): fixed bottom-right, lifted above any bottom bar by an inline `bottom` */
+.petpal{position:fixed;right:max(10px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));z-index:45;
+  border:0;background:none;padding:0;width:68px;height:78px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:bottom .25s cubic-bezier(.2,.8,.2,1)}
+.petpal .pp-body{position:absolute;left:2px;top:0;animation:v3-bob 2.6s ease-in-out infinite;filter:drop-shadow(0 3px 2px rgba(10,25,40,.18))}
+.petpal .pp-body .pet{display:block}
+.petpal .pp-shade{position:absolute;left:14px;right:14px;bottom:0;height:9px;border-radius:50%;background:rgba(20,15,5,.22);animation:v3-shade 2.6s ease-in-out infinite}
+.petpal[data-mood="happy"] .pp-body{animation:v3-hop .9s ease-in-out 2}
+.petpal[data-mood="think"] .pp-body{animation:v3-sway 1.8s ease-in-out infinite;transform-origin:50% 90%}
+.petpal.jump .pp-body{animation:v3-hop .9s ease-in-out 1}
+.petpal .pp-say{position:absolute;right:62px;bottom:46px;width:max-content;max-width:170px;padding:8px 12px;border-radius:16px 16px 4px 16px;background:var(--card);color:var(--ink);
+  font-family:var(--font);font-weight:900;font-size:.85rem;line-height:1.25;text-align:left;box-shadow:0 3px 0 var(--line),0 8px 16px -8px rgba(0,0,0,.3);transform-origin:bottom right}
+.petpal .pp-say.in{animation:v3-bubble .45s cubic-bezier(.2,.9,.3,1.35)}
+.petpal.away,.petpal.peek{transform:translateX(46px);opacity:.6}
+.petpal.peek:hover,.petpal.peek:focus-visible{transform:none;opacity:1}
+.petpal{transition:bottom .25s cubic-bezier(.2,.8,.2,1),transform .22s ease,opacity .22s ease}
+.petpal.onmap{display:none}
+.has-pet .app{padding-bottom:110px}
+.has-pet .quiz{padding-bottom:250px}
+@keyframes v3-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes v3-shade{0%,100%{transform:scaleX(1);opacity:1}50%{transform:scaleX(.78);opacity:.55}}
+@keyframes v3-hop{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-22px) rotate(-6deg)}60%{transform:translateY(0)}80%{transform:translateY(-6px) rotate(3deg)}}
+@keyframes v3-sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes v3-bubble{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+
+/* the animal picker (Core.pickPet) */
+.petpick{position:fixed;inset:0;z-index:9999;background:rgba(10,20,30,.45);display:flex;align-items:flex-end;justify-content:center;animation:v3-fade .2s both}
+.petpick .pk-card{width:100%;max-width:560px;background:var(--card);border-radius:24px 24px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:v3-up .28s cubic-bezier(.2,.8,.2,1)}
+.petpick .pk-hero{display:flex;justify-content:center;animation:v3-bob 2.6s ease-in-out infinite}
+.avarow.big{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.avarow.big .ava{width:auto;height:auto;flex-direction:column;gap:2px;padding:8px 0 6px;font-size:inherit}
+.avarow.big .ava small{font-family:var(--font);font-weight:900;font-size:.72rem;color:var(--ink)}
+@keyframes v3-fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){.petpal .pp-body,.petpal .pp-shade,.petpick .pk-hero{animation:none!important}}
+
+/* the result card of a passed stage test: three stars pop in, and the button fills like a fuse (Core.autoGo) */
+.wincard{text-align:center}
+.winstars{display:flex;justify-content:center;gap:6px;margin:6px 0 10px}
+.winstars svg{width:46px;height:46px;fill:var(--line);stroke:rgba(0,0,0,.12);stroke-width:1;animation:v3-starwin .5s cubic-bezier(.2,.9,.3,1.5) backwards}
+.winstars svg:nth-child(2){width:58px;height:58px;margin-top:-10px}
+.winstars svg.on{fill:var(--gold);stroke:var(--gold-d)}
+.btn.autogo{position:relative;overflow:hidden}
+.btn.autogo::after{content:"";position:absolute;left:0;bottom:0;height:5px;width:100%;background:rgba(255,255,255,.6);transform-origin:left;animation:v3-fuse var(--autogo,2600ms) linear forwards}
+@keyframes v3-starwin{0%{transform:scale(0) rotate(-45deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes v3-fuse{from{transform:scaleX(0)}to{transform:scaleX(1)}}

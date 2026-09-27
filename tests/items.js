@@ -21,10 +21,22 @@ const N = +(process.env.N || 120);                     // draws per stage per le
 
 const ROUTES = {
   WP: ['wp/stages.js', 'wp/icons.js', 'wp/bank.js', 'wp/generate.js', 'wp/state.js'],  // WP draws from templates, in state.js
-  FR: ['fr/stages.js', 'fr/figs.js', 'fr/icons.js', 'fr/bank.js', 'fr/generate.js'],
+  FR: ['fr/stages.js', 'fr/figs.js', 'fr/icons.js', 'fr/bank.js', 'fr/util.js', 'fr/generate.js', 'fr/generate2.js'],
   AR: ['ar/stages.js', 'ar/figs.js', 'ar/figs2.js', 'ar/icons.js', 'ar/bank.js', 'ar/generate.js', 'ar/generate2.js'],
   TE: ['te/stages.js', 'te/figs.js', 'te/icons.js', 'te/bank.js', 'te/generate.js'],
 };
+
+/* The list above must load what the route's own page loads, or stations whose generator lives in a file left
+   out here are silently skipped — or, when a generator calls into such a file, reported as broken although the
+   app is fine. That is what happened with FR from 2026-09-15: util.js and generate2.js were missing, FR-43
+   «failed» for two weeks, and the 30-odd stations of generate2.js were never checked at all. */
+for (const [code, files] of Object.entries(ROUTES)) {
+  const page = JS(code.toLowerCase() + '/index.html');
+  const need = [...page.matchAll(/<script src="(?!\.\.\/)([^"?]+)/g)].map(m => code.toLowerCase() + '/' + m[1])
+    .filter(f => /\/(util|generate\d*|bank|stages)\.js$/.test(f));
+  const miss = need.filter(f => !files.includes(f));
+  if (miss.length) { console.log(`FAIL ${code}: the page loads ${miss.join(', ')} but this test does not — add them to ROUTES`); process.exit(1); }
+}
 
 function boot(code) {
   const dom = new JSDOM('<!doctype html><html><body><div id="app"></div></body></html>',

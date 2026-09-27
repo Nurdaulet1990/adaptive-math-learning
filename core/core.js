@@ -23,6 +23,16 @@
     const m=document.createElement('meta'); m.name='viewport'; m.content='width=device-width,initial-scale=1';
     (document.head||document.documentElement).appendChild(m); }catch(e){} })();
 
+  /* Installable app + opens without a network once visited: ../sw.js next to the site root (see its header — it is
+     network-first, so online nothing changes). Only on https or localhost; never under node (tests), where there is
+     no navigator.serviceWorker and no currentScript. */
+  (function registerSW(){ try{
+    if(!('serviceWorker' in navigator)||!document.currentScript) return;
+    if(location.protocol!=='https:'&&!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    const sw=new URL('../sw.js',document.currentScript.src);
+    addEventListener('load',()=>{ navigator.serviceWorker.register(sw.href,{scope:new URL('./',sw).href}).catch(()=>{}); });
+  }catch(e){} })();
+
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
   const ls={get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
   const enc=encodeURIComponent;
@@ -47,7 +57,77 @@
   const AVATARS=['🦊','🐻','🐣','🐬','🦉','🐯','🐢','🦋'];
   let pickAva=null;
   const avatar=()=>(STATE&&STATE._ava)||ls.get('esep_ava')||'🦊';
-  function setAvatar(e){ ls.set('esep_ava',e); if(STATE){ STATE._ava=e; dirty=true; schedule(); } }
+  function setAvatar(e){ ls.set('esep_ava',e); if(STATE){ STATE._ava=e; dirty=true; schedule(); } pal.redraw(); }
+  /* the drawing of an animal (core/pets.js). A page still holding an older cached pets.js — or none — shows the emoji. */
+  const petSVG=(a,o)=>window.Pets?window.Pets.svg(a||avatar(),o):`<span class="pet-emoji">${a||avatar()}</span>`;
+  const petName=a=>window.Pets?window.Pets.name(a||avatar()):'';
+
+  /* ── the companion: the pupil's animal floats in the corner of every page she is logged in on ──
+     Mounted by Core.login(), so the teacher page and the login card never get one. It keeps above whatever is
+     fixed to the bottom of the screen (a question's action bar, the feedback sheet, the Russian hint), reacts to
+     the feedback sheet (#fb) — happy on «Дұрыс», thinking on a wrong answer — and, when tapped, jumps and says
+     something. It never navigates: a tap in the middle of a question must not take the child away from it.
+     Core.petSay(text[,ms]) and Core.petMood('idle'|'think'|'happy'[,ms]) let a page talk through it. */
+  const pal=(function(){
+    let el=null, mood='idle', moodT=0, sayT=0, lastFb='', raf=0;
+    const CHEER=['Керемет!','Жарайсың!','Дұрыс!','Тамаша!'], TRY=['Қайта көрейік!','Асықпа, ойлан.','Бөліктерге қара!'], TAP=['Алға!','Сен істей аласың!','Мен осындамын!'];
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    function draw(){ if(!el) return; el.querySelector('.pp-body').innerHTML=petSVG(null,{mood,size:64}); el.setAttribute('aria-label','Жолсерігің'+(petName()?': '+petName():'')); }
+    function setMood(m,ms){ clearTimeout(moodT); mood=m; draw(); if(el){ el.dataset.mood=m; } if(ms) moodT=setTimeout(()=>setMood('idle'),ms); }
+    function say(t,ms){ if(!el) return; const b=el.querySelector('.pp-say'); clearTimeout(sayT); b.textContent=t; b.hidden=false; b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); sayT=setTimeout(()=>{ b.hidden=true; },ms||2600); }
+    /* keep clear of anything fixed to the bottom edge */
+    function place(){ raf=0; if(!el) return; let h=0;
+      document.querySelectorAll('.actbar,#fb,.ruhint,.tabbar').forEach(x=>{ if(!x.firstChild&&x.id==='fb') return; const cs=getComputedStyle(x);
+        /* measured by size, not position: the feedback sheet slides in from below, so at the moment it appears its
+           top is still off-screen and a position-based check would leave the animal standing behind it */
+        if(cs.position==='fixed'&&cs.display!=='none'&&x.offsetHeight) h=Math.max(h,x.offsetHeight+(parseFloat(cs.bottom)||0)); });
+      el.style.bottom=h?`${Math.round(h+10)}px`:'';
+      /* something tappable underneath (a card's button on the home page)? then only peek in from the edge */
+      el.classList.toggle('peek',covers()); }
+    function covers(){ const r=el.getBoundingClientRect(); if(!r.width) return false;
+      const x0=r.left-(el.classList.contains('peek')||el.classList.contains('away')?46:0);   // test where it WOULD stand, or it flips back and forth
+      const pts=[[x0+r.width*.3,r.top+r.height*.55],[x0+r.width*.6,r.top+r.height*.4],[x0+r.width*.5,r.bottom-12]];
+      return pts.some(([x,y])=>document.elementsFromPoint(x,y).some(n=>n!==el&&!el.contains(n)&&n.closest&&n.closest('a,button,input,select,textarea,[role="button"],.choice'))); }
+    const soon=()=>{ if(!raf) raf=requestAnimationFrame(place); };
+    function watch(){
+      const fb=document.getElementById('fb'), retry=document.getElementById('retryMsg');
+      const now=(fb&&fb.querySelector('.fb')?(fb.querySelector('.fb.ok')?'ok':'no')+fb.children.length:'')+(retry?'r':'');
+      /* on a route map the animal already stands on the pupil's station: one of it is enough */
+      el.classList.toggle('onmap',!!document.querySelector('.stn .fox'));
+      if(now!==lastFb){ if(fb&&fb.querySelector('.fb.ok')&&!/^ok/.test(lastFb)){ setMood('happy',2400); say(pick(CHEER),2200); }
+        else if((fb&&fb.querySelector('.fb.no')&&!/^no/.test(lastFb))||(retry&&!/r$/.test(lastFb))){ setMood('think',3000); say(pick(TRY),2600); }
+        lastFb=now; }
+      soon(); }
+    function mount(){ if(el||!document.body||ls.get('esep_pet_off')===1) return;
+      el=document.createElement('button'); el.type='button'; el.id='petpal'; el.className='petpal';
+      el.innerHTML='<span class="pp-say" hidden></span><span class="pp-body"></span><span class="pp-shade" aria-hidden="true"></span>';
+      document.body.appendChild(el); document.body.classList.add('has-pet'); draw();
+      el.onclick=()=>{ el.classList.remove('jump'); void el.offsetWidth; el.classList.add('jump'); if(mood==='idle') say(pick(TAP),1800); };
+      new MutationObserver(watch).observe(document.body,{childList:true,subtree:true});
+      addEventListener('resize',soon);
+      /* while the page scrolls it steps aside to the right edge, so it never sits on a button the child is scrolling to */
+      let st=0; addEventListener('scroll',()=>{ el.classList.add('away'); clearTimeout(st); st=setTimeout(()=>{ if(el){ el.classList.remove('away'); soon(); } },650); },{passive:true});
+      setInterval(()=>{ if(el&&!document.hidden) soon(); },1500);   // layout also moves without DOM changes (fonts, images, a keyboard)
+      watch(); }
+    return {mount, redraw:draw, say, mood:setMood, off(v){ ls.set('esep_pet_off',v?1:0); if(v&&el){ el.remove(); el=null; document.body.classList.remove('has-pet'); } else if(!v) mount(); }};
+  })();
+
+  /* ── changing the animal after login: the top-bar chip opens this ── */
+  function pickPet(){
+    if(document.getElementById('petpick')) return;
+    const box=document.createElement('div'); box.id='petpick'; box.className='petpick';
+    let cur=avatar();
+    const grid=()=>AVATARS.map(a=>`<button type="button" class="ava${a===cur?' on':''}" data-a="${a}" aria-pressed="${a===cur}" aria-label="${petName(a)}">${petSVG(a,{head:true,size:44})}<small>${petName(a)}</small></button>`).join('');
+    const hero=()=>`<div class="pk-hero">${petSVG(cur,{mood:'happy',size:120})}</div><h2 style="text-align:center;margin:0 0 10px">${petName(cur)}</h2>`;
+    box.innerHTML=`<div class="pk-card" role="dialog" aria-modal="true" aria-label="Жолсерік таңдау"><div class="pk-top"></div><div class="avarow big">${grid()}</div>
+      <div class="row" style="margin-top:14px"><button type="button" class="btn plain" data-x>Жабу</button><button type="button" class="btn" data-ok>Сақтау</button></div></div>`;
+    const top=box.querySelector('.pk-top'), row=box.querySelector('.avarow'); top.innerHTML=hero();
+    row.onclick=e=>{ const b=e.target.closest('button[data-a]'); if(!b) return; cur=b.dataset.a; row.innerHTML=grid(); top.innerHTML=hero(); };
+    box.querySelector('[data-x]').onclick=()=>box.remove();
+    box.onclick=e=>{ if(e.target===box) box.remove(); };
+    box.querySelector('[data-ok]').onclick=()=>{ setAvatar(cur); document.querySelectorAll('.avachip').forEach(c=>c.innerHTML=petSVG(cur,{head:true,size:38})); box.remove(); pal.mood('happy',1600); };
+    document.body.appendChild(box); box.querySelector('[data-ok]').focus();
+  }
   let muted=ls.get('esep_mute')!==0;                 // silent by default: 20 pupils in one classroom
   const isMuted=()=>muted;
   function toggleMute(){ muted=!muted; ls.set('esep_mute',muted?1:0); document.querySelectorAll('[data-mute]').forEach(b=>b.textContent=muted?'🔇':'🔊'); if(!muted) sound('ok'); }
@@ -150,7 +230,7 @@
       <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сынып…</option></select></div>
       <div id="c_codebox" style="display:none"><div style="height:8px"></div><input class="big" id="c_code" placeholder="Мектеп коды" autocomplete="off" autocapitalize="off"></div>
       <div style="height:12px"></div><p class="note" style="margin:0 0 6px">Жолда сені кім ертіп жүреді?</p>
-      <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}">${a}</button>`).join('')}</div>
+      <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}" aria-label="${petName(a)}">${petSVG(a,{head:true,size:38})}</button>`).join('')}</div>
       <div style="height:10px"></div><button class="btn wide" id="c_go">Кіру</button><p class="note" id="c_msg" style="margin-top:8px"></p>
       ${Object.keys(known).length?`<p class="note" style="margin-top:10px">Бұл құрылғыда бұрын кірген:</p><div class="row" id="c_known">${Object.values(known).map(k=>`<button class="btn ghost" data-id="${esc(k.id)}">${esc(k.name)}</button>`).join('')}</div>`:''}
       </div>`;
@@ -238,6 +318,7 @@
       if(pickAva||!STATE._ava){ STATE._ava=pickAva||avatar(); pickAva=null; dirty=true; schedule(); }
       cache.state=STATE; cache.sid=session.id; cache.dirty=dirty; ls.set(CACHE_KEY,cache);
       if(mineQ().length) schedule(800);   // events left over from an offline spell or a closed tab
+      pal.mount();
       return {student:session,state:STATE};
     },
     /** Route entry: login (if needed) and return this route's state object. */
@@ -275,7 +356,16 @@
     /** Answers per day, {'YYYY-MM-DD': n} (a copy). For the portal. */
     days(){ return Object.assign({},(STATE&&STATE._days)||{}); }, ymd,
     lang, setLang, avatar, setAvatar, AVATARS, sound, isMuted, toggleMute,
-    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<span class="avachip">${avatar()}</span>`:''}</div>`; },
+    /** After a PASSED stage test: the button fills up like a fuse and, unless the pupil taps it first or has
+        left the screen, goes back to the map by itself — where the map plays the pass (map.js · celebrate). */
+    autoGo(btn,fn,ms){ if(!btn||typeof fn!=='function') return; ms=ms||2600; btn.classList.add('autogo'); btn.style.setProperty('--autogo',ms+'ms');
+      let done=false; const go=()=>{ if(done) return; done=true; fn(); };
+      const t=setTimeout(()=>{ if(btn.isConnected) go(); },ms); btn.addEventListener('click',()=>{ clearTimeout(t); done=true; },{once:true}); },
+    /** three stars, the earned ones gold and popping in turn — the result card of a passed test */
+    winStars(n){ const P='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
+      return `<div class="winstars" aria-label="${n} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<n?'on':''}" style="animation-delay:${.15+k*.18}s" aria-hidden="true">${P}</svg>`).join('')}</div>`; },
+    pet:petSVG, petName, pickPet, petSay:(t,ms)=>pal.say(t,ms), petMood:(m,ms)=>pal.mood(m,ms), petOff:v=>pal.off(v),
+    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<button type="button" class="avachip" onclick="Core.pickPet()" aria-label="Жолсерігің${petName()?': '+petName():''}. Ауыстыру">${petSVG(null,{head:true,size:38})}</button>`:''}</div>`; },
     /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */
   };
   window.Core=Core;

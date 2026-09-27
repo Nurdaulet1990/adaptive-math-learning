@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Есеп жолы: a road winding up through stations to a gold one. Full-bleed so the same art works as a maskable icon;
+       everything that matters sits inside the central 80 % safe zone. -->
+  <rect width="512" height="512" fill="#0E7C9B"/>
+  <path d="M0 400 C120 360 180 420 300 392 S460 330 512 350 V512 H0Z" fill="#0A5E76"/>
+  <path d="M150 400 C150 330 360 330 360 262 S150 190 170 128" fill="none" stroke="#F1E1BE" stroke-width="54" stroke-linecap="round"/>
+  <path d="M150 400 C150 330 360 330 360 262 S150 190 170 128" fill="none" stroke="#FFFBF0" stroke-width="6" stroke-linecap="round" stroke-dasharray="18 20"/>
+  <circle cx="150" cy="392" r="30" fill="#fff" stroke="#6B4FA3" stroke-width="12"/>
+  <circle cx="352" cy="264" r="30" fill="#fff" stroke="#B14A72" stroke-width="12"/>
+  <circle cx="172" cy="134" r="46" fill="#D99A1E" stroke="#fff" stroke-width="10"/>
+  <path d="M172 104 l9.4 19 21 3-15.2 14.8 3.6 20.9L172 151.8l-18.8 9.9 3.6-20.9L141.6 126l21-3z" fill="#fff"/>
+</svg>

@@ -72,6 +72,10 @@ const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.leve
       st.tests.push({t:Date.now(),ok:score,n,pass});
       if(st.tests.length>20) st.tests.splice(0,st.tests.length-20);   // one row per station, not a diary
       Core.save(R); } }
+  /* back to the map on its own after a PASS (as core/runner.js does), unless the pupil moved on first:
+     the legacy screen is left alone if anything replaced it in the meantime */
+  if(passed){ const main=document.getElementById('main'), snap=main&&main.firstElementChild;
+    setTimeout(()=>{ if(snap&&snap.isConnected&&main.firstElementChild===snap&&typeof showMap==='function') showMap(); },2600); }
   return r; };
 /* The placement test asks its own questions (checkPlacement) and never goes through showFeedback, so until
    2026-09-25 not one of them was logged: a child who spent half an hour on the placement showed «3 есеп» on the
@@ -93,7 +97,7 @@ const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placeme
    PV keeps its own question screens (48 levels of tested code), but the way in is the same as every
    other route: the road with one station per level, grouped by the app's own five modules. This is
    also the only navigation on a phone — pv's own stylesheet hides its sidebar under 768px. */
-const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=7'; document.head.appendChild(mapCSS);
+const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=12'; document.head.appendChild(mapCSS);
 const mapWrap=document.createElement('style'); mapWrap.textContent=
  /* width:100% matters: #main is a flex container, so without it the map shrinks to its content
      (~340px) and sits in a narrow column instead of filling the 560px reading measure. */
@@ -174,7 +178,7 @@ const _rm=renderMain; renderMain=function(){ if(R&&!state.level){ showMap(); ret
 /* boot: pull in the map component (pv/index.html only loads core.js), then login → load → re-render */
 const loadScript=src=>new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
 host.style.display='block';
-loadScript('../core/map.js?v=7').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
+loadScript('../core/map.js?v=12').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);
