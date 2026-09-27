@@ -55,12 +55,21 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
     await ctx.close(); }
 
   // ── 3 · re-passing an old station must not drag a later passed one back ──
-  { const { page, ctx } = await open('fr/', { FR: { diag: { placed: 'FR-03', t: 1 }, stages: stages('FR', 7, 3, 1) } });
+  // The seed follows the route's ORDER, not its numbers: since the 50-station ladder (2026-09-15) FR runs
+  // FR-08 → FR-01 → FR-04 → FR-07 → … — an FR-01/02/03 seed in numeric order is a state no pupil can reach
+  // (FR-02 is the 15th station), and re-passing FR-01 in it rightly opened FR-04 next to «current» FR-03.
+  { const LADDER = ['FR-08', 'FR-01', 'FR-04', 'FR-07', 'FR-09', 'FR-10', 'FR-11'];
+    const seed = {}; LADDER.forEach((id, i) => { seed[id] = stage(i < 2 ? 'passed' : i === 2 ? 'current' : 'locked', 1); });
+    const { page, ctx } = await open('fr/', { FR: { diag: { placed: 'FR-04', t: 1 }, stages: seed } });
+    const order = await page.evaluate(() => STAGES.slice(0, 7).map(s => s[0]));
+    T('runner: the FR ladder still starts FR-08 → FR-01 → FR-04 … (the seed below assumes it)', JSON.stringify(order) === JSON.stringify(LADDER), order);
     await page.waitForSelector('.stn[data-stn="FR-01"] [data-go]', { state: 'attached' }); await page.evaluate(() => document.querySelector('.stn[data-stn="FR-01"] [data-go]').click());   // the bubble's own «Жаттығу» button
     for (let i = 0; i < 9; i++) { await right(page); await page.waitForSelector('#nextBtn'); if (i < 8) await page.click('#nextBtn'); }
     await page.click('#testBtn'); for (let i = 0; i < 10; i++) { await right(page); await page.waitForTimeout(750); }
-    await page.waitForSelector('#homeBtn'); const stt = await page.evaluate(() => { const s = Runner.state().stages; return Object.keys(s).sort().map(k => s[k].status); });
-    T('runner: re-passing FR-01 (for its stars) leaves FR-02 passed and FR-03 the only current', JSON.stringify(stt) === JSON.stringify(['passed', 'passed', 'current', 'locked', 'locked', 'locked', 'locked']), stt); await ctx.close(); }
+    await page.waitForSelector('#homeBtn'); const st = await page.evaluate(() => Runner.state().stages);
+    const stt = LADDER.map(id => st[id].status), cur = Object.keys(st).filter(k => st[k].status === 'current');
+    T('runner: re-passing FR-01 (for its stars) leaves FR-04 the only current, nothing dragged back',
+      JSON.stringify(stt) === JSON.stringify(['passed', 'passed', 'current', 'locked', 'locked', 'locked', 'locked']) && cur.length === 1, { stt, cur }); await ctx.close(); }
   { const { page, ctx } = await open('wp/', { WP: { diag: { placed: 'WP-03', t: 1 }, stages: stages('WP', 13, 3, 1) } });
     await page.waitForFunction(() => typeof startTest === 'function' && document.querySelector('.stn')); await page.evaluate(() => startTest('WP-01'));
     for (let i = 0; i < 10; i++) { await page.waitForFunction(() => window._Q && !window._Q.done); await page.evaluate(() => { const q = window._Q.q; if (typeof answerInput === 'function' && document.getElementById('ans')) { document.getElementById('ans').value = String(q.ans); document.getElementById('ans').dispatchEvent(new Event('input')); } }); 
