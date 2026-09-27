@@ -312,3 +312,13 @@ select count(*) as days, sum(score) as perfect_answers, sum(score)/5 as practice
 - `esep_save` 仍是整块覆盖（后写赢）。同一孩子两台设备同时做题仍会互相覆盖。
 - 4 位 PIN 的哈希离线可以秒破——哈希只是不让人「顺手看到」，真正的保护是匿名角色根本读不到这一列。
 - `core/core-stub.js`（路线作者本地用的假 core）没有加 `days()` / `board()`，路线用不到它们。
+
+## 14 · 班级榜带上每个孩子的动物（`14_board_ava.sql`）
+
+首页「Сынып」标签的领奖台要画出前三名各自选的动物。动物本来就在每个孩子的 state 里（`_ava`），这个文件只是让 `esep_board` 顺带把它返回（`top[].ava` 和 `me.ava`）。排名、分数、权限都不变。
+
+- **安装**：SQL editor 里整文件运行一次。可重复运行。需要已装 01、06、07。
+- **安全**：`_ava` 是孩子自己的浏览器写的，所以只放行 8 个动物 emoji（和 `core.js` 的 `AVATARS` 一致），其他任何内容一律返回 `null`，不会出现在别的孩子屏幕上。
+- **没装之前**：前端照常工作——同学显示成名字首字母，自己的动物照样画出来。
+- **撤销**：重新运行 `07_practice_stars.sql`。
+- **本地演练**：`node supabase/test/run_board_ava.js`（9 项）。

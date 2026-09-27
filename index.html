@@ -105,6 +105,31 @@
 .rk-bar{height:10px;border-radius:999px;background:var(--line);box-shadow:inset 0 2px 0 rgba(0,0,0,.07);overflow:hidden}
 .rk-bar i{display:block;height:100%;border-radius:999px;background:var(--accent);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
 .rk-w{flex:none;font-weight:800;font-size:.8rem;color:var(--good)}
+/* ── class podium (look v3, step 4) ── */
+.pod{display:flex;justify-content:center;align-items:flex-end;gap:6px;margin:12px 0 10px}
+.pod-c{width:31%;display:flex;flex-direction:column;align-items:center;--pc:#C9D3DC;--pd:#9AA9B6;--h:66px}
+.pod-c.p1{--pc:#F8D48A;--pd:#E0A22E;--h:96px}
+.pod-c.p3{--pc:#EBC9A4;--pd:#C98A52;--h:46px}
+.pod-a{animation:v3-bob 2.6s ease-in-out infinite;filter:drop-shadow(0 3px 2px rgba(10,25,40,.18))}
+.pod-a .pet{display:block}
+.pod-nm{font-weight:900;font-size:.9rem;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pod-sc{font-weight:800;font-size:.78rem;color:var(--gold-d,#AC7813);margin-bottom:6px}
+.pod-c.me .pod-nm{color:var(--accent)}
+.pod-lid{width:92%;height:14px;background:var(--pc);border-radius:10px 10px 0 0;transform:perspective(120px) rotateX(38deg);transform-origin:bottom}
+.pod-blk{width:92%;height:var(--h);background:var(--pd);border-radius:0 0 8px 8px;display:flex;justify-content:center;padding-top:6px;
+  box-shadow:inset 0 -6px 0 rgba(0,0,0,.15);transform-origin:bottom;animation:pod-up .55s cubic-bezier(.2,.9,.3,1.2) backwards}
+.pod-c.p1 .pod-blk{animation-delay:.15s}.pod-c.p3 .pod-blk{animation-delay:.3s}
+.pod-blk span{font-family:var(--disp);font-weight:600;font-size:1.6rem;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.15)}
+.pod-c.me .pod-blk{box-shadow:inset 0 -6px 0 rgba(0,0,0,.15),0 0 0 3px var(--accent)}
+@keyframes pod-up{from{transform:scaleY(.2)}to{transform:none}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pod-c{--pc:#5C6A78;--pd:#43505D}
+  :root:not([data-theme="light"]) .pod-c.p1{--pc:#B08630;--pd:#8A6620}:root:not([data-theme="light"]) .pod-c.p3{--pc:#94643A;--pd:#6F4A2A}}
+.brd-row .pet{flex:none}
+.ini{flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--fig);color:var(--muted);font-family:var(--disp);font-weight:600}
+.pod .ini{font-size:1.6rem;margin-bottom:4px}
+.rules{margin-top:10px}
+.rules summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--accent);min-height:44px;display:flex;align-items:center}
+@media (prefers-reduced-motion: reduce){.pod-a,.pod-blk{animation:none!important}}
 </style>
 </head>
 <body>
@@ -341,14 +366,25 @@
     const wk=x=>stars&&x.week>0?`<small>осы аптада +${x.week}</small>`:'';
     const inTop=top.some(x=>x.me);
     const mine=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i><span>Сен${wk(b.me)}</span><b>${b.me.n}</b></div>`;
-    const tabMine=(top.length?top.map(x=>`<div class="brd-row"><i>${x.rank}</i><span>${x.me?'Сен':esc(x.name)}${wk(x)}</span><b>${x.n}</b></div>`).join(''):`<p class="note">${stars?'Әзірге ешкім жұлдыз жинаған жоқ.':'Бұл аптада әлі ешкім ұпай жинаған жоқ.'} Бірінші бол!</p>`)+(inTop?'':mine);
+    /* each pupil as the animal they chose (esep_board sends `ava` from 14_board_ava.sql on; before that, or for an
+       animal outside the eight, the pupil's initial). My own animal comes from this device — always current. */
+    const face=(x,size,head,mood)=>{ const a=x.me?Core.avatar():x.ava;
+      return a&&window.Pets?Pets.svg(a,{size,head,mood}):`<span class="ini" style="width:${head?size:size*.8}px;height:${head?size:size*.8}px">${esc(String(x.me?student.name:x.name||'?').trim().charAt(0))}</span>`; };
+    const pod=top.slice(0,3), POS=[1,0,2];
+    const podium=pod.length?`<div class="pod">${POS.filter(i=>pod[i]).map((i,k)=>{ const x=pod[i];
+      return `<div class="pod-c p${i+1}${x.me?' me':''}"><div class="pod-a" style="animation-delay:${k*.35}s">${face(x,i===0?64:54,false,i===0?'happy':'idle')}</div>
+        <b class="pod-nm">${x.me?'Сен':esc(String(x.name).split(' ')[0])}</b><span class="pod-sc">★ ${+x.n}</span>
+        <div class="pod-lid"></div><div class="pod-blk"><span>${+x.rank}</span></div></div>`; }).join('')}</div>`:'';
+    const rows=top.slice(3).map(x=>`<div class="brd-row${x.me?' brd-me':''}"><i>${x.rank}</i>${face(x,30,true)}<span>${x.me?'Сен':esc(x.name)}${wk(x)}</span><b>${x.n}</b></div>`).join('');
+    const mineRow=`<div class="brd-row brd-me"><i>${b.me.n?b.me.rank:'–'}</i>${face({me:true},30,true)}<span>Сен${wk(b.me)}</span><b>${b.me.n}</b></div>`;
+    const tabMine=(top.length?podium+rows:`<p class="note">${stars?'Әзірге ешкім жұлдыз жинаған жоқ.':'Бұл аптада әлі ешкім ұпай жинаған жоқ.'} Бірінші бол!</p>`)+(inTop?'':mineRow);
     const tabCls=cls.length>1?cls.map(c=>`<div class="brd-row" style="border:0;padding:0"><span>${esc(c.klass)}${c.mine?' · сенің сыныбың':''}</span><b>${c.avg}</b></div><div class="brd-bar"><b class="${c.mine?'mine':''}" style="width:${Math.round(100*c.avg/max)}%"></b></div>`).join('')
       +`<p class="note" style="margin:0">Бір оқушыға шаққандағы орташа${stars?' жұлдыз':''}. Сенің ${b.me.n} ${stars?'жұлдызың':'есебің'} ${esc(b.klass)} нәтижесіне қосылды.</p>`:'';
     let tab='mine';
     const draw=()=>{ box.innerHTML=`<div class="card"><div class="rt-head" style="padding:0"><h2 style="margin:0">Сынып тақтасы · ${esc(b.klass)}</h2><span class="note">${stars?'★ жұлдыз':'осы апта'}</span></div>
       ${tabCls?`<div class="brd-tabs"><button type="button" data-t="mine" aria-pressed="${tab==='mine'}">Менің сыныбым</button><button type="button" data-t="cls" aria-pressed="${tab==='cls'}">Сыныптар</button></div>`:'<div style="height:8px"></div>'}
       ${tab==='mine'?`<p class="note" style="margin:0 0 4px">${stars?'Кезең тесті, жарыс және бөлме — бәрі қосылады':'Кеңессіз, бірінші реттен дұрыс шешілген есептер'}</p>${tabMine}`:tabCls}
-      <p class="note" style="margin:10px 0 0">${stars?'Жұлдыз: кеңессіз, бірден дұрыс 5 есеп — 1 · бүгінгі мақсат — 1 · кезең тесті 10/10 — 3, 9/10 — 2, 8/10 — 1 · жарыс пен бөлме — 3/2/1. Жиналған жұлдыз ешқашан жоғалмайды.':'Дүйсенбі күні тақта нөлден басталады.'}</p></div>`;
+      <details class="rules"><summary>Жұлдыз қалай жиналады?</summary><p class="note" style="margin:8px 0 0">${stars?'Жұлдыз: кеңессіз, бірден дұрыс 5 есеп — 1 · бүгінгі мақсат — 1 · кезең тесті 10/10 — 3, 9/10 — 2, 8/10 — 1 · жарыс пен бөлме — 3/2/1. Жиналған жұлдыз ешқашан жоғалмайды.':'Дүйсенбі күні тақта нөлден басталады.'}</p></details></div>`;
       box.querySelectorAll('[data-t]').forEach(x=>x.onclick=()=>{ tab=x.dataset.t; draw(); }); };
     draw(); });
 })();
