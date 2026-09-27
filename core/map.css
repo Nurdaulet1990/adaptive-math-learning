@@ -14,7 +14,7 @@
   --road:#F1E1BE; --road-edge:#D9C395; --road-line:#FFFBF0;
   --road-side:#BFA877; --tree:#7FA35E; --tree-d:#5E8544; --trunk:#8B6A45; --plinth:rgba(60,45,20,.28);
   --river:#8CC4E8; --cloud:#FFFFFF; --rock:#B7AC98; --rock-d:#9C917D; --stone:#D9D3C7; --stone-d:#A79F90; --stone-ink:#7C7466;
-  --gold-top:#FFC940; --gold-side:#C98A10; --gold-ink:#5A3A00; --unlock:#35B46A; --unlock-d:#23874C;
+  --gold-top:#FFC940; --gold-side:#C98A10; --gold-ink:#5A3A00;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -28,7 +28,7 @@
     --road:#4E4430; --road-edge:#372F21; --road-line:#8B7B57;
     --road-side:#241E14; --tree:#2F4A36; --tree-d:#243A2A; --trunk:#4A3A28; --plinth:rgba(0,0,0,.45);
     --river:#2C4F6B; --cloud:#3A4867; --rock:#4A4A44; --rock-d:#3A3A35; --stone:#4A4F57; --stone-d:#30343A; --stone-ink:#A5B0BC;
-    --gold-top:#E6B347; --gold-side:#9A7024; --gold-ink:#2A1C00; --unlock:#3FB872; --unlock-d:#2A8651;
+    --gold-top:#E6B347; --gold-side:#9A7024; --gold-ink:#2A1C00;
   }
 }
 .mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
@@ -149,10 +149,10 @@
 .v5 .stn .unlk{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;color:var(--stone-ink);pointer-events:none}
 .v5 .stn .unlk svg{width:22px;height:22px;fill:currentColor}
 .v5 .stn.unlock .unlk{animation:mp-unlk .6s cubic-bezier(.3,.7,.3,1) forwards}
-.v5 .stn.unlocking.unlock .dot{background-color:var(--unlock);color:#fff;box-shadow:0 14px 0 var(--unlock-d),0 0 0 8px rgba(53,180,106,.25),inset 0 3px 0 rgba(255,255,255,.5)}
+.v5 .stn.unlocking.unlock .dot{background-color:var(--gold-top);color:var(--gold-ink);box-shadow:0 14px 0 var(--gold-side),0 0 0 8px rgba(255,201,64,.3),inset 0 3px 0 rgba(255,255,255,.55)}
 .v5 .stn.unlock .num{opacity:1;transition:opacity .3s .25s}
 .v5 .stn .spark{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;pointer-events:none;opacity:0;
-  box-shadow:0 -44px 0 #FFD54A,31px -31px 0 #7ED8A0,44px 0 0 #FFD54A,31px 31px 0 #7ED8A0,0 44px 0 #FFD54A,-31px 31px 0 #7ED8A0,-44px 0 0 #FFD54A,-31px -31px 0 #7ED8A0}
+  box-shadow:0 -44px 0 #FFD54A,31px -31px 0 #FFF1B8,44px 0 0 #FFD54A,31px 31px 0 #FFF1B8,0 44px 0 #FFD54A,-31px 31px 0 #FFF1B8,-44px 0 0 #FFD54A,-31px -31px 0 #FFF1B8}
 .v5 .stn.unlock .spark{animation:mp-spark .7s ease-out forwards}
 .v5 .stn:not(.unlocking) .unlk,.v5 .stn:not(.unlocking) .spark{display:none}
 @keyframes mp-starpop{0%{transform:scale(0) rotate(-40deg);opacity:0}100%{transform:none;opacity:1}}

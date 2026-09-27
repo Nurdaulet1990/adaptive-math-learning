@@ -143,7 +143,8 @@ function mapScroll(){ const el=document.querySelector('.stn.cur')||document.quer
   if(!el||!box) return; const r=el.getBoundingClientRect(), b=box.getBoundingClientRect();
   box.scrollTop += (r.top-b.top) - box.clientHeight*(box.dataset.cel?0.42:0.62);
   if(box.dataset.cel) celebrate(box); }
-/* A station has just been passed: its stars pop in; the next coin loses its lock, flashes green and turns gold;
+/* A station has just been passed: its stars pop in; the next coin loses its lock and turns gold in a ring of
+   sparks (owner, 2026-09-27: no green flash — gold is the colour of «where you are»);
    the pupil's animal hops along the road from one to the other; «up» plays if sound is on.
    Everything is on classes and the Web Animations API; with «reduce motion» the map simply shows the end state. */
 function celebrate(box){
