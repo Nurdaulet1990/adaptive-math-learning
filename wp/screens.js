@@ -11,6 +11,10 @@ function stemHTML(stem,hl){
 
 /* ── home ── */
 function showHome(){
+  /* a teacher's task (portal → ?task=TE-08 or ?task=TE-08&test=1): open that station at once — even one the
+     pupil has not reached, the teacher chose it — then drop the parameter so a reload shows the map */
+  { const qp=new URLSearchParams(location.search), tk=qp.get('task');
+    if(tk&&R.diag&&STAGES.some(s=>s[0]===tk)){ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk):startPractice(tk); } }
   const cur=currentStage();
   let html=topbar();
   if(!R.diag){

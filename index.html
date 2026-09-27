@@ -158,12 +158,26 @@
 .rc-b{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:4px;min-width:56px;cursor:pointer;font:inherit}
 .rc-b small{font-weight:800;font-size:.7rem;color:var(--muted)} .rc-b[aria-current="true"] small{color:var(--ink);font-weight:900}
 .rc-b[aria-current="true"] .rc-coin{transform:translateY(-3px)}
+/* ── the teacher's tasks on Бүгін ── */
+.tk{border:2px solid var(--rc);background:color-mix(in srgb,var(--rc) 8%,var(--card))}
+.tk.done{border-color:var(--good);background:color-mix(in srgb,var(--good) 8%,var(--card))}
+.tk-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.tk-tag{display:inline-flex;align-items:center;min-height:26px;padding:0 10px;border-radius:999px;background:var(--rc);color:#fff;font-weight:900;font-size:.8rem}
+.tk.done .tk-tag{background:var(--good)}
+.tk-due{font-weight:800;font-size:.82rem;color:var(--muted)} .tk-due.late{color:var(--bad)}
+.tk-what{font-family:var(--disp);font-weight:600;font-size:1.25rem;margin-top:8px}
+.tk-st{font-size:.85rem;font-weight:700;color:var(--muted);margin-top:2px} .tk-st b{color:var(--rc-d)}
+.tk-note{margin-top:6px;font-weight:700;font-size:.9rem;font-style:italic}
+.tk-bar{height:12px;border-radius:999px;background:var(--line);margin-top:10px;overflow:hidden;box-shadow:inset 0 2px 0 rgba(0,0,0,.06)}
+.tk-bar i{display:block;height:100%;border-radius:999px;background:var(--rc);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)} .tk.done .tk-bar i{background:var(--good)}
+.tk-num{text-align:right;font-weight:900;font-size:.85rem;margin-top:3px}
+.tk-go{margin-top:8px;background:var(--rc);box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28)}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <script src="core/pets.js?v=1"></script>
-<script src="core/core.js?v=20"></script>
+<script src="core/core.js?v=21"></script>
 <script src="room/routes.js?v=4"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
@@ -252,6 +266,7 @@
      Сынып: the class board. The tab lives in location.hash, so the phone's back button walks back through
      tabs and a link can open one (#synyp). Everything is still one page and one request set, as before. */
   let T1='', T2='', T3='', T4='';
+  T1+=`<div id="tasks"></div>`;   // the teacher's tasks, filled from esep_my_tasks below (16_tasks.sql)
   if(r){ const rc=r.code.toLowerCase();
     T1+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>
     <a class="go" href="${r.url}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
@@ -304,7 +319,7 @@
               ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>',T3],
               ['synyp','Сынып','<path d="M5 20v-6M12 20V6M19 20v-9"/>',T4]];
   let html=Core.topbar()+TABS.map(([id,,,h])=>`<section class="tabp" id="t-${id}" hidden>${h}</section>`).join('')
-    +`<nav class="tabbar" aria-label="Негізгі мәзір">${TABS.map(([id,lb,ic])=>`<a href="#${id}" data-t="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${lb}</span>${id==='jarys'?'<b class="tb-badge" id="jbadge" hidden></b>':''}</a>`).join('')}</nav>`;
+    +`<nav class="tabbar" aria-label="Негізгі мәзір">${TABS.map(([id,lb,ic])=>`<a href="#${id}" data-t="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${lb}</span>${id==='jarys'?'<b class="tb-badge" id="jbadge" hidden></b>':id==='bugin'?'<b class="tb-badge" id="bbadge" hidden></b>':''}</a>`).join('')}</nav>`;
   app.innerHTML=html; document.body.classList.add('tabs');
   const LEGACY={board:'synyp',rooms:'jarys',duel:'jarys'};
   function showTab(){ let t=(location.hash||'').slice(1); t=LEGACY[t]||t; if(!TABS.some(x=>x[0]===t)) t='bugin';
@@ -312,6 +327,30 @@
     document.querySelectorAll('.tabbar a').forEach(a=>{ if(a.dataset.t===t) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     window.scrollTo(0,0); }
   addEventListener('hashchange',showTab); showTab();
+  /* ── the teacher's tasks, at the top of Бүгін ── */
+  (async function tasks(){ const box=document.getElementById('tasks'); if(!box||!Core.myTasks) return;
+    const list=await Core.myTasks(); if(!list||!list.length){ box.innerHTML=''; return; }
+    const MON=['қаңтар','ақпан','наурыз','сәуір','мамыр','маусым','шілде','тамыз','қыркүйек','қазан','қараша','желтоқсан'];
+    const today=new Date(); today.setHours(0,0,0,0);
+    const RN=Object.fromEntries(Core.config.ROUTES.map(r=>[r[0],r])), NM={};
+    await Promise.all([...new Set(list.map(t=>t.route))].map(async r=>{ try{ NM[r]=window.RoomRoutes?await RoomRoutes.stageNames(r):{}; }catch(e){ NM[r]={}; } }));
+    const open=list.filter(t=>!(t.p&&t.p.done));
+    const bb=document.getElementById('bbadge'); if(bb){ bb.hidden=!open.length; bb.textContent=open.length; }
+    box.innerHTML=list.slice(0,4).map(t=>{ const rc=String(t.route).toLowerCase(), R=RN[t.route]||[t.route,t.route,'#'], p=t.p||{n:0,of:1,done:false};
+      const st=(t.stages||[]).map(id=>{ const n=NM[t.route]&&Object.prototype.hasOwnProperty.call(NM[t.route],id)?NM[t.route][id].name:''; return `<b>${esc(id)}</b>${n?' '+esc(n):''}`; }).join(' · ');
+      let due=''; if(t.due){ const d=new Date(t.due+'T00:00:00'); const late=d<today&&!p.done; due=`<span class="tk-due${late?' late':''}">${late?'Мерзімі өтті · ':''}${d.getDate()} ${MON[d.getMonth()]}${late?'':'ке дейін'}</span>`; }
+      const what=t.kind==='test'?(t.stages.length>1?`${t.stages.length} кезең тестін тапсыр`:'Кезең тестін тапсыр'):`${t.goal} есепті дұрыс шығар`;
+      const go=`${R[2]}?task=${encodeURIComponent(t.stages[0])}${t.kind==='test'?'&test=1':''}`;
+      return `<div class="card tk${p.done?' done':''}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
+        <div class="tk-top"><span class="tk-tag">${p.done?'✓ Орындалды':'Мұғалімнің тапсырмасы'}</span>${due}</div>
+        <div class="tk-what">${esc(what)}</div><div class="tk-st">${esc(R[1])} · ${st}</div>
+        ${t.note?`<div class="tk-note">«${esc(t.note)}»</div>`:''}
+        <div class="tk-bar"><i style="width:${Math.round(100*p.n/Math.max(1,p.of))}%"></i></div><div class="tk-num">${p.n} / ${p.of}</div>
+        ${p.done?'':`<a class="btn wide tk-go" href="${go}">${p.n?'Жалғастыру':'Бастау'}</a>`}</div>`; }).join('');
+    /* a task that has just turned done since this device last looked: the companion celebrates */
+    try{ const seen=JSON.parse(localStorage.getItem('esep_taskdone')||'[]'); const fresh=list.filter(t=>t.p&&t.p.done&&!seen.includes(t.id));
+      if(fresh.length&&seen.length+fresh.length){ if(Core.petMood) Core.petMood('happy',2600); if(Core.petSay) Core.petSay('Тапсырма орындалды!',2600); }
+      localStorage.setItem('esep_taskdone',JSON.stringify(list.filter(t=>t.p&&t.p.done).map(t=>t.id).concat(seen).slice(0,50))); }catch(e){} })();
   (function carousel(){ const tr=document.getElementById('rcTrack'); if(!tr) return; const cs=[...tr.children], dots=[...document.querySelectorAll('#rcDots i')], bs=[...document.querySelectorAll('#rcBadges .rc-b')];
     const at=()=>Math.round(tr.scrollLeft/Math.max(1,cs[0].offsetWidth+parseFloat(getComputedStyle(tr).columnGap||0)));
     const mark=()=>{ const i=Math.max(0,Math.min(cs.length-1,at())); dots.forEach((d,k)=>d.classList.toggle('on',k===i)); bs.forEach((b,k)=>b.setAttribute('aria-current',k===i?'true':'false')); };

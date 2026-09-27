@@ -119,12 +119,18 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 .tl-pw button[aria-pressed="true"]{color:var(--accent)} .tl-pw svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tl-msg{min-height:1.2em;margin:10px 0 0} .tl-msg.warn{color:var(--bad);font-weight:800}
 @media (prefers-reduced-motion:reduce){.tl-pets span{animation:none}}
+.tkf label{display:block;font-weight:900;font-size:.88rem;margin:12px 0 6px}
+.tkst{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 8px;background:var(--card)}
+.tkck{display:flex!important;align-items:center;gap:8px;min-height:36px;margin:0!important;font-weight:700!important;font-size:.88rem!important;cursor:pointer}
+.tkck input{width:18px;height:18px;flex:none}
+.tkc.closed{opacity:.6}
+.rk-bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden} .rk-bar i{display:block;height:100%;border-radius:999px}
 </style>
 </head>
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=20"></script>
+<script src="../core/core.js?v=21"></script>
 <script src="../core/figs.js?v=8"></script>
 <script src="../room/routes.js?v=4"></script>
 <script>
@@ -186,6 +192,7 @@ function verdict(n,acc,h){ if(!n||n<5) return ['—','var(--muted)']; if(acc>=0.
 const vcell=(n,acc,h)=>{ const [t,c]=verdict(n,acc,h); return `<td style="color:${c};font-weight:800;white-space:nowrap">${t}</td>`; };
 const VLEGEND='Қорытынды: <b>Меңгерді</b> — дұрыс ≥80%, кеңес &lt;1 · <b>Кеңеспен</b> — дұрыс, бірақ кеңес ≥2 · <b>Болжайды</b> — дұрыс &lt;50%, кеңесті қолданбайды · <b>Қиналады</b> — дұрыс &lt;60%, кеңес ≥2 · <b>Үйреніп жатыр</b> — аралық · «—» 5 есептен аз.';
 const TABS=[['bugin','Бүгін','<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],['oqu','Оқушылар','<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 14.2c1.8.6 3 2.2 3.4 4.8"/>'],
+  ['task','Тапсырма','<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l2 2 4-4M8.5 16h7"/>'],
   ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>'],['bap','Баптау','<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>']];
 /* v3 header: brand, the four tabs, the class chips and «шығу». Tabs live in location.hash (#bugin #oqu #jarys #bap,
    a pupil is #s=<id>), so the browser's back button walks back through them. Before login: brand only. */
@@ -291,6 +298,63 @@ function heatHTML(rows,route){ const names=RNM[route]||{}; const ids=Object.keys
     <div class="hlegend"><span><i style="background:${col}"></i>өтті ★★★</span><span><i style="background:color-mix(in srgb,${col} 45%,#fff)"></i>өтті ★</span><span><i style="background:#FFD66B;box-shadow:0 0 0 2px #C98A10"></i>қазір осында</span><span><i style="background:#E0685E"></i>3+ күн тұр</span><span><i style="background:var(--fig)"></i>жетпеген</span></div></div>
     <div class="heat" style="--rc:${col}"><table><tr><th></th>${ids.map((id,i)=>`<th title="${esc(id)} · ${esc(nmOf(route,id))}">${i+1}</th>`).join('')}<th></th></tr>${body}
     <tr><td class="nm muted" style="font-size:.78rem">Осы станцияда</td>${cnt.map(n=>`<td class="cnt" style="${n?'':'color:var(--line)'}">${n||'·'}</td>`).join('')}<td></td></tr></table></div>`; }
+
+/* ── tasks for a class or single pupils (supabase/16_tasks.sql) ─────────────────────────────────────────────────
+   The form on top, the tasks below with who has done them. Progress comes from the server (the pupils' answer log
+   after the task was published), so this page only shows it. */
+const TK_ROUTES=['TE','AR','FR','WP'];
+async function showTasks(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view; if(!T.tok) return login(); T.tab='task';
+  if(location.hash!=='#task') history.replaceState(null,'','#task');
+  T.app.innerHTML=tbar()+`<div class="card"><p>Жүктелуде…</p></div>`;
+  if(!T.rows||!T.rows.length){ try{ T.rows=((await trpc('esep_t_students'))||[]).filter(r=>r&&/^[0-9a-f-]{1,40}$/i.test(String(r.id))); }catch(e){} }
+  await loadNames(); if(!T.classes){ try{ T.classes=await trpc('esep_t_classes'); }catch(e){ T.classes=[]; } }
+  let list=null, missing=false; try{ list=await trpc('esep_t_tasks'); }catch(e){ if(!T.tok) return; missing=true; }
+  if(gen!==T.view) return;
+  const F=T.tk=T.tk||{route:'TE',stages:new Set(),kind:'answers',goal:20,due:ymd(new Date(Date.now()+3*864e5)),note:'',klasses:new Set(T.klass?[T.klass]:[]),students:new Set()};
+  const routes=TK_ROUTES.filter(c=>ROUTES.includes(c));
+  const names=RNM[F.route]||{}; const ids=Object.keys(names);
+  const klasses=[...new Set([...(T.classes||[]).filter(c=>c.listed!==false).map(c=>c.name),...T.rows.map(r=>r.klass).filter(Boolean)])].sort();
+  const MON=['қаң','ақп','нау','сәу','мам','мау','шіл','там','қыр','қаз','қар','жел'], dd=d=>{ const x=new Date(d+'T00:00:00'); return `${x.getDate()} ${MON[x.getMonth()]}`; };
+  const who=t=>[...(t.klasses||[]).map(k=>esc(k)+' сыныбы'),...(t.students||[]).map(id=>{ const r=T.rows.find(x=>x.id===id); return esc(r?r.name:'?'); })].join(', ');
+  const today=ymd(new Date());
+  const card=t=>{ const pu=t.pupils||[], done=pu.filter(x=>x.p&&x.p.done).length, late=t.due&&t.due<today;
+    const what=t.kind==='test'?(t.stages.length>1?`${t.stages.length} кезең тесті`:'кезең тесті'):`${t.goal} есеп дұрыс`;
+    return `<div class="card tkc${t.closed?' closed':''}"><div class="rt-head" style="padding:0;align-items:flex-start"><div><b style="font-size:1.05rem">${esc(t.route)} · ${t.stages.map(x=>esc(x)).join(', ')}</b> <span class="ttag info">${what}</span>
+        ${t.closed?'<span class="ttag mute">аяқталды</span>':late?'<span class="ttag bad">мерзімі өтті</span>':''}
+        <div class="note" style="margin:4px 0 0">${t.due?'Мерзімі: '+dd(t.due)+' · ':''}${who(t)}${t.note?' · «'+esc(t.note)+'»':''}</div></div>
+        <div style="text-align:right;white-space:nowrap"><b style="font-family:var(--disp);font-size:1.4rem">${done} / ${pu.length}</b><div class="note" style="margin:0">орындады</div></div></div>
+      <div class="rk-bar" style="margin:10px 0 4px"><i style="width:${pu.length?Math.round(100*done/pu.length):0}%;background:var(--good)"></i></div>
+      <details class="more"><summary>Оқушылар</summary><div style="overflow-x:auto"><table class="t3"><tr><th>Оқушы</th><th>Сынып</th><th>Орындалуы</th><th></th></tr>
+        ${pu.map(x=>{ const pr=x.p||{n:0,of:1}; const st=pr.done?'<span class="ttag ok">орындады</span>':pr.n?(late?'<span class="ttag bad">үлгермеді</span>':'<span class="ttag info">жұмыста</span>'):(late?'<span class="ttag bad">бастамады</span>':'<span class="ttag mute">бастамады</span>');
+          return `<tr style="cursor:pointer" onclick="location.hash='s=${enc(x.id)}&r=${esc(t.route)}'"><td style="text-align:left;white-space:nowrap">${pava(T.rows.find(r=>r.id===x.id)||{name:x.name},24)} <b>${esc(x.name)}</b></td><td>${esc(x.klass||'—')}</td><td>${pr.n} / ${pr.of}</td><td>${st}</td></tr>`; }).join('')}</table></div>
+        <div class="row" style="margin-top:10px">${t.closed?'':`<button class="btn ghost" onclick="tkClose(${num(t.id)})">Аяқтау</button>`}<button class="btn plain" onclick="tkDel(${num(t.id)},this)">Өшіру</button></div></details></div>`; };
+  const pupils=T.rows.slice().sort((a,b)=>(a.klass||'').localeCompare(b.klass||'')||a.name.localeCompare(b.name));
+  T.app.innerHTML=tbar()+(missing?`<div class="card"><h2>Тапсырмалар</h2><p class="note">Бұл мүмкіндік әлі орнатылмаған: Supabase-те <b>supabase/16_tasks.sql</b> файлын іске қосыңыз.</p></div>`:`
+   <div class="tgrid"><div class="card"><h2>Жаңа тапсырма</h2>
+    <div class="tkf"><label>Бағыт</label><div class="row" style="flex-wrap:wrap;gap:6px">${routes.map(c=>`<button type="button" class="tchip" style="--c:var(--${c.toLowerCase()},var(--accent))" aria-pressed="${F.route===c}" onclick="T.tk.route='${c}';T.tk.stages=new Set();showTasks()">${c} · ${esc(ROUTE_NAME[c]||'')}</button>`).join('')}</div>
+     <label>Станция(лар) <small class="muted">— 10-ға дейін</small></label><div class="tkst">${ids.map((id,i)=>`<label class="tkck"><input type="checkbox" ${F.stages.has(id)?'checked':''} onchange="tkPick('${esc(id)}',this.checked)"><b>${esc(id)}</b> ${esc(names[id].name)}${names[id].grade?` <small class="muted">${esc(names[id].grade)}-сын.</small>`:''}</label>`).join('')||'<p class="note">Станция атаулары жүктелмеді.</p>'}</div>
+     <label>Не істеу керек</label><div class="row" style="align-items:center;gap:10px;flex-wrap:wrap"><div class="seg"><button type="button" aria-pressed="${F.kind==='answers'}" onclick="T.tk.kind='answers';showTasks()">Есеп дұрыс шығару</button><button type="button" aria-pressed="${F.kind==='test'}" onclick="T.tk.kind='test';showTasks()">Кезең тесті</button></div>
+       ${F.kind==='answers'?`<input type="number" min="1" max="200" value="${num(F.goal)}" class="big" style="width:90px;font-size:1rem;padding:8px" onchange="T.tk.goal=+this.value"> <span class="note" style="margin:0">есеп дұрыс</span>`:`<span class="note" style="margin:0">әр станцияның тесті: 10-нан 8</span>`}</div>
+     <label>Мерзімі</label><input type="date" class="big" style="font-size:1rem;padding:8px;max-width:220px" value="${esc(F.due)}" onchange="T.tk.due=this.value">
+     <label>Ескерту <small class="muted">— міндетті емес</small></label><input class="big" maxlength="200" style="font-size:1rem;padding:8px" placeholder="мысалы: жұмаға дейін" value="${esc(F.note)}" oninput="T.tk.note=this.value">
+     <label>Кімге</label><div class="row" style="flex-wrap:wrap;gap:6px">${klasses.map(k=>`<button type="button" class="tchip" aria-pressed="${F.klasses.has(k)}" onclick="tkKl('${esc(k)}')">${esc(k)} сыныбы</button>`).join('')}</div>
+     <details class="more"${F.students.size?' open':''}><summary>Жеке оқушылар${F.students.size?' · '+F.students.size:''}</summary><div class="tkst">${pupils.map(r=>`<label class="tkck"><input type="checkbox" ${F.students.has(r.id)?'checked':''} onchange="tkSt('${esc(r.id)}',this.checked)">${pava(r,22)} <b>${esc(r.name)}</b> <small class="muted">${esc(r.klass||'—')}</small></label>`).join('')}</div></details>
+     <button class="btn gold wide" id="tkGo" style="margin-top:12px" onclick="tkCreate()">Жариялау</button><p class="note" id="tkMsg" style="color:var(--bad)">${esc(msg||'')}</p></div></div>
+    <div>${(list||[]).length?(list||[]).map(card).join(''):'<div class="card"><p class="note" style="margin:0">Әзірге тапсырма жоқ. Сол жақтағы пішінмен бірінші тапсырманы жариялаңыз.</p></div>'}</div></div>`);
+}
+function tkPick(id,on){ const s=T.tk.stages; if(on){ if(s.size>=10){ showTasks('10 станциядан артық болмайды.'); return; } s.add(id); } else s.delete(id); }
+function tkKl(k){ const s=T.tk.klasses; s.has(k)?s.delete(k):s.add(k); showTasks(); }
+function tkSt(id,on){ const s=T.tk.students; on?s.add(id):s.delete(id); }
+async function tkCreate(){ const F=T.tk;
+  if(!F.stages.size) return showTasks('Кемінде бір станция таңдаңыз.');
+  if(!F.klasses.size&&!F.students.size) return showTasks('Кімге екенін таңдаңыз: сынып немесе жеке оқушы.');
+  $('tkGo').disabled=true; let r;
+  try{ r=await trpc('esep_t_task_create',{p_route:F.route,p_stages:[...F.stages],p_kind:F.kind,p_goal:F.kind==='answers'?(+F.goal||20):1,p_due:F.due||null,p_note:F.note||'',p_klasses:[...F.klasses],p_students:[...F.students]}); }
+  catch(e){ return showTasks('Қате: '+e.message); }
+  if(r&&r.error) return showTasks({stages:'Станциялар дұрыс емес.',goal:'Есеп саны 1-ден 200-ге дейін.',klass:'Мұндай сынып жоқ.',student:'Оқушы табылмады.',nobody:'Кімге екенін таңдаңыз.',note:'Ескерту тым ұзын.'}[r.error]||'Болмады.');
+  T.tk=null; showTasks(); }
+async function tkClose(id){ try{ await trpc('esep_t_task_close',{p_id:id}); }catch(e){} showTasks(); }
+async function tkDel(id,btn){ if(!btn.dataset.arm){ btn.dataset.arm=1; btn.textContent='Иә, өшіру'; return; } try{ await trpc('esep_t_task_delete',{p_id:id}); }catch(e){} showTasks(); }
 async function showTeacher(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view;
   if(!['bugin','oqu','bap'].includes(T.tab)) T.tab='bugin'; if(T.tok&&location.hash!=='#'+T.tab) history.replaceState(null,'','#'+T.tab);
   if(!T.tok) return login();
@@ -641,8 +705,9 @@ async function showRoom(id,keep){ clearTimeout(T.rpoll); if(!T.tok) return login
 /* ── v3 router: the hash picks the view ── */
 function render(){ const h=(location.hash||'').slice(1);
   if(h.startsWith('s=')){ const [id,rt]=h.slice(2).split('&r='); return showStudent(decodeURIComponent(id),rt||undefined); }
-  T.tab=['bugin','oqu','jarys','bap'].includes(h)?h:'bugin';
+  T.tab=['bugin','oqu','task','jarys','bap'].includes(h)?h:'bugin';
   if(T.tab==='jarys') return showRooms();
+  if(T.tab==='task') return showTasks();
   return showTeacher(); }
 addEventListener('hashchange',render);
 render();
