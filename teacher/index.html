@@ -101,6 +101,24 @@ table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width
 .tgrid>*{min-width:0}
 details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-height:44px;display:flex;align-items:center}
 @media print{.ttop .ttabs,.ttop .tright{display:none!important}}
+
+/* the way in */
+.tlogin{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,420px);gap:28px;align-items:center;min-height:calc(100vh - 140px);padding:10px 0 30px}
+@media (max-width:860px){.tlogin{grid-template-columns:1fr;min-height:0;gap:16px}}
+.tl-hero h1{font-family:var(--disp);font-weight:600;font-size:clamp(2rem,4.2vw,3rem);margin:0 0 6px;color:var(--ink)}
+.tl-lead{font-size:1.15rem;font-weight:700;color:var(--muted);margin:0 0 18px}
+.tl-feats{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+.tl-feats li{display:flex;align-items:center;gap:12px;font-weight:700}
+.tl-feats svg{flex:none;width:42px;height:42px;padding:9px;border-radius:14px;background:var(--accent-soft);color:var(--accent);fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;box-sizing:border-box}
+.tl-pets{display:flex;gap:10px;margin-top:22px} .tl-pets span{animation:v3-bob 2.6s ease-in-out infinite} .tl-pets .pet{display:block}
+@media (max-width:860px){.tl-feats li:nth-child(n+3),.tl-pets{display:none}}
+.tl-card{padding:22px 22px 18px} .tl-card h2{margin:0 0 12px}
+.tl-lbl{display:block;font-weight:800;font-size:.9rem;margin-bottom:6px}
+.tl-pw{position:relative;margin-bottom:12px} .tl-pw input{padding-right:56px}
+.tl-pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:44px;height:44px;border:0;border-radius:12px;background:none;color:var(--muted);cursor:pointer}
+.tl-pw button[aria-pressed="true"]{color:var(--accent)} .tl-pw svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tl-msg{min-height:1.2em;margin:10px 0 0} .tl-msg.warn{color:var(--bad);font-weight:800}
+@media (prefers-reduced-motion:reduce){.tl-pets span{animation:none}}
 </style>
 </head>
 <body>
@@ -179,11 +197,30 @@ function tbar(sub){ const logged=T&&T.tok;
        <a href="../" class="muted" style="margin-left:8px">портал</a> · <a href="#" class="muted" onclick="tlogout();return false">шығу</a></div>`
     :`<span style="margin-left:auto"><a href="../" class="muted">портал</a></span>`)+`</div>`; }
 async function tlogout(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const t=T.tok; T.tok=''; sessionStorage.removeItem('esep_tt'); try{ await rpc('esep_t_logout',{p_token:t}); }catch(e){} login(); }
-function login(note){ T.app.innerHTML=tbar('кіру')+`<div class="card"><h2>Мұғалімнің құпия сөзі</h2><input class="big" id="tpin" type="password" placeholder="Құпия сөз" autocomplete="current-password"><div style="height:10px"></div><button class="btn wide" id="tgo">Кіру</button><p class="note" id="pinMsg" style="margin-top:8px">${esc(note||'')}</p></div>`;
+/* The way in (v3): what the page is for, on the left; the password on the right (stacked on a phone).
+   The ids tpin / tgo / pinMsg are kept — the e2e tests and the password managers know them. */
+function login(note){ const PETS=['🦊','🐻','🦉','🐯','🐢'];
+  const ic=d=>`<svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  T.app.innerHTML=tbar()+`<div class="tlogin">
+   <div class="tl-hero"><h1>Мұғалім беті</h1><p class="tl-lead">Сыныбыңыздың математика жолы — бір бетте.</p>
+    <ul class="tl-feats">
+     <li>${ic('<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>')}<span><b>Бүгін</b> кімге көмек керек — себебімен бірден көресіз</span></li>
+     <li>${ic('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16M15 4v16"/>')}<span><b>Жылу картасы</b> — бүкіл сынып қай станцияда</span></li>
+     <li>${ic('<path d="M4 19c4-1 3-6 8-7s5-6 8-7"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="5" r="1.5"/>')}<span><b>Әр оқушының жолы</b> — күн бойынша, әр тест</span></li>
+     <li>${ic('<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>')}<span><b>Жарыс бөлмесі</b> — кодты тақтаға шығарып, бүкіл сынып бірге</span></li></ul>
+    <div class="tl-pets" aria-hidden="true">${window.Pets?PETS.map((a,i)=>`<span style="animation-delay:${i*.3}s">${Pets.svg(a,{head:true,size:52})}</span>`).join(''):''}</div></div>
+   <div class="card tl-card"><h2>Кіру</h2>
+    <label for="tpin" class="tl-lbl">Мұғалімнің құпия сөзі</label>
+    <div class="tl-pw"><input class="big" id="tpin" type="password" placeholder="Құпия сөз" autocomplete="current-password"><button type="button" id="tshow" aria-label="Құпия сөзді көрсету" aria-pressed="false">${ic('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>')}</button></div>
+    <button class="btn wide" id="tgo">Кіру</button>
+    <p class="note tl-msg${note?' warn':''}" id="pinMsg" role="status">${esc(note||'')}</p>
+    <p class="note" style="margin:10px 0 0">Құпия сөзді мектептегі жауапты адамнан сұраңыз. Бір кіру осы браузерде 12 сағатқа жарайды; бөлісілген компьютерде «шығу» басыңыз.</p>
+    <p class="note" style="margin:10px 0 0"><a href="../">← Оқушылар беті</a></p></div></div>`;
+  $('tshow').onclick=()=>{ const on=$('tpin').type==='password'; $('tpin').type=on?'text':'password'; $('tshow').setAttribute('aria-pressed',String(on)); $('tpin').focus(); };
   const go=async()=>{ const v=($('tpin').value||'').trim(); if(!v) return; $('tgo').disabled=true; $('pinMsg').textContent='Тексерілуде…';
     try{ const r=await rpc('esep_t_login',{p_secret:v});
       if(r&&r.token){ T.tok=r.token; sessionStorage.setItem('esep_tt',r.token); return showTeacher(); }
-      $('pinMsg').textContent=r&&r.error==='locked'?'Тым көп қате әрекет. 10 минуттан кейін қайталаңыз.':r&&r.error==='not_configured'?'Құпия сөз әлі орнатылмаған (supabase/README).':'Құпия сөз дұрыс емес.'; }
+      $('pinMsg').classList.add('warn'); $('pinMsg').textContent=r&&r.error==='locked'?'Тым көп қате әрекет. 10 минуттан кейін қайталаңыз.':r&&r.error==='not_configured'?'Құпия сөз әлі орнатылмаған (supabase/README).':'Құпия сөз дұрыс емес.'; }
     catch(e){ $('pinMsg').textContent='Базаға қосылу мүмкін болмады.'; }
     $('tgo').disabled=false; };
   $('tgo').onclick=go; $('tpin').onkeydown=e=>{ if(e.key==='Enter') go(); }; setTimeout(()=>$('tpin').focus(),50); }
