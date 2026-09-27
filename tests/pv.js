@@ -291,6 +291,34 @@ setTimeout(() => {
     T('the hint of a two-digit column level uses the chart; a three-digit one does not', /class="pv-table bc2"/.test(w.renderVisualHint(36, 26, '+', 0, 5, stepsA[0])) && !/bc2/.test(w.renderVisualHint(436, 226, '+', 0, 5, w.buildVisualSteps(436, 226, '+')[0])));
   } catch (e) { T('two-digit hint chart', false, e.message); }
 
+  /* 6. beside the question, not only in the hint (owner 2026-09-26: grade-2 children meet the column here for the
+        first time, so C comes first, like the ten-frame of the 20-levels), fully drawn; and the column itself shows
+        the exchange — a carried 1 above the next column, a borrow as the struck tens digit, the digit it became,
+        and «10» above the ones. A no-picture twin loses both, and gets both back after a miss. */
+  try {
+    const openWith = (mod, lvl, a, b) => { open(mod, lvl); ev(`(()=>{ const o=rand; rand=(lo,hi)=>{ rand=(lo2,hi2)=>{ rand=o; return Math.min(Math.max(${b},lo2),hi2); }; return Math.min(Math.max(${a},lo),hi); }; generateQuestion(); })()`); };
+    const mark = id => { const el = doc.getElementById(id); return el ? el.textContent.trim() : null; };
+    openWith('d3', 'a4', 36, 26);
+    T('a4, 36 + 26: the block chart stands beside the question, every step drawn (ten faded, new rod, arrow)',
+      !!doc.querySelector('.ops-pv-chart .bc2') && doc.querySelectorAll('.ops-pv-chart .bc2 tbody tr').length === 4 && doc.querySelectorAll('.ops-pv-chart .bc2 g[opacity] rect[rx="2"]').length === 10 && /⟵/.test(doc.querySelector('.ops-pv-chart').textContent), doc.querySelectorAll('.ops-pv-chart .bc2 tbody tr').length);
+    T('…and the column carries a 1 above the tens', mark('carry-t') === '1' && ev('currentOps.a') === 36, { carry: mark('carry-t'), ops: ev('currentOps') });
+    openWith('d3', 'a6', 67, 58);
+    T('a6, 67 + 58 = 125: a «Жүздік» column, ten rods faded in one box, a hundred flat arriving; 1 above the tens AND the hundreds',
+      /Жүздік/.test(doc.querySelector('.ops-pv-chart').textContent) && doc.querySelectorAll('.ops-pv-chart .bc2 g[opacity] rect[rx="1.5"]').length === 100 && mark('carry-t') === '1' && mark('carry-h') === '1', { t: mark('carry-t'), h: mark('carry-h') });
+    openWith('d3', 's3', 32, 16);
+    const struck = doc.querySelector('.vert-calc .vert-row .vert-digit.struck');
+    T('s3, 32 − 16: one-row chart beside the question; the 3 struck through, 2 above it, 10 above the ones',
+      doc.querySelectorAll('.ops-pv-chart .bc2 tbody tr').length === 1 && struck && struck.textContent.trim() === '3' && mark('carry-t') === '2' && mark('carry-o') === '10', { struck: struck && struck.textContent, t: mark('carry-t'), o: mark('carry-o') });
+    openWith('d3', 'a3', 42, 31);
+    T('a3, 42 + 31 (no exchange): chart drawn, no mark in the carry row', !!doc.querySelector('.ops-pv-chart .bc2') && mark('carry-t') === '' , { t: mark('carry-t') });
+    openWith('d3', 'a4_n', 36, 26);
+    T('the no-picture twin of a4 has neither the chart nor the carry row', !doc.querySelector('.ops-pv-chart') && !doc.getElementById('carryRow'), { chart: !!doc.querySelector('.ops-pv-chart'), carry: !!doc.getElementById('carryRow') });
+    ev('state.streak=5'); ev('showFeedback(false)');
+    T('…a miss brings both back', !!doc.querySelector('.ops-pv-chart .bc2') && mark('carry-t') === '1', { chart: !!doc.querySelector('.ops-pv-chart .bc2'), t: mark('carry-t') });
+    openWith('d4', 'a8', 236, 148);
+    T('a three-digit level keeps its disc chart and gets no carry marks (not this change)', !doc.querySelector('.ops-pv-chart .bc2') && mark('carry-t') === '', { t: mark('carry-t') });
+  } catch (e) { T('chart beside the question', false, e.message); }
+
   const failed = out.filter(x => !x).length;
   console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);
   process.exit(failed ? 1 : 0);
