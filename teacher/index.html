@@ -124,7 +124,7 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=19"></script>
+<script src="../core/core.js?v=20"></script>
 <script src="../core/figs.js?v=8"></script>
 <script src="../room/routes.js?v=4"></script>
 <script>
@@ -419,7 +419,7 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const route=isAll()?(sub||mainRoute(r)):T.route; SR=route;
   T.app.innerHTML=tbar(r.name)+`<div class="card"><p>Жүктелуде…</p></div>`;
   let ev=[]; try{ ev=await trpc('esep_t_events',Object.assign({p_students:[id],p_limit:3000},rangeISO(T.range))); }catch(e){ if(!T.tok) return; }
-  await loadNames();
+  await loadNames(); if(!T.classes){ try{ T.classes=await trpc('esep_t_classes'); }catch(e){ T.classes=[]; } }
   const s=RS(r,route); const stages=s.stages||{}; const cur=stOf(r,route);
   const evs=ev.map(e=>Object.assign({T:new Date(e.t)},e.ev)).filter(e=>evRoute(e)===route);
   const ans=evs.filter(e=>e.ev==='answer'); const per={};
@@ -444,6 +444,7 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
     ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${esc(a.stage)}${a.lvl?' L'+esc(a.lvl):''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${num(a.hints)||''}</td><td>${Math.round(num(a.ms)/1000)||''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
   html+=`<div class="card"><h2>Басқару · ${route}</h2>
     <p class="note">Кезеңді қолмен қою: <input class="big" id="setst" placeholder="${route}-03" style="width:140px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" onclick="setStage('${id}',$('setst').value.trim().toUpperCase())">Қою</button></p>
+    <p class="note" style="margin-top:8px">Сыныбы: <select id="setkl" style="font-size:1rem;padding:6px">${klassOpts(r.klass)}</select> <button class="btn ghost" onclick="setKlass('${id}')">Ауыстыру</button> <span class="muted">— оқушы сыныбын өзі ауыстыра алмайды</span></p>
     <p class="note" style="margin-top:8px">PIN-ді ұмытса — жаңасын қою: <input class="big" id="newpin" inputmode="numeric" maxlength="4" placeholder="4 сан" autocomplete="off" style="width:110px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" onclick="resetPin('${id}')">Сақтау</button></p>
     <p class="note" style="margin-top:8px"><a href="#" onclick="resetDiag('${id}');return false">Диагностиканы қайта ашу</a> · <a href="#" onclick="$('delc').style.display='block';return false">Оқушыны өшіру</a></p>
     <div id="delc" style="display:none;margin-top:6px"><p class="note">Барлық бағыттағы барлық деректері өшеді. Сенімдісің бе?</p><button class="btn plain" onclick="delStudent('${id}')">Иә, өшіру</button></div>
@@ -506,6 +507,13 @@ async function setStage(id,stId){ const route=SR||T.route;
   if(!/^[A-Z]{2}-\d{2}$/.test(stId)||!stId.startsWith(route+'-')) { $('tmsg').textContent='Кезең коды: '+route+'-01 түрінде.'; return; }
   try{ await patchRoute(id,rs=>{ const ids=Object.keys(rs.stages).sort(); if(!ids.includes(stId)) ids.push(stId); ids.sort(); ids.forEach(k=>{ rs.stages[k]=rs.stages[k]||{status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; rs.stages[k].status=k<stId?'passed':(k===stId?'current':'locked'); }); if(!rs.diag) rs.diag={t:Date.now(),placed:stId,results:{},n:0,manual:true}; }); showStudent(id,SR); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 async function resetDiag(id){ try{ await patchRoute(id,rs=>{ rs.diag=null; Object.keys(rs.stages).forEach(k=>{ rs.stages[k].status='locked'; }); }); showStudent(id,SR); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
+/* the class a pupil is in: set once at registration, afterwards only here (supabase/15_klass_lock.sql) */
+function klassOpts(cur){ const names=[...new Set([...(T.classes||[]).filter(c=>c.listed!==false).map(c=>c.name),...(T.rows||[]).map(r=>r.klass).filter(Boolean)])].sort();
+  return `<option value="">— сыныпсыз —</option>`+names.map(n=>`<option ${n===(cur||'')?'selected':''} value="${esc(n)}">${esc(n)}</option>`).join(''); }
+async function setKlass(id){ const v=$('setkl').value; let r;
+  try{ r=await trpc('esep_t_set_klass',{p_student:id,p_klass:v}); }catch(e){ $('tmsg').textContent=/esep_t_set_klass|function/.test(e.message)?'Бұл мүмкіндік әлі орнатылмаған (supabase/15_klass_lock.sql).':'Қате: '+e.message; return; }
+  if(r&&r.error){ $('tmsg').textContent=r.error==='klass'?'Мұндай сынып тізімде жоқ.':'Болмады.'; return; }
+  const row=T.rows.find(x=>x.id===id); if(row) row.klass=(r&&r.klass)||''; $('tmsg').textContent='Сынып ауыстырылды: '+((r&&r.klass)||'сыныпсыз')+'.'; }
 async function resetPin(id){ const v=($('newpin').value||'').trim(); if(!/^\d{4}$/.test(v)){ $('tmsg').textContent='PIN — 4 сан.'; return; }
   try{ await trpc('esep_t_reset_pin',{p_student:id,p_pin:v}); $('newpin').value=''; $('tmsg').textContent='Жаңа PIN сақталды. Оқушы барлық құрылғыда қайта кіреді.'; }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 async function delStudent(id){ try{ await trpc('esep_t_delete',{p_student:id}); T.rows=T.rows.filter(x=>x.id!==id); showTeacher(); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }

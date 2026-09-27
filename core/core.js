@@ -233,7 +233,7 @@
       host.innerHTML=`<div class="top"><div class="brand">Есеп жолы<small>Математика · 1–5 сынып</small></div><div class="who">${langLinks()}</div></div>
       <div class="card"><h1>Сәлем!</h1><p>Атыңды және 4 таңбалы PIN кодыңды жаз. Бірінші рет кірсең — PIN-ді өзің ойлап тап және есте сақта.</p>
       <input class="big" id="c_nm" placeholder="Аты-жөні (мысалы: Айгүл С.)" autocomplete="off">
-      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сынып…</option></select></div>
+      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сынып (тек бірінші рет)</option></select></div>
       <div id="c_codebox" style="display:none"><div style="height:8px"></div><input class="big" id="c_code" placeholder="Мектеп коды" autocomplete="off" autocapitalize="off"></div>
       <div style="height:12px"></div><p class="note" style="margin:0 0 6px">Жолда сені кім ертіп жүреді?</p>
       <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}" aria-label="${petName(a)}">${petSVG(a,{head:true,size:38})}</button>`).join('')}</div>
@@ -245,7 +245,7 @@
       /* The class is chosen, never typed: one child's «5 БАРЫС» and another's «БАРЫС5» used to be two classes,
          which split every class board into groups of one. The list is the teacher's, from esep_classes(). */
       rpc('esep_classes',{}).then(list=>{ const sel=$('c_kl'); if(!sel||!Array.isArray(list)||!list.length) return;
-        sel.innerHTML='<option value="">Сынып…</option>'+klassOptions(list);
+        sel.innerHTML='<option value="">Сынып (тек бірінші рет)</option>'+klassOptions(list);   // an existing pupil\'s class is kept by the server (15_klass_lock.sql); only the teacher moves her
         const last=ls.get('esep_klass'); if(last&&list.indexOf(last)>=0) sel.value=last;
       }).catch(()=>{});
       async function go(){
