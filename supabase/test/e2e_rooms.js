@@ -28,7 +28,7 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(r.rows[0].v) }).catch(() => {});
     } catch (e) { return route.fulfill({ status: /does not exist/.test(e.message) ? 404 : 400, contentType: 'application/json', body: JSON.stringify({ message: e.message }) }).catch(() => {}); } };
   const browser = await chromium.launch(); const errs = [];
-  const ctxOf = async (vp) => { const ctx = await browser.newContext({ viewport: vp || { width: 390, height: 860 }, deviceScaleFactor: 2 }); await ctx.route(/supabase\.co/, backend); await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); return ctx; };
+  const ctxOf = async (vp) => { const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: vp || { width: 390, height: 860 }, deviceScaleFactor: 2 }); await ctx.route(/supabase\.co/, backend); await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort()); return ctx; };
   const as = async n => { const ctx = await ctxOf(); await ctx.addInitScript(s => localStorage.setItem('esep_session_v1', JSON.stringify(s)), who[n]); const p = await ctx.newPage(); p.on('pageerror', e => errs.push(n + ': ' + e.message)); return p; };
   const B = 'http://localhost:8769/'; const A = await as('Айгүл С.'), E = await as('Ерасыл Т.'), D = await as('Дана К.');
   const shot = (p, f) => p.screenshot({ path: path.join(__dirname, f), fullPage: true });
@@ -42,7 +42,7 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
   await A.goto(B); await A.waitForSelector('.ring'); await A.waitForTimeout(500);
   T('before 05_rooms.sql is installed the portal shows no room card, and no errors', (await A.locator('#rooms').innerText()).trim() === '' && errs.length === 0, errs);
   await file('05_rooms.sql');
-  await A.reload(); await A.waitForSelector('#roomGo');
+  await A.reload(); await A.click('.tabbar a[data-t="jarys"]'); await A.waitForSelector('#roomGo');   // rooms live on the Жарыс tab since look v3
   T('portal: «Жарыс бөлмесі» card with a button', /Жарыс бөлмесі/.test(await A.locator('#roomGo').innerText()) && (await A.locator('#roomGo a.btn').count()) === 1);
 
   // ── a pupil opens a room on a FRACTIONS station she has passed
@@ -59,7 +59,7 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
 
   // ── a classmate sees it on the portal; another class comes in by code
   let failed = 0; await E.context().route(/\/fr\/generate\.js/, r => failed++ < 2 ? r.fulfill({ status: 503, body: 'x' }) : r.continue());   // his first download of the generators fails — both tries of it
-  await E.goto(B); await E.waitForSelector('#rooms .card');
+  await E.goto(B + '#jarys'); await E.waitForSelector('#rooms .card');
   T('portal of a classmate: «Айгүл жарыс бөлмесін ашты» with the station\'s name + «Қосылу»', /Айгүл жарыс бөлмесін ашты/.test(await E.locator('#rooms').innerText()) && !/FR-03/.test(await E.locator('#rooms .card').first().innerText()), await E.locator('#rooms').innerText());
   await E.locator('#rooms a.btn', { hasText: 'Қосылу' }).click(); await E.waitForSelector('#rcode');
   T('…one tap and he is in the lobby, no code typed — and told he has not passed this station', (await E.locator('#rcode').innerText()).trim() === code && /Айгүл ашқан бөлме/.test(await E.locator('#app').innerText()) && /әлі өткен жоқсың/.test(await E.locator('#app').innerText()));
@@ -96,15 +96,15 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
 
   // ── the teacher: ANY station (word problems here), the code on the board, every answer, what the class missed
   const tctx = await ctxOf({ width: 1100, height: 800 }); const P = await tctx.newPage(); P.on('pageerror', e => errs.push('teacher: ' + e.message));
-  await P.goto(B + 'teacher/'); await P.fill('#tpin', 'мұғалім-құпиясы-2026'); await P.click('#tgo'); await P.waitForSelector('#roomEntry');
-  await P.click('#roomEntry button'); await P.waitForSelector('#rnew');
+  await P.goto(B + 'teacher/'); await P.fill('#tpin', 'мұғалім-құпиясы-2026'); await P.click('#tgo'); await P.waitForSelector('.ttabs');
+  await P.click('.ttabs a[href="#jarys"]'); await P.waitForSelector('#rnew');   // the teacher's Жарыс tab
   T('teacher: four routes to choose from; the station list follows the route', JSON.stringify(await P.locator('#rroute option').evaluateAll(o => o.map(x => x.value))) === '["AR","FR","TE","WP"]'
     && (await P.selectOption('#rroute', 'WP'), (await P.locator('#rstage option').count()) === 13));
   await P.selectOption('#rstage', 'WP-01'); await P.selectOption('#rkl', '3А'); await P.click('#rnew'); await P.waitForSelector('#rstart');
   const tcode = ((await P.locator('#roomView').innerText()).match(/\b\d{4}\b/) || [])[0];
   T('teacher opens a room on WP-01 (nobody has passed it): a big code, 5 questions · 8 minutes, «Бастау» disabled', /^\d{4}$/.test(tcode) && await P.locator('#rstart').isDisabled() && /5 есеп · 8 минут/.test(await P.locator('#roomView').innerText()), tcode);
   await shot(P, 'room-teacher-lobby.png');
-  await A.goto(B); await A.waitForSelector('#rooms .card');
+  await A.goto(B + '#jarys'); await A.reload(); await A.waitForSelector('#rooms .card');
   T('class 3А sees «Мұғалім жарыс бөлмесін ашты» on the portal', /Мұғалім жарыс бөлмесін ашты/.test(await A.locator('#rooms').innerText()));
   await A.locator('#rooms a.btn', { hasText: 'Қосылу' }).click(); await A.waitForSelector('#rcode'); const trid = await roomId(A);
   await E.goto(B + 'room/?code=' + tcode); await E.waitForSelector('#rcode');
@@ -118,8 +118,8 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
   T('…and «Сынып жиі қателескен есептер»: the two questions she missed, 1 / 2 wrong each; no device is flagged', /Сынып жиі қателескен есептер/.test(rank) && (rank.match(/1 \/ 2 қате/g) || []).length === 2 && (await P.locator('#roomView table .chip').count()) === 0, rank);
   await shot(P, 'room-teacher-ranking.png');
   // «← бөлмелер» while a poll is in the air must not bounce the teacher back into the room
-  await P.click('text=Тағы бір бөлме'); await P.waitForSelector('#rnew'); await P.click('text=← тізім'); await P.waitForSelector('#roomEntry'); await P.waitForTimeout(2600);
-  T('teacher: leaving the room views stays left (no stale poll repaints them)', (await P.locator('#roomEntry').count()) === 1 && (await P.locator('#roomView').count()) === 0);
+  await P.click('text=Тағы бір бөлме'); await P.waitForSelector('#rnew'); await P.click('text=← тізім'); await P.waitForSelector('.ttabs'); await P.waitForTimeout(2600);
+  T('teacher: leaving the room views stays left (no stale poll repaints them)', (await P.locator('#kpis').count()) === 1 && (await P.locator('#roomView').count()) === 0);   // v3: «← тізім» lands on the Бүгін tab
   // a station whose questions are widgets of their own (kind:'custom', AR-31): the widget mounts in the room page and hands its value back
   const cust = await A.evaluate(async () => { const m = await RoomRoutes.load('AR'); const q = RoomRoutes.sheet(m, 'AR', 'AR-31', 5, 6)[0]; const el = document.createElement('div'); document.body.appendChild(el); let got; q.mount(el, v => { got = v; });
     const n = el.querySelectorAll('button,input').length; const b = el.querySelector('button'); if (b) b.click(); el.remove(); return { kind: q.kind, n, html: el.innerHTML.length > 20 }; });

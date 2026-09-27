@@ -36,7 +36,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     } catch (e) { return route.fulfill({ status: /permission denied/.test(e.message) ? 401 : 400, contentType: 'application/json', body: JSON.stringify({ message: e.message }) }).catch(() => {}); }
     finally { await c.query('reset role').catch(() => {}); c.release(); } };
 
-  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } }); const page = await ctx.newPage();
+  const browser = await chromium.launch(); const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 900 } }); const page = await ctx.newPage();
   await ctx.route(/supabase\.co/, backend); await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   const errs = []; page.on('pageerror', e => errs.push(e.message));
   const B = 'http://localhost:8766/';
@@ -96,7 +96,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const tp = await ctx.newPage(); tp.on('pageerror', e => errs.push('teacher: ' + e.message)); await tp.goto(B + 'teacher/'); await tp.waitForSelector('#tpin');
   await tp.fill('#tpin', '1234'); await tp.click('#tgo'); await tp.waitForFunction(() => /дұрыс емес/.test(document.getElementById('pinMsg').textContent));
   T('teacher: the old 1234 no longer opens anything', !(await tp.evaluate(() => sessionStorage.getItem('esep_tt'))));
-  await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('table.t3');
+  await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('.ttabs'); await tp.click('.ttabs a[href="#oqu"]'); await tp.waitForSelector('table.t3');
   await tp.waitForTimeout(600);
   T('teacher: list loads with a hostile pupil state in it (HTML counter, null stage) — page alive, nothing executed', (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0 && (await tp.locator('tr', { hasText: 'Ерасыл Т.' }).count()) >= 1);
   // «барлық бағыт» is the default view: the day table adds up every route; choosing one route narrows it
@@ -112,7 +112,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
     await tp.selectOption('select >> nth=0', 'ALL'); await tp.waitForSelector('#dayBody table'); await tp.waitForTimeout(300); }
   const csv = await tp.evaluate(() => new Promise(res => { const o = URL.createObjectURL; URL.createObjectURL = b => { b.text().then(res); return o.call(URL, b); }; exportCSV(); }));
   T('teacher: CSV export neutralises a name that starts like a formula', /"'=HYPERLINK/.test(csv) && !/;"=HYPERLINK|^"=HYPERLINK/m.test(csv), csv.slice(0, 300));
-  await tp.selectOption('select >> nth=0', 'FR'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(800);
+  await tp.click('[data-route="FR"]'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(800);
   await tp.locator('tr', { hasText: 'Айгүл С.' }).first().click(); await tp.waitForSelector('#setst'); await tp.waitForTimeout(500);
   T('teacher: hostile event/state values render as text, nothing executes', (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0 && /onerror/.test(await tp.locator('#app').innerText()) && !/NaN/.test(await tp.locator('#app').innerText()));
   await pg.query(`update students set state = jsonb_set(state, '{AR}', '{"nAns": 77}'::jsonb) where id=$1`, [me]);   // progress made after the teacher's list was loaded
