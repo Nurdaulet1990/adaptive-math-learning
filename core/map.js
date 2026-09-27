@@ -56,7 +56,7 @@ function map(o){
     const icon=s.icon||`<span class="num">${i+1}</span>`;
     const tap=cur||passed;
     return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%"${tap?` data-stn="${esc(s.id)}"`:''}>
-      ${cur?`<span class="fox">${ava}</span>`:''}
+      ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:40}):ava}</span>`:''}
       <div class="bub"><b>${esc(s.name)}</b><i>${esc(s.sub||s.id)}</i>${tap?`<button type="button" class="btn" data-go="${esc(s.id)}">${esc(go)}</button>`:''}</div>
       <span class="dot"${tap?' role="button" tabindex="0"':''}><svg viewBox="-24 -24 48 48" aria-hidden="true">${icon}</svg></span>
       ${stars}</div>`;

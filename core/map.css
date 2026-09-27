@@ -46,7 +46,7 @@
 .stn.locked .dot{background:var(--fig);color:var(--muted);box-shadow:0 6px 0 var(--line)}
 .stn .stars{position:absolute;left:50%;transform:translateX(-50%);top:38px;font-size:.78rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-shadow:0 1px 2px rgba(255,255,255,.6)}
 .stn.cur .stars{top:46px}
-.stn .fox{position:absolute;left:34px;top:-6px;font-size:28px;line-height:1;animation:mp-bob 2.6s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(10,25,40,.35))}
+.stn .fox{position:absolute;left:30px;top:-18px;font-size:28px;line-height:1;animation:mp-bob 2.6s ease-in-out infinite;pointer-events:none;filter:drop-shadow(0 2px 3px rgba(10,25,40,.35))}
 @keyframes mp-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 .stn .bub{position:absolute;left:50%;bottom:52px;transform:translateX(-50%) scale(.9);transform-origin:bottom center;
   width:max-content;max-width:min(78vw,250px);background:var(--card);border-radius:16px;padding:12px 14px;
@@ -64,4 +64,5 @@
 .unit::before,.unit::after{content:"";flex:1;height:2px;background:var(--plate);border-radius:2px}
 .unit span{font-family:var(--disp);font-weight:600;font-size:.8rem;letter-spacing:.04em;color:var(--ink);
   background:var(--plate);border-radius:999px;padding:4px 12px;white-space:nowrap}
+.stn .fox .pet{display:block}
 @media (prefers-reduced-motion: reduce){.stn .fox{animation:none}}
