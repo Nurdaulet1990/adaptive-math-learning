@@ -130,6 +130,34 @@
 .rules{margin-top:10px}
 .rules summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--accent);min-height:44px;display:flex;align-items:center}
 @media (prefers-reduced-motion: reduce){.pod-a,.pod-blk{animation:none!important}}
+/* ── Бағыттар: big cards to swipe (choice E) ── */
+.rcar{position:relative;margin:0 -16px}
+.rc-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 28px 16px;scroll-padding:0 28px;scrollbar-width:none;overscroll-behavior-x:contain;outline:none}
+.rc-track::-webkit-scrollbar{display:none}
+.rcard{flex:0 0 100%;max-width:440px;scroll-snap-align:center;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:22px 20px 20px;border-radius:30px;background:color-mix(in srgb,var(--rc) 14%,var(--card));color:var(--ink);
+  box-shadow:0 8px 0 color-mix(in srgb,var(--rc) 40%,transparent),0 20px 30px -18px rgba(60,40,10,.35)}
+.rcard.soon{filter:grayscale(.6);opacity:.8}
+.rcard h2{font-family:var(--disp);font-weight:600;font-size:1.7rem;margin:10px 0 2px;color:var(--rc-d)}
+.rc-sub{margin:0;font-weight:800;font-size:.85rem;color:var(--muted)}
+.rc-art{width:100%;max-width:240px;height:auto;margin:10px 0 8px;color:var(--rc)}
+.rc-coin{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:1.7rem;background:var(--rc);color:#fff;
+  box-shadow:0 6px 0 var(--rc-d),inset 0 3px 0 rgba(255,255,255,.35)}
+.rc-coin.new{background:var(--card);color:var(--rc);border:3px solid var(--rc);box-shadow:0 6px 0 var(--line)}
+.rc-coin.sm{width:40px;height:40px;font-size:1.1rem;box-shadow:0 4px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.35)} .rc-coin.sm.new{box-shadow:0 4px 0 var(--line)}
+.rc-bar{width:100%;height:12px;border-radius:999px;background:var(--card);box-shadow:inset 0 2px 0 rgba(0,0,0,.07);overflow:hidden}
+.rc-bar i{display:block;height:100%;border-radius:999px;background:var(--rc);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.rc-num{display:flex;justify-content:space-between;width:100%;margin-top:6px;font-weight:900;font-size:.9rem} .rc-st{color:var(--gold-d)}
+.rc-new{margin:4px 0 0;font-weight:800;color:var(--rc-d)}
+.rc-go{margin-top:14px;background:var(--rc);box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28)} .rc-go[aria-disabled]{background:var(--line);box-shadow:none;color:var(--muted)}
+.rc-arrow{position:absolute;top:50%;transform:translateY(-60%);z-index:2;width:44px;height:44px;border-radius:50%;border:0;background:var(--card);color:var(--ink);font-size:1.6rem;line-height:1;cursor:pointer;box-shadow:0 4px 0 var(--line)}
+.rc-arrow.prev{left:4px} .rc-arrow.next{right:4px}
+@media (hover:none){.rc-arrow{display:none}}
+.rc-dots{display:flex;justify-content:center;gap:6px;margin:4px 0 10px} .rc-dots i{width:9px;height:9px;border-radius:999px;background:var(--line);transition:width .2s} .rc-dots i.on{width:22px;background:var(--accent)}
+.rc-badges{display:flex;justify-content:space-around;gap:4px}
+.rc-b{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:none;padding:4px;min-width:56px;cursor:pointer;font:inherit}
+.rc-b small{font-weight:800;font-size:.7rem;color:var(--muted)} .rc-b[aria-current="true"] small{color:var(--ink);font-weight:900}
+.rc-b[aria-current="true"] .rc-coin{transform:translateY(-3px)}
 </style>
 </head>
 <body>
@@ -246,18 +274,31 @@
   const COUNT={WP:13,FR:50,PV:48,AR:41,TE:20};
   const began=code=>{ const p=progress(code); return p&&p.diag?((state[code]||{}).last||1):0; };
   const order=Core.config.ROUTES.map((x,i)=>[x,i]).sort((a,b)=>(began(b[0][0])-began(a[0][0]))||(a[1]-b[1])).map(x=>x[0]);
-  let newShown=false;
-  order.forEach(([code,name,url,status,grades])=>{
-    const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
-    const total=p?p.total:(COUNT[code]||7);
-    const at=p&&p.diag?p.cur:-1;
-    if(!(p&&p.diag)&&!newShown&&order.some(([c])=>began(c))){ T2+=`<div class="sec">Жаңа бағыттар</div>`; newShown=true; }
-    T2+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
-      <div class="rt-head"><span class="rt-name">${esc(name)}</span><span class="rt-go">${live?(p&&p.diag?'жалғастыру':'бастау'):'жақында'}</span></div>
-      ${strip(color,total,at)}
-      <div class="rt-foot"><span>${p&&p.diag?`${p.passed} / ${total} станция`:`${total} станция · ${esc(grades)}-сынып`}</span><span>${p&&p.stars?'★ '+p.stars:''}</span></div></a>`;
-  });
-  T2+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
+  /* ── Бағыттар as big cards to swipe through (owner's choice E, 2026-09-27): one route at a time, each with its own
+     picture; the one worked on last comes first. Native scroll-snap does the swiping (touch, trackpad, shift-wheel),
+     the arrows and the row of badges below jump; the dots follow. ── */
+  const SYM={TE:'x',AR:'×',FR:'½',WP:'?',PV:'10'};
+  const ART={
+    TE:`<path d="M40,150 L110,40 L180,150Z" fill="currentColor" opacity=".18"/><path d="M110,40 L180,150 L110,150Z" fill="currentColor" opacity=".28"/><g transform="translate(110,56)" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none"><path d="M0,-30 V14"/><path d="M-34,-22 H34"/><path d="M-34,-22 L-46,0 H-22Z M34,-22 L22,0 H46Z" fill="var(--gold)" stroke="currentColor"/></g>`,
+    AR:[0,1,2,3].map(r=>[0,1,2,3,4,5,6].map(k=>`<circle cx="${40+k*23}" cy="${46+r*24}" r="7.5" fill="currentColor" opacity="${r<2?1:.35}"/>`).join('')).join(''),
+    FR:`<circle cx="110" cy="88" r="54" fill="currentColor" opacity=".3"/><path d="M110,88 L110,34 A54,54 0 0 1 164,88Z" fill="currentColor"/><path d="M110,34 V142 M56,88 H164" stroke="#fff" stroke-width="3"/>`,
+    WP:`<rect x="46" y="34" width="128" height="104" rx="12" fill="#fff" stroke="currentColor" stroke-width="3" opacity=".95"/><path d="M64,62 H156 M64,84 H156 M64,106 H128" stroke="currentColor" stroke-width="7" stroke-linecap="round" opacity=".4"/><circle cx="166" cy="40" r="20" fill="currentColor"/><text x="166" y="48" text-anchor="middle" font-family="Fredoka,sans-serif" font-weight="600" font-size="22" fill="#fff">?</text>`,
+    PV:[2,4,6,3,5].map((h,k)=>`<rect x="${38+k*30}" y="${144-h*17}" width="24" height="${h*17}" rx="4" fill="currentColor" opacity="${.45+k*.12}"/>`).join('')};
+  const cards=[], badges=[];
+  order.forEach(([code,name,url,status,grades],i)=>{
+    const p=progress(code), live=status==='live', rc=code.toLowerCase(), color=`var(--${rc},var(--accent))`, dark=`var(--${rc}-d,var(--accent-d))`;
+    const total=p?p.total:(COUNT[code]||7), started=!!(p&&p.diag);
+    cards.push(`<section class="rcard${live?'':' soon'}" id="rc-${code}" style="--rc:${color};--rc-d:${dark}" aria-label="${esc(name)}">
+      <span class="rc-coin${started?'':' new'}">${SYM[code]||'?'}</span>
+      <h2>${esc(name)}</h2><p class="rc-sub">${esc(grades)}-сынып · ${total} станция</p>
+      <svg class="rc-art" viewBox="0 0 220 160" aria-hidden="true">${ART[code]||''}</svg>
+      ${started?`<div class="rc-bar"><i style="width:${Math.round(100*p.passed/Math.max(total,1))}%"></i></div><div class="rc-num"><span>${p.passed}/${total} станция</span><span class="rc-st">★ ${p.stars}</span></div>`
+        :`<p class="rc-new">${live?'Жаңа бағыт — диагностикадан бастайсың':'Жақында ашылады'}</p>`}
+      ${live?`<a class="btn wide rc-go" href="${url}">${started?'Жалғастыру':'Бастау'}</a>`:`<span class="btn wide rc-go" aria-disabled="true">Жақында</span>`}</section>`);
+    badges.push(`<button type="button" class="rc-b" data-to="rc-${code}" style="--rc:${color};--rc-d:${dark}" aria-label="${esc(name)}"><span class="rc-coin sm${started?'':' new'}">${SYM[code]||'?'}</span><small>${esc(name.split(' ')[0])}</small></button>`); });
+  T2+=`<div class="rcar"><button type="button" class="rc-arrow prev" aria-label="Алдыңғы">‹</button><div class="rc-track" id="rcTrack">${cards.join('')}</div><button type="button" class="rc-arrow next" aria-label="Келесі">›</button></div>
+    <div class="rc-dots" id="rcDots">${cards.map((_,i)=>`<i${i?'':' class="on"'}></i>`).join('')}</div><div class="rc-badges" id="rcBadges">${badges.join('')}</div>
+    <p class="note" style="text-align:center;margin-top:14px">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p>`;
   const TABS=[['bugin','Бүгін','<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',T1],
               ['bagyt','Бағыттар','<path d="M4 19c4-1 3-6 8-7s5-6 8-7"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="5" r="1.5"/>',T2],
               ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>',T3],
@@ -271,6 +312,14 @@
     document.querySelectorAll('.tabbar a').forEach(a=>{ if(a.dataset.t===t) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
     window.scrollTo(0,0); }
   addEventListener('hashchange',showTab); showTab();
+  (function carousel(){ const tr=document.getElementById('rcTrack'); if(!tr) return; const cs=[...tr.children], dots=[...document.querySelectorAll('#rcDots i')], bs=[...document.querySelectorAll('#rcBadges .rc-b')];
+    const at=()=>Math.round(tr.scrollLeft/Math.max(1,cs[0].offsetWidth+parseFloat(getComputedStyle(tr).columnGap||0)));
+    const mark=()=>{ const i=Math.max(0,Math.min(cs.length-1,at())); dots.forEach((d,k)=>d.classList.toggle('on',k===i)); bs.forEach((b,k)=>b.setAttribute('aria-current',k===i?'true':'false')); };
+    const go=i=>{ i=Math.max(0,Math.min(cs.length-1,i)); tr.scrollTo({left:cs[i].offsetLeft-cs[0].offsetLeft,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}); };
+    tr.addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});
+    document.querySelector('.rc-arrow.prev').onclick=()=>go(at()-1); document.querySelector('.rc-arrow.next').onclick=()=>go(at()+1);
+    bs.forEach((b,k)=>b.onclick=()=>go(k)); tr.addEventListener('keydown',e=>{ if(e.key==='ArrowRight') go(at()+1); if(e.key==='ArrowLeft') go(at()-1); });
+    tr.tabIndex=0; mark(); })();
   /* the Бүгін tab's «waiting for you» list: rooms and challenges each report in, and the list and the Жарыс badge are redrawn */
   const WAIT={rooms:[],duel:[]};
   /* Kazakh dative for a first name: Нұрлан → Нұрланға, Әли → Әлиге, Бекзат → Бекзатқа, Ерік → Ерікке */
