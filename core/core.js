@@ -356,6 +356,14 @@
     /** Answers per day, {'YYYY-MM-DD': n} (a copy). For the portal. */
     days(){ return Object.assign({},(STATE&&STATE._days)||{}); }, ymd,
     lang, setLang, avatar, setAvatar, AVATARS, sound, isMuted, toggleMute,
+    /** After a PASSED stage test: the button fills up like a fuse and, unless the pupil taps it first or has
+        left the screen, goes back to the map by itself — where the map plays the pass (map.js · celebrate). */
+    autoGo(btn,fn,ms){ if(!btn||typeof fn!=='function') return; ms=ms||2600; btn.classList.add('autogo'); btn.style.setProperty('--autogo',ms+'ms');
+      let done=false; const go=()=>{ if(done) return; done=true; fn(); };
+      const t=setTimeout(()=>{ if(btn.isConnected) go(); },ms); btn.addEventListener('click',()=>{ clearTimeout(t); done=true; },{once:true}); },
+    /** three stars, the earned ones gold and popping in turn — the result card of a passed test */
+    winStars(n){ const P='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
+      return `<div class="winstars" aria-label="${n} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<n?'on':''}" style="animation-delay:${.15+k*.18}s" aria-hidden="true">${P}</svg>`).join('')}</div>`; },
     pet:petSVG, petName, pickPet, petSay:(t,ms)=>pal.say(t,ms), petMood:(m,ms)=>pal.mood(m,ms), petOff:v=>pal.off(v),
     topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<button type="button" class="avachip" onclick="Core.pickPet()" aria-label="Жолсерігің${petName()?': '+petName():''}. Ауыстыру">${petSVG(null,{head:true,size:38})}</button>`:''}</div>`; },
     /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */

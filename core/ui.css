@@ -279,3 +279,14 @@ textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 .avarow.big .ava small{font-family:var(--font);font-weight:900;font-size:.72rem;color:var(--ink)}
 @keyframes v3-fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion: reduce){.petpal .pp-body,.petpal .pp-shade,.petpick .pk-hero{animation:none!important}}
+
+/* the result card of a passed stage test: three stars pop in, and the button fills like a fuse (Core.autoGo) */
+.wincard{text-align:center}
+.winstars{display:flex;justify-content:center;gap:6px;margin:6px 0 10px}
+.winstars svg{width:46px;height:46px;fill:var(--line);stroke:rgba(0,0,0,.12);stroke-width:1;animation:v3-starwin .5s cubic-bezier(.2,.9,.3,1.5) backwards}
+.winstars svg:nth-child(2){width:58px;height:58px;margin-top:-10px}
+.winstars svg.on{fill:var(--gold);stroke:var(--gold-d)}
+.btn.autogo{position:relative;overflow:hidden}
+.btn.autogo::after{content:"";position:absolute;left:0;bottom:0;height:5px;width:100%;background:rgba(255,255,255,.6);transform-origin:left;animation:v3-fuse var(--autogo,2600ms) linear forwards}
+@keyframes v3-starwin{0%{transform:scale(0) rotate(-45deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes v3-fuse{from{transform:scaleX(0)}to{transform:scaleX(1)}}

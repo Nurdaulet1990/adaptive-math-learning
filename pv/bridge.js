@@ -72,6 +72,10 @@ const _lc=showLevelComplete; showLevelComplete=function(ws){ const lv=state.leve
       st.tests.push({t:Date.now(),ok:score,n,pass});
       if(st.tests.length>20) st.tests.splice(0,st.tests.length-20);   // one row per station, not a diary
       Core.save(R); } }
+  /* back to the map on its own after a PASS (as core/runner.js does), unless the pupil moved on first:
+     the legacy screen is left alone if anything replaced it in the meantime */
+  if(passed){ const main=document.getElementById('main'), snap=main&&main.firstElementChild;
+    setTimeout(()=>{ if(snap&&snap.isConnected&&main.firstElementChild===snap&&typeof showMap==='function') showMap(); },2600); }
   return r; };
 /* The placement test asks its own questions (checkPlacement) and never goes through showFeedback, so until
    2026-09-25 not one of them was logged: a child who spent half an hour on the placement showed «3 есеп» on the
