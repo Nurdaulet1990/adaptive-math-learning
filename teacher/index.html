@@ -13,7 +13,7 @@
 <title>Есеп жолы · Мұғалім</title>
 <!-- teacher page is Kazakh only: never translated -->
 <meta name="google" content="notranslate">
-<link rel="stylesheet" href="../core/ui.css?v=17">
+<link rel="stylesheet" href="../core/ui.css?v=18">
 <style>
 /* the printable class report (printReport): on paper only the report, no bar, no buttons, no card frames */
 table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width:200px}
@@ -124,9 +124,9 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=18"></script>
+<script src="../core/core.js?v=19"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="../room/routes.js?v=3"></script>
+<script src="../room/routes.js?v=4"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.

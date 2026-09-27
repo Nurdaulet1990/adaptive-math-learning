@@ -239,6 +239,7 @@
       <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}" aria-label="${petName(a)}">${petSVG(a,{head:true,size:38})}</button>`).join('')}</div>
       <div style="height:10px"></div><button class="btn wide" id="c_go">Кіру</button><p class="note" id="c_msg" style="margin-top:8px"></p>
       ${Object.keys(known).length?`<p class="note" style="margin-top:10px">Бұл құрылғыда бұрын кірген:</p><div class="row" id="c_known">${Object.values(known).map(k=>`<button class="btn ghost" data-id="${esc(k.id)}">${esc(k.name)}</button>`).join('')}</div>`:''}
+      ${ROOT?`<p class="note tlink"><a href="${ROOT}teacher/">Мұғалімсіз бе? Мұғалім беті →</a></p>`:''}
       </div>`;
       const $=id=>document.getElementById(id); const msg=t=>{ $('c_msg').textContent=t; };
       /* The class is chosen, never typed: one child's «5 БАРЫС» and another's «БАРЫС5» used to be two classes,

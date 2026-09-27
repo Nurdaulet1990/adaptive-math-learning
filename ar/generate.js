@@ -263,7 +263,7 @@
       stem: k + ' × ' + m + ' = ?',
       kind: 'input',
       ans: String(prod),
-      fig: lvl === 1 ? { type: 'numline', k: k, times: m }
+      fig: lvl === 1 ? { type: 'numline', k: k, times: m, ask: 'end' }   // the jumps are counted, the product is not printed
         : lvl === 2 ? { type: 'array', r: m, c: k } : null,
       hfig: lvl === 3 ? { type: 'array', r: m, c: k } : null,
       h1: k + ' санын ' + m + ' рет ал, немесе кестеден тап.',
@@ -553,7 +553,7 @@
       kind: 'input',
       ans: String(a),
       fig: lvl === 1 ? { type: 'groups', g: g, n: per }
-        : lvl === 2 ? (quot ? { type: 'numline', k: per, times: g } : { type: 'rembar', total: tot, per: per, groups: g, rem: 0 }) : null,
+        : lvl === 2 ? (quot ? { type: 'numline', k: per, times: g } : { type: 'rembar', total: tot, per: per, groups: g, rem: 0, ask: 'per' }) : null,
       hfig: lvl === 3 ? { type: 'groups', g: g, n: per } : null,
       h1: quot ? 'Ішінде ' + per + '-тен неше рет бар екенін тап.'
         : 'Барлығын ' + g + ' топқа тең үлестір.',
@@ -580,7 +580,7 @@
         kind: 'choice',
         choices: opts(q, near(q, 3)),
         ans: String(q),
-        fig: { type: 'array', r: q, c: b },
+        fig: { type: 'array', r: q, c: b, ask: 'r' },
         h1: 'Үш саннан төрт теңдік құрылады: екі көбейту, екі бөлу.',
         h2: b + ' × ' + q + ' = ' + a + '  →  ' + a + ' ÷ ' + b + ' = ' + q,
         expl: b + ' × ' + q + ' = ' + a + ', сондықтан ' + a + ' ÷ ' + b + ' = ' + q +
@@ -591,8 +591,8 @@
       stem: a + ' ÷ ' + b + ' = ?',
       kind: 'input',
       ans: String(q),
-      fig: lvl === 1 ? { type: 'array', r: q, c: b } : null,
-      hfig: lvl === 3 ? { type: 'array', r: q, c: b } : null,
+      fig: lvl === 1 ? { type: 'array', r: q, c: b, ask: 'r' } : null,   // the rows are counted, their number is not printed
+      hfig: lvl === 3 ? { type: 'array', r: q, c: b, ask: 'r' } : null,
       h1: 'Кері амалды ойла: ' + b + ' нешеге көбейткенде ' + a + ' болады?',
       h2: b + ' × ? = ' + a,
       steps: [{ label: 'Кері амал', expr: b + ' × ? = ' + a, val: String(q) }],
@@ -617,7 +617,7 @@
         choices: opts(s2, near(s2, 3)),
         ans: String(s2),
         fig: lvl === 1 ? { type: 'array', r: a, c: b, split: s1 }
-          : { type: 'area', rows: [a], cols: [s1, s2] },
+          : { type: 'area', rows: [a], cols: [s1, s2], askCol: 1 },   // the second width is the question: «?», and its product blank
         h1: 'Қиын көбейткішті екі оңайға бөл: ' + b + ' = ' + s1 + ' + ?',
         h2: b + ' − ' + s1 + ' = ' + s2,
         expl: a + ' × ' + b + ' = ' + a + ' × ' + s1 + ' + ' + a + ' × ' + s2 +
@@ -671,8 +671,8 @@
       ansHTML: '<b>' + (askRem ? r : q) + '</b>  <span class="note">(' + tot + ' ÷ ' + d +
         ' = ' + q + ' қалдық ' + r + ')</span>',
       fig: lvl === 1 ? { type: 'groups', g: q, n: d, left: r }
-        : lvl === 2 ? { type: 'rembar', total: tot, per: d, groups: q, rem: r } : null,
-      hfig: lvl === 3 ? { type: 'rembar', total: tot, per: d, groups: q, rem: r } : null,
+        : lvl === 2 ? { type: 'rembar', total: tot, per: d, groups: q, rem: r, ask: askRem ? 'rem' : '' } : null,
+      hfig: lvl === 3 ? { type: 'rembar', total: tot, per: d, groups: q, rem: r, ask: askRem ? 'rem' : '' } : null,
       h1: d + '-тен неше рет алуға болады? Артылғаны — қалдық.',
       h2: d + ' × ' + q + ' = ' + d * q + ', ' + tot + ' − ' + d * q + ' = ' + r,
       steps: askRem
