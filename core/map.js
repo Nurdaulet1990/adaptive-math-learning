@@ -1,4 +1,9 @@
-/* Есеп жолы · core/map.js v4 — the route map: a mountain road through the steppe, one big station per stage.
+/* Есеп жолы · core/map.js v5 — v5 (look v3, redesign after the owner's review): an illustrated landscape
+   (rolling bands, river, trees, rocks, flowers, clouds), a smooth S-shaped road with a side and a walked
+   trail, stations as coins — passed in the route colour with stars, current gold with the pupil's animal
+   standing on it, locked in stone with a lock — and the current station's button pinned in a card at the
+   bottom of the map instead of a bubble over the road. Bubbles still open for passed stations.
+   Before: core/map.js v4 — the route map: a mountain road through the steppe, one big station per stage.
    v4 (look v3, step 3): the road has a side, stations stand on plinths, hills and trees line the road,
    stars are drawn, locked stations carry a lock, the walked part of the road draws itself in, the current
    station pulses. Same API and markup hooks (.stn[data-stn], [data-go], .bub) as v3.
@@ -38,7 +43,8 @@ function map(o){
   const st=o.stages||[], n=st.length; if(!n) return '';
   const C=o.color||'var(--accent)', CD=o.colorDark||'var(--accent-d)', ava=o.avatar||'🦊', go=o.go||'Бастау';
   const H=TOP+n*STEP+PADB;
-  const pts=st.map((s,i)=>({x:Math.round(W*XS[i%4]), y:H-PADB-i*STEP}));
+  /* a smooth S through the stations (v5): x swings on a sine instead of four fixed columns */
+  const pts=st.map((s,i)=>({x:Math.round(W/2+W*0.27*Math.sin(i*1.05+0.4)), y:H-PADB-i*STEP}));
   const road=curve(pts);
   const curIdx=st.findIndex(s=>s.status==='current');
   const doneIdx=curIdx>=0?curIdx:st.reduce((a,s,i)=>s.status==='passed'?i:a,-1);
@@ -48,76 +54,70 @@ function map(o){
   const unitOf=(s,i)=>s.unit||`${Math.floor(i/4)+1}-бөлім`;
   let units='';
   st.forEach((s,i)=>{ const u=unitOf(s,i); if(i&&unitOf(st[i-1],i-1)===u) return;
-    const y=pts[i].y+STEP*0.58;
+    const y=pts[i].y+STEP*0.4;   // below the unit's first coin, clear of the stars over the coin before it
     units+=`<div class="unit" style="top:${(y/H*100).toFixed(3)}%"><span>${esc(u)}</span></div>`; });
 
-  /* hills and trees on the side of the road the zig-zag is away from; the same map always looks the same */
+  /* ── the land (v5): rolling bands down the whole map, a river now and then, trees, rocks and flowers kept
+     off the road. Deterministic — the same route always draws the same landscape. ── */
+  let rs=7; const rnd=()=>{ rs=(rs*9301+49297)%233280; return rs/233280; };
+  const nearRoad=(x,y,m)=>pts.some(p=>Math.abs(p.y-y)<STEP*0.7&&Math.abs(p.x-x)<m);
+  const wave=(y,amp,ph)=>{ let d=`M0,${H} L0,${y.toFixed(0)}`; for(let x=0;x<=W;x+=12) d+=` L${x},${(y+amp*Math.sin(x/56+ph)).toFixed(1)}`; return d+` L${W},${H}Z`; };
+  let land='';
+  for(let y=300,k=0;y<H;y+=STEP*1.35,k++) land+=`<path d="${wave(y,11,k*1.3)}" fill="var(--${['hill','g1','hill2','g2'][k%4]})"${k%2?'':' opacity=".55"'}/>`;
+  let river=''; for(let y=TOP+STEP*2.5;y<H-STEP;y+=STEP*6){ const d=`M-10,${y} C${W*0.2},${y+18} ${W*0.3},${y-14} ${W*0.45},${y+8} S${W*0.8},${y+40} ${W+10},${y+22}`;
+    river+=`<path d="${d}" fill="none" stroke="var(--river)" stroke-width="15" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#fff" stroke-width="2.2" stroke-dasharray="6 14" opacity=".6"/>`; }
   let deco='';
-  pts.forEach((p,i)=>{ if(i%2) return; const left=p.x>W/2, x=left?Math.max(34,p.x-150):Math.min(W-34,p.x+150), y=p.y+STEP*0.42, s=0.8+((i*37)%5)/10;
-    deco+=`<g transform="translate(${x},${y.toFixed(0)}) scale(${s.toFixed(2)})"><path d="M-46,0 C-34,-34 34,-34 46,0Z" fill="var(--hill)"/><path d="M0,-25 C18,-24 34,-16 46,0 L0,0Z" fill="var(--hill2)" opacity=".7"/>`
-      +(i%4===0?`<g transform="translate(${left?-16:16},-22)"><rect x="-2.5" y="0" width="5" height="12" rx="2" fill="var(--trunk)"/><circle r="12" cy="-4" fill="var(--tree)"/><circle r="12" cy="-4" cx="4" fill="var(--tree-d)" opacity=".55"/><circle r="4" cx="-4" cy="-9" fill="#fff" opacity=".22"/></g>`:'')
-      +`</g>`; });
+  for(let y=TOP+40;y<H-30;y+=40){ for(let t=0;t<3;t++){ const x=Math.round(18+rnd()*(W-36)), yy=Math.round(y+rnd()*30), r=rnd();
+    if(nearRoad(x,yy,66)) continue;
+    if(r<0.45){ const k=(0.7+rnd()*0.4).toFixed(2);
+      deco+=`<g transform="translate(${x},${yy}) scale(${k})"><ellipse cy="16" rx="13" ry="4" fill="#3E5A2A" opacity=".18"/><rect x="-2.5" y="4" width="5" height="12" rx="2" fill="var(--trunk)"/><path d="M0,-26 L15,6 L-15,6Z" fill="var(--tree)"/><path d="M0,-26 L15,6 L0,6Z" fill="var(--tree-d)"/><path d="M0,-38 L11,-10 L-11,-10Z" fill="var(--tree)"/><path d="M0,-38 L11,-10 L0,-10Z" fill="var(--tree-d)"/></g>`; }
+    else if(r<0.6) deco+=`<g transform="translate(${x},${yy})"><path d="M-13,6 L-8,-6 L3,-9 L12,-2 L14,6Z" fill="var(--rock)"/><path d="M3,-9 L12,-2 L14,6 L2,6Z" fill="var(--rock-d)"/></g>`;
+    else if(r<0.8) deco+=`<g transform="translate(${x},${yy})"><path d="M0,0 v-9" stroke="var(--hill2)" stroke-width="1.6"/><circle cy="-11" r="3.4" fill="${['#E86F9A','#F4B942','#9B7FD4'][Math.floor(rnd()*3)]}"/><circle cy="-11" r="1.3" fill="#FFE08A"/></g>`; } }
+
   const STAR='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
-  const LOCK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>';
+  const LOCK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.8"/></svg>';
 
   const nodes=st.map((s,i)=>{
-    const p=pts[i], cur=s.status==='current', passed=s.status==='passed', open=cur;
-    const cls=`stn ${cur?'cur':passed?'passed':'locked'}${open?' open':''}`;
+    const p=pts[i], cur=s.status==='current', passed=s.status==='passed', locked=!cur&&!passed;
+    const cls=`stn ${cur?'cur':passed?'passed':'locked'}`;
     // stars:null means "this route keeps no star score" (PV) — draw nothing rather than three empty stars
     const stars=(passed&&s.stars!=null)?`<span class="stars" aria-label="${s.stars} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<s.stars?'on':''}" aria-hidden="true">${STAR}</svg>`).join('')}</span>`:'';
-    const icon=s.icon||`<span class="num">${i+1}</span>`;
+    const face=locked?`<span class="lk">${LOCK}</span>`:(s.icon&&!passed&&!cur?`<svg viewBox="-24 -24 48 48" aria-hidden="true">${s.icon}</svg>`:`<span class="num">${i+1}</span>`);
     const tap=cur||passed;
     const d=Math.max(0,Math.min(18,i-Math.max(0,doneIdx-6)))*45;   // stations pop in from the pupil's part of the road upward
     return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%;--d:${d}ms"${tap?` data-stn="${esc(s.id)}"`:''}>
-      <span class="plinth" aria-hidden="true"></span>
-      ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:40}):ava}</span>`:''}
+      ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:64}):ava}</span>`:''}
       <div class="bub"><b>${esc(s.name)}</b><i>${esc(s.sub||s.id)}</i>${tap?`<button type="button" class="btn" data-go="${esc(s.id)}">${esc(go)}</button>`:''}</div>
-      <span class="dot"${tap?' role="button" tabindex="0"':''}><svg viewBox="-24 -24 48 48" aria-hidden="true">${icon}</svg></span>
-      ${s.status==='locked'?`<span class="lk">${LOCK}</span>`:''}${stars}</div>`;
+      <span class="dot"${tap?' role="button" tabindex="0"':''} aria-label="${i+1}. ${esc(s.name)}">${face}</span>
+      ${stars}</div>`;
   }).join('');
+  const cs=curIdx>=0?st[curIdx]:null;
+  /* the current station's action lives in a card pinned to the bottom of the map, not in a bubble over the road */
+  const card=cs?`<div class="mapgo"><div><b>${curIdx+1}-станция · ${esc(cs.name)}</b><i>${esc(cs.sub||cs.id)}</i></div><button type="button" class="btn" data-go="${esc(cs.id)}">${esc(go)}</button></div>`:'';
 
-  return `<div class="mapbox"><div class="mapinner" style="--rc:${C};--rc-d:${CD}">
+  return `<div class="mapbox v5" style="--rc:${C};--rc-d:${CD}"><div class="mapinner">
   <svg class="maproad" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.label||'Жол картасы')}">
     <defs>
       <linearGradient id="mp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/></linearGradient>
-      <linearGradient id="mp-gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--g1)"/><stop offset="1" stop-color="var(--g2)"/></linearGradient>
-      <radialGradient id="mp-sun"><stop offset="0" stop-color="var(--sun)" stop-opacity=".9"/><stop offset="1" stop-color="var(--sun)" stop-opacity="0"/></radialGradient>
-      <g id="mp-tulip"><path d="M0,0 L0,-15" stroke="var(--hill2)" stroke-width="1.6" stroke-linecap="round"/><path d="M-4,-8 q4,4 8,0" stroke="var(--hill2)" stroke-width="1.3" fill="none"/><path d="M-4,-15 q0,-7 4,-8 q4,1 4,8 q-4,3 -8,0Z" fill="var(--tulip)" opacity=".8"/></g>
-      <g id="mp-grass" stroke="var(--hill2)" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"><path d="M0,0 v-8 M4,0 q-1,-6 4,-9 M-4,0 q1,-6 -4,-9"/></g>
     </defs>
-
-    <rect width="${W}" height="${TOP+20}" fill="url(#mp-sky)"/>
-    <g fill="#FFFFFF" opacity="var(--starop)"><circle cx="42" cy="40" r="1.3"/><circle cx="96" cy="22" r="1"/><circle cx="150" cy="52" r="1.4"/><circle cx="214" cy="30" r="1"/><circle cx="268" cy="60" r="1.3"/><circle cx="318" cy="34" r="1"/><circle cx="70" cy="88" r="1"/><circle cx="240" cy="96" r="1.2"/></g>
-    <circle cx="292" cy="62" r="44" fill="url(#mp-sun)"/><circle cx="292" cy="62" r="15" fill="var(--sun)"/>
-    <path d="M0,252 L44,170 L78,204 L118,138 L158,196 L196,152 L236,206 L276,158 L316,202 L360,166 L360,252Z" fill="var(--mtn-far)"/>
-    <path d="M118,138 L104,158 L134,158Z" fill="var(--snow)"/><path d="M276,158 L264,176 L290,176Z" fill="var(--snow)"/>
-    <path d="M0,258 L52,206 L92,236 L140,192 L188,238 L232,200 L286,244 L330,212 L360,236 L360,258Z" fill="var(--mtn)" opacity=".75"/>
-    <rect y="248" width="${W}" height="${H-248}" fill="url(#mp-gr)"/>
-    <path d="M0,268 C58,246 108,278 168,262 C228,246 292,274 360,254 L360,300 L0,300Z" fill="var(--hill)"/>
-    <path d="M0,292 C70,276 120,300 190,288 C258,276 300,296 360,284 L360,330 L0,330Z" fill="var(--hill2)" opacity=".45"/>
-
-    <g transform="translate(300,214)">
-      <path d="M-18,25 L-14,6 q14,-12 28,0 L18,25Z" fill="var(--card)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round" opacity=".9"/>
-      <path d="M-14,6 q14,-12 28,0" fill="none" stroke="var(--tulip)" stroke-width="2"/>
-      <path d="M-4,25 L-4,14 q4,-4 8,0 L4,25Z" fill="var(--gold)" stroke="var(--ink)" stroke-width="1" opacity=".9"/>
-      <path d="M0,-7 L0,-18 L10,-14 L0,-10" fill="var(--tulip)" stroke="var(--ink)" stroke-width=".9" stroke-linejoin="round"/>
-    </g>
-
-    ${deco}
-    <path d="${road}" transform="translate(0,10)" fill="none" stroke="var(--road-side)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${road}" fill="none" stroke="var(--road-edge)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" opacity=".75"/>
-    <path d="${road}" fill="none" stroke="var(--road)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="${road}" fill="none" stroke="var(--road-line)" stroke-width="2.4" stroke-dasharray="10 14" stroke-linecap="round" opacity=".75"/>
-    ${done?`<path class="mp-done" d="${done}" pathLength="100" fill="none" stroke="${C}" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" opacity=".35"/>`:''}
-
-    <g transform="translate(26,${H-30})"><use href="#mp-tulip"/></g>
-    <g transform="translate(336,${H-110}) scale(.85)"><use href="#mp-tulip"/></g>
-    <g transform="translate(22,${H-330})"><use href="#mp-grass"/></g>
-    <g transform="translate(340,${H-520})"><use href="#mp-grass"/></g>
-    <g transform="translate(24,${H-700})"><use href="#mp-grass"/></g>
+    <rect width="${W}" height="${H}" fill="var(--g1)"/>
+    <rect width="${W}" height="${TOP+60}" fill="url(#mp-sky)"/>
+    <g fill="#FFFFFF" opacity="var(--starop)"><circle cx="42" cy="40" r="1.3"/><circle cx="96" cy="22" r="1"/><circle cx="150" cy="52" r="1.4"/><circle cx="214" cy="30" r="1"/><circle cx="268" cy="60" r="1.3"/><circle cx="318" cy="34" r="1"/></g>
+    <g fill="var(--cloud)" opacity=".9"><g transform="translate(70,70)"><ellipse rx="26" ry="11"/><ellipse cx="-14" cy="3" rx="16" ry="9"/><ellipse cx="14" cy="-4" rx="15" ry="12"/></g><g transform="translate(290,112) scale(.8)"><ellipse rx="26" ry="11"/><ellipse cx="-14" cy="3" rx="16" ry="9"/><ellipse cx="14" cy="-4" rx="15" ry="12"/></g></g>
+    <path d="M0,250 L46,172 L86,210 L146,122 L200,200 L246,150 L296,214 L344,160 L360,176 L360,330 L0,330Z" fill="var(--mtn-far)"/>
+    <path d="M146,122 L130,146 L142,143 L149,151 L159,141 L166,147Z M46,172 L34,190 L46,186 L56,192Z M344,160 L332,178 L344,174 L356,180Z" fill="var(--snow)"/>
+    <path d="${wave(292,10,0.3)}" fill="var(--hill)"/>
+    ${land}${river}${deco}
+    <path d="${road}" transform="translate(3,12)" fill="none" stroke="#5A4420" stroke-opacity=".16" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${road}" transform="translate(0,9)" fill="none" stroke="var(--road-side)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${road}" fill="none" stroke="var(--road-edge)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${road}" fill="none" stroke="var(--road)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="${road}" fill="none" stroke="var(--road-line)" stroke-width="2.6" stroke-dasharray="9 13" stroke-linecap="round" opacity=".85"/>
+    ${done?`<path class="mp-done" d="${done}" pathLength="100" fill="none" stroke="${C}" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/>
+    <path class="mp-done" d="${done}" pathLength="100" fill="none" stroke="${C}" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.1 3.2" opacity=".9"/>`:''}
   </svg>
   ${units}${nodes}
-</div></div>`;
+</div>${card}</div>`;
 }
 
 function mapBind(fn){

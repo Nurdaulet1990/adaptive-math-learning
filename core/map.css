@@ -13,6 +13,8 @@
   --g1:#E9E0C4; --g2:#DED2B0;
   --road:#F1E1BE; --road-edge:#D9C395; --road-line:#FFFBF0;
   --road-side:#BFA877; --tree:#7FA35E; --tree-d:#5E8544; --trunk:#8B6A45; --plinth:rgba(60,45,20,.28);
+  --river:#8CC4E8; --cloud:#FFFFFF; --rock:#B7AC98; --rock-d:#9C917D; --stone:#D9D3C7; --stone-d:#A79F90; --stone-ink:#7C7466;
+  --gold-top:#FFC940; --gold-side:#C98A10; --gold-ink:#5A3A00;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -25,6 +27,8 @@
     --g1:#212927; --g2:#191F1E;
     --road:#4E4430; --road-edge:#372F21; --road-line:#8B7B57;
     --road-side:#241E14; --tree:#2F4A36; --tree-d:#243A2A; --trunk:#4A3A28; --plinth:rgba(0,0,0,.45);
+    --river:#2C4F6B; --cloud:#3A4867; --rock:#4A4A44; --rock-d:#3A3A35; --stone:#4A4F57; --stone-d:#30343A; --stone-ink:#A5B0BC;
+    --gold-top:#E6B347; --gold-side:#9A7024; --gold-ink:#2A1C00;
   }
 }
 .mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
@@ -99,3 +103,37 @@
 @keyframes mp-draw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
 @keyframes mp-bub{from{transform:translateX(-50%) scale(.6)}to{transform:translateX(-50%) scale(1)}}
 @media (prefers-reduced-motion: reduce){.stn .dot,.stn.cur .dot::after,.mp-done,.stn.open .bub{animation:none!important}}
+
+/* ── v5 · coins on an illustrated road (look v3, redesign) ─────────────────────────────────────────────
+   Scoped to .mapbox.v5 so nothing above changes meaning for a page that still holds map.js v4. */
+.v5 .stn::before{content:"";position:absolute;left:-46px;top:12px;width:92px;height:26px;border-radius:50%;background:radial-gradient(closest-side,var(--plinth),transparent);pointer-events:none}
+.v5 .stn .plinth{display:none}
+.v5 .stn .dot{left:-38px;top:-17px;width:76px;height:34px;border-radius:50%;background:var(--stone);color:var(--stone-ink);
+  background-image:radial-gradient(ellipse 30% 30% at 32% 30%,rgba(255,255,255,.5),transparent);
+  box-shadow:0 12px 0 var(--stone-d),inset 0 -3px 0 rgba(0,0,0,.06),inset 0 2px 0 rgba(255,255,255,.55)}
+.v5 .stn[data-stn] .dot:active{transform:translateY(10px);box-shadow:0 2px 0 var(--stone-d)}
+.v5 .stn.passed .dot{background-color:var(--rc);color:#fff;box-shadow:0 12px 0 var(--rc-d),inset 0 -3px 0 rgba(0,0,0,.08),inset 0 2px 0 rgba(255,255,255,.4)}
+.v5 .stn.passed .dot:active{box-shadow:0 2px 0 var(--rc-d)}
+.v5 .stn.cur .dot{left:-46px;top:-20px;width:92px;height:40px;background-color:var(--gold-top);color:var(--gold-ink);box-shadow:0 14px 0 var(--gold-side),inset 0 -3px 0 rgba(0,0,0,.08),inset 0 3px 0 rgba(255,255,255,.55)}
+.v5 .stn.cur .dot:active{box-shadow:0 2px 0 var(--gold-side)}
+.v5 .stn.cur .dot::after{inset:-12px -14px;border-radius:50%;border:4px solid var(--gold-top)}
+.v5 .stn.cur::before{left:-58px;top:14px;width:116px;height:32px}
+.v5 .stn .num{font-family:var(--disp);font-weight:700;font-size:1.25rem;line-height:1}
+.v5 .stn.cur .num{font-size:1.45rem}
+.v5 .stn .dot svg{width:28px;height:28px}
+.v5 .stn .lk{position:static;width:auto;height:auto;background:none;box-shadow:none;color:inherit;display:grid;place-items:center}
+.v5 .stn .lk svg{width:18px;height:18px;fill:currentColor}
+.v5 .stn.locked{opacity:1}
+.v5 .stn .stars{top:-50px;left:0;transform:translateX(-50%)}
+.v5 .stn .fox{left:-32px;top:-86px}
+.v5 .stn .bub{bottom:36px}
+.v5 .stn.cur .bub{bottom:96px}
+.v5 .unit span{box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.mapgo{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;margin:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));
+  background:var(--card);border-top:1px solid var(--line);box-shadow:0 -10px 22px -16px rgba(10,25,40,.45)}
+.mapgo>div{flex:1;min-width:0;display:flex;flex-direction:column}
+.mapgo b{font-family:var(--disp);font-weight:600;font-size:1.02rem;line-height:1.2;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapgo i{font-style:normal;font-size:.76rem;font-weight:700;color:var(--muted)}
+.mapgo .btn{flex:none;min-height:50px;padding:10px 22px;border:0;border-radius:14px;font-family:var(--disp);font-weight:600;font-size:1.02rem;cursor:pointer;
+  background:var(--rc);color:#fff;box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28);transition:transform .08s,box-shadow .08s}
+.mapgo .btn:active{transform:translateY(5px);box-shadow:0 0 0 var(--rc-d)}
