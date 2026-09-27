@@ -23,6 +23,16 @@
     const m=document.createElement('meta'); m.name='viewport'; m.content='width=device-width,initial-scale=1';
     (document.head||document.documentElement).appendChild(m); }catch(e){} })();
 
+  /* Installable app + opens without a network once visited: ../sw.js next to the site root (see its header — it is
+     network-first, so online nothing changes). Only on https or localhost; never under node (tests), where there is
+     no navigator.serviceWorker and no currentScript. */
+  (function registerSW(){ try{
+    if(!('serviceWorker' in navigator)||!document.currentScript) return;
+    if(location.protocol!=='https:'&&!/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
+    const sw=new URL('../sw.js',document.currentScript.src);
+    addEventListener('load',()=>{ navigator.serviceWorker.register(sw.href,{scope:new URL('./',sw).href}).catch(()=>{}); });
+  }catch(e){} })();
+
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
   const ls={get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
   const enc=encodeURIComponent;
