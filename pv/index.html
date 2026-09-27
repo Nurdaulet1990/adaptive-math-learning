@@ -501,6 +501,8 @@ h1,h2,h3,h4 { font-family: 'Fredoka', sans-serif; text-wrap: balance; }
 }
 .fill-order-hint .arrow { font-size:16px; }
 .carry-row { font-size:16px; color:var(--accent); min-height:24px; }
+.carry-row .carry-mark { font-size:15px; font-weight:700; color:var(--accent); }
+.vert-digit.struck { text-decoration:line-through; text-decoration-thickness:2px; color:var(--text-dim); }
 
 /* ── Hint system (visual) ── */
 .hint-btn-inline {
@@ -1139,7 +1141,7 @@ function renderMain() {
    and a «no picture» level still asks the child to write in it. What goes is what is there to be looked
    at and counted: the blocks, the ten-frames, the disc chart beside the column. Each is swapped for an
    empty slot of the same identity, so putting it back is exact. */
-const AID_SELECTOR = '.block-display, .horiz-vis, .ops-pv-chart';
+const AID_SELECTOR = '.block-display, .horiz-vis, .ops-pv-chart, .carry-row';
 function hideAids(ws) {
   const kept = [];
   ws.querySelectorAll(AID_SELECTOR).forEach(el => {
@@ -1968,8 +1970,10 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
     if(s.isSubtract && s.effA && s.borrowed) {
       if(s.filledUpTo>=c || s.showRegroup) topD=s.effA[c];
     }
-    aRow+=`<span class="h-digit ${lit?'lit':'dim'}">${topD}</span>`;
-    bRow+=`<span class="h-digit ${lit?'lit':'dim'}">${bd[c]}</span>`;
+    /* a column the number does not reach is blank, not 0: 67 + 58 in three columns is « 67», not «067» */
+    const aHas=c<String(a).length, bHas=c<String(b).length;
+    aRow+=`<span class="h-digit ${lit?'lit':'dim'}">${aHas?topD:''}</span>`;
+    bRow+=`<span class="h-digit ${lit?'lit':'dim'}">${bHas?bd[c]:''}</span>`;
     // result
     const filled=s.result && s.filledUpTo>=c;
     resRow+=`<span class="h-digit ${filled?'result-fill':''}">${filled?s.result[c]:'?'}</span>`;
@@ -1985,7 +1989,7 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
 
   // Blocks: simplified — show the active column's blocks
   let blocks='';
-  if(nd===2 && !DISC_LVL.has(baseLevel(state.level))) {
+  if(a<100 && b<100 && !DISC_LVL.has(baseLevel(state.level))) {
     blocks=blockChart2(a,b,op,s);   // the owner's three-row table: a, b, and what comes of them, exchange drawn
   } else if(s.showRegroup) {
     const fromName=['бірлік','ондық','жүздік'][s.regroupFrom]||'';
@@ -2064,18 +2068,26 @@ function renderVisualHint(a,b,op,stepIdx,totalSteps,step) {
    column method happen to the blocks in the same order as to the digits.
    Subtraction is ONE row, not three (owner, second page, 2026-09-25: «减法的不用三行，在一行里»): only the
    number being taken from is laid out, and the taking happens on it — a crossed rod is the ten subtracted,
-   crossed cubes the ones. Addition keeps a, b and the row under them.
+   crossed cubes the ones. Addition keeps a, b and the row under them. A sum past 100 (a5, a6) gets a
+   «Жүздік» column: ten rods boxed and faded, a hundred flat arriving.
+   Since 2026-09-26 the chart is not only in the hint: it stands BESIDE the question, fully drawn (owner:
+   grade-2 children meet the column for the first time here, and «我们在两位数加减法的时候没有像二十以内的那样
+   先用 C 走一遍» — the ten-frame of the 20-levels walks the sum through with blocks first, so must this).
    Two-digit levels only; from three digits up the disc chart (pv/discs.js) does this job. */
+const BC2_FINAL = { col:-1, filledUpTo:9, showRegroup:true, isFinal:true };   // every step done: what stands beside the question
 function blockChart2(a,b,op,s) {
   const sc=0.45, rodStep=TEN_W+12, cubeStep=BU+4;   // rods 12 apart, cubes 4: a gap must beat the gaps inside a rod, or ten rods read as one slab
   const cross=(x,y,w,h)=>`<path d="M${x-2},${y-2} L${x+w+2},${y+h+2} M${x+w+2},${y-2} L${x-2},${y+h+2}" stroke="var(--error)" stroke-width="${h>BU?5:3}" stroke-linecap="round" opacity="0.85"/>`;
   const dashed=(x,y,w,h)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="5 3"/>`;
-  /* rods: array of 'solid' | 'spent' | 'new' | 'cross' */
-  const rods=list=>{ if(!list.length) return '<span class="bc2-q">—</span>';
-    const w=list.length*rodStep-6+8, h=TEN_H+8; let g='';
-    list.forEach((k,i)=>{ const x=4+i*rodStep, y=4; if(k==='spent') g+=`<g opacity="0.3">${svgTen(x,y)}</g>`+dashed(x-3,y-3,TEN_W+6,TEN_H+6); else g+=svgTen(x,y);
+  /* rods: array of 'solid' | 'spent' | 'new' | 'cross'; `box` = [from,to) drawn in one dashed box (ten rods becoming a hundred) */
+  const rods=(list,box)=>{ if(!list.length) return '<span class="bc2-q">—</span>';
+    const w=list.length*rodStep-12+8, h=TEN_H+8; let g='', boxes='';
+    if(box) boxes=dashed(4+box[0]*rodStep-3,1,(box[1]-box[0])*rodStep-12+6,TEN_H+6);
+    list.forEach((k,i)=>{ const x=4+i*rodStep, y=4; if(k==='spent') g+=`<g opacity="0.3">${svgTen(x,y)}</g>`+(box?'':dashed(x-3,y-3,TEN_W+6,TEN_H+6)); else g+=svgTen(x,y);
       if(k==='new') g+=dashed(x-3,y-3,TEN_W+6,TEN_H+6); if(k==='cross') g+=cross(x,y,TEN_W,TEN_H); });
-    return `<svg viewBox="0 0 ${w} ${h}" width="${Math.round(w*sc)}" height="${Math.round(h*sc)}">${g}</svg>`; };
+    return `<svg viewBox="0 0 ${w} ${h}" width="${Math.round(w*sc)}" height="${Math.round(h*sc)}">${boxes}${g}</svg>`; };
+  /* a hundred flat, arriving (dashed box) */
+  const flat=()=>{ const w=H_W+8, h=H_H+8; return `<svg viewBox="0 0 ${w} ${h}" width="${Math.round(w*sc)}" height="${Math.round(h*sc)}">${svgHundred(4,4)}${dashed(1,1,w-2,h-2)}</svg>`; };
   /* cubes: array of 'solid' | 'spent' | 'new' | 'cross', laid out five to a row; `box` = [from,to) drawn in a dashed box */
   const cubes=(list,box)=>{ if(!list.length) return '<span class="bc2-q">—</span>';
     const per=5, rowsN=Math.ceil(list.length/per), w=Math.min(list.length,per)*cubeStep-4+8, h=rowsN*cubeStep-4+8; let g='', boxes='';
@@ -2085,11 +2097,16 @@ function blockChart2(a,b,op,s) {
   const fill=(n,k)=>new Array(n).fill(k);
   const digs=n=>[n%10,Math.floor(n/10)%10]; const [ao,at]=digs(a), [bo,bt]=digs(b);
   const q='<span class="bc2-q">?</span>', L='<span class="bc2-arrow">⟵</span>', R='<span class="bc2-arrow">⟶</span>';
-  let rT, rO;
+  let rT, rO, rH=null;
   if(op==='+'){
-    const carry=ao+bo>=10, onesDone=s.filledUpTo>=0, tensDone=s.filledUpTo>=1||s.isFinal, showCarry=carry&&(s.showRegroup||tensDone);
+    const carry=ao+bo>=10, sumT=at+bt+(carry?1:0), carry2=sumT>=10;
+    const onesDone=s.filledUpTo>=0, tensDone=s.filledUpTo>=1||s.isFinal, hundDone=s.filledUpTo>=2||s.isFinal;
+    const showCarry=carry&&(s.showRegroup&&s.col===0||tensDone), showCarry2=carry2&&(s.showRegroup&&s.col===1||hundDone);
     rO=!onesDone?q:carry?cubes(fill(10,'spent').concat(fill(ao+bo-10,'solid')),[0,10]):cubes(fill(ao+bo,'solid'));
-    rT=!tensDone?(showCarry?rods(['new'])+L:q):rods(fill(at+bt,'solid').concat(carry?['new']:[]))+(carry?L:'');
+    const tensRods=fill(at+bt,'solid').concat(carry?['new']:[]);
+    if(carry2){ for(let i=0;i<10;i++) tensRods[i]='spent'; }
+    rT=!tensDone?(showCarry?rods(['new'])+L:q):rods(tensRods,carry2?[0,10]:null)+(carry&&!carry2?L:'');
+    if(carry2) rH=!hundDone?(showCarry2?flat()+L:q):flat()+L;
   } else {
     const borrow=ao<bo, onesDone=s.filledUpTo>=0, tensDone=s.filledUpTo>=1||s.isFinal, showBorrow=borrow&&(s.showRegroup||onesDone);
     const t=fill(at,'solid'); if(showBorrow) t[at-1]='spent';
@@ -2098,14 +2115,16 @@ function blockChart2(a,b,op,s) {
     if(onesDone){ let left=bo; for(let i=o.length-1;i>=0&&left>0;i--){ o[i]='cross'; left--; } }
     rT=rods(t); rO=(showBorrow?R:'')+cubes(o,showBorrow?[ao,ao+10]:null);
   }
-  const cell=(t,o,cls)=>`<tr class="${cls}"><td class="pv-cell">${t}</td><td class="pv-cell">${o}</td></tr>`;
-  const head=`<thead><tr><th>Ондық</th><th>Бірлік</th></tr></thead>`;
-  if(op!=='+') return `<table class="pv-table bc2">${head}<tbody>${cell(rT,rO,'pv-row-s')}</tbody></table>`;
+  const H=rH!==null;   // a hundreds column, only when the sum reaches 100
+  const cell=(h,t,o,cls)=>`<tr class="${cls}">${H?`<td class="pv-cell">${h}</td>`:''}<td class="pv-cell">${t}</td><td class="pv-cell">${o}</td></tr>`;
+  const head=`<thead><tr>${H?'<th>Жүздік</th>':''}<th>Ондық</th><th>Бірлік</th></tr></thead>`;
+  if(op!=='+') return `<table class="pv-table bc2">${head}<tbody>${cell('',rT,rO,'pv-row-s')}</tbody></table>`;
+  const none='<span class="bc2-q">—</span>';
   return `<table class="pv-table bc2">${head}<tbody>
-    ${cell(rods(fill(at,'solid')),cubes(fill(ao,'solid')),'pv-row-a')}
-    <tr><td colspan="2" class="pv-op-row">${op}</td></tr>
-    ${cell(rods(fill(bt,'solid')),cubes(fill(bo,'solid')),'pv-row-b')}
-    ${cell(rT,rO,'pv-row-r')}
+    ${cell(none,rods(fill(at,'solid')),cubes(fill(ao,'solid')),'pv-row-a')}
+    <tr><td colspan="${H?3:2}" class="pv-op-row">${op}</td></tr>
+    ${cell(none,rods(fill(bt,'solid')),cubes(fill(bo,'solid')),'pv-row-b')}
+    ${cell(rH,rT,rO,'pv-row-r')}
   </tbody></table>`;
 }
 // Render blocks for a specific column level (0=ones, 1=tens, 2=hundreds)
@@ -2410,6 +2429,8 @@ function genOps(ws) {
            ten enclosed where it arrived, and in subtraction every disc taken crossed rather than removed. */
         DISC_LVL.has(state.level)
           ? (op==='+' ? DISCS.add(a,b) : DISCS.sub(a,b))
+          : (a<100 && b<100)
+          ? blockChart2(a,b,op,BC2_FINAL)   // two digits: the owner's block chart, every step drawn — C before the column
           : `<table class="pv-table">
           <thead><tr>${pvHead}</tr></thead>
           <tbody>
@@ -2424,6 +2445,17 @@ function genOps(ws) {
       <button class="check-btn" onclick="checkOps()">Тексеру</button>
     </div>
     <div class="feedback" id="fb"></div>`;
+
+  /* The column shows the exchange too (owner, 2026-09-26: «在竖式里也要把进位的表现出来»): a carried 1 above the
+     next column; for a borrow the tens digit struck through, the digit it became above it, and «10» above the
+     ones. Two-digit levels, where the column is met for the first time. The marks are an aid like the chart:
+     a no-picture twin loses them (hideAids) and gets them back after a wrong answer. */
+  if(a<100 && b<100 && !DISC_LVL.has(state.level)) {
+    const set=(id,v)=>{ const el=document.getElementById(id); if(el){ el.textContent=v; el.classList.add('carry-mark'); } };
+    if(op==='+'){ if(a%10+b%10>=10) set('carry-t','1'); if(Math.floor(a/10)+Math.floor(b/10)+(a%10+b%10>=10?1:0)>=10) set('carry-h','1'); }
+    else if(a%10<b%10){ set('carry-t',String(Math.floor(a/10)-1)); set('carry-o','10');
+      const aRow=ws.querySelector('.vert-calc .vert-row'); const tens=aRow&&aRow.querySelectorAll('.vert-digit')[nd-2]; if(tens) tens.classList.add('struck'); }
+  }
 
   // Right-to-left fill order
   const fillOrder=[];
