@@ -14,7 +14,7 @@
   --road:#F1E1BE; --road-edge:#D9C395; --road-line:#FFFBF0;
   --road-side:#BFA877; --tree:#7FA35E; --tree-d:#5E8544; --trunk:#8B6A45; --plinth:rgba(60,45,20,.28);
   --river:#8CC4E8; --cloud:#FFFFFF; --rock:#B7AC98; --rock-d:#9C917D; --stone:#D9D3C7; --stone-d:#A79F90; --stone-ink:#7C7466;
-  --gold-top:#FFC940; --gold-side:#C98A10; --gold-ink:#5A3A00;
+  --gold-top:#FFC940; --gold-side:#C98A10; --gold-ink:#5A3A00; --unlock:#35B46A; --unlock-d:#23874C;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -28,7 +28,7 @@
     --road:#4E4430; --road-edge:#372F21; --road-line:#8B7B57;
     --road-side:#241E14; --tree:#2F4A36; --tree-d:#243A2A; --trunk:#4A3A28; --plinth:rgba(0,0,0,.45);
     --river:#2C4F6B; --cloud:#3A4867; --rock:#4A4A44; --rock-d:#3A3A35; --stone:#4A4F57; --stone-d:#30343A; --stone-ink:#A5B0BC;
-    --gold-top:#E6B347; --gold-side:#9A7024; --gold-ink:#2A1C00;
+    --gold-top:#E6B347; --gold-side:#9A7024; --gold-ink:#2A1C00; --unlock:#3FB872; --unlock-d:#2A8651;
   }
 }
 .mapbox{border-radius:20px;overflow:auto;border:1px solid var(--line);max-height:70vh;background:var(--sky1);-webkit-overflow-scrolling:touch}
@@ -137,3 +137,25 @@
 .mapgo .btn{flex:none;min-height:50px;padding:10px 22px;border:0;border-radius:14px;font-family:var(--disp);font-weight:600;font-size:1.02rem;cursor:pointer;
   background:var(--rc);color:#fff;box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28);transition:transform .08s,box-shadow .08s}
 .mapgo .btn:active{transform:translateY(5px);box-shadow:0 0 0 var(--rc-d)}
+
+/* ── the moment a station is passed (map.js · celebrate) ── */
+.v5 .stn.justdone .stars svg{animation:mp-starpop .45s cubic-bezier(.2,.9,.3,1.5) backwards}
+.v5 .stn.justdone .stars svg:nth-child(2){animation-delay:.15s}
+.v5 .stn.justdone .stars svg:nth-child(3){animation-delay:.3s}
+.v5 .stn.unlocking .dot{background-color:var(--stone);color:var(--stone-ink);box-shadow:0 14px 0 var(--stone-d),inset 0 3px 0 rgba(255,255,255,.55);
+  transition:background-color .45s ease,box-shadow .45s ease,color .45s}
+.v5 .stn.unlocking .num{opacity:0}
+.v5 .stn.unlocking .dot::after{display:none}
+.v5 .stn .unlk{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;color:var(--stone-ink);pointer-events:none}
+.v5 .stn .unlk svg{width:22px;height:22px;fill:currentColor}
+.v5 .stn.unlock .unlk{animation:mp-unlk .6s cubic-bezier(.3,.7,.3,1) forwards}
+.v5 .stn.unlocking.unlock .dot{background-color:var(--unlock);color:#fff;box-shadow:0 14px 0 var(--unlock-d),0 0 0 8px rgba(53,180,106,.25),inset 0 3px 0 rgba(255,255,255,.5)}
+.v5 .stn.unlock .num{opacity:1;transition:opacity .3s .25s}
+.v5 .stn .spark{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border-radius:50%;pointer-events:none;opacity:0;
+  box-shadow:0 -44px 0 #FFD54A,31px -31px 0 #7ED8A0,44px 0 0 #FFD54A,31px 31px 0 #7ED8A0,0 44px 0 #FFD54A,-31px 31px 0 #7ED8A0,-44px 0 0 #FFD54A,-31px -31px 0 #7ED8A0}
+.v5 .stn.unlock .spark{animation:mp-spark .7s ease-out forwards}
+.v5 .stn:not(.unlocking) .unlk,.v5 .stn:not(.unlocking) .spark{display:none}
+@keyframes mp-starpop{0%{transform:scale(0) rotate(-40deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes mp-unlk{0%{transform:none;opacity:1}40%{transform:translateY(-8px) rotate(-12deg) scale(1.2)}100%{transform:translateY(-46px) rotate(20deg) scale(1.5);opacity:0}}
+@keyframes mp-spark{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.4);opacity:0}}
+@media (prefers-reduced-motion: reduce){.v5 .stn.justdone .stars svg,.v5 .stn.unlock .unlk,.v5 .stn.unlock .spark{animation:none!important}}

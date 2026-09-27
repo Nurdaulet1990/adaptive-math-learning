@@ -77,9 +77,14 @@ function map(o){
   const STAR='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
   const LOCK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.8"/></svg>';
 
+  /* ── celebration: the station that was current the last time THIS map was drawn on this device is now passed,
+     and the one right after it is current → the pupil has just passed it. Remembered per map in localStorage,
+     so it works for every route (runner, wp, pv) without them telling the map anything, and plays once. ── */
+  const celFrom=(()=>{ const c=st.findIndex(s=>s.status==='current'); let pv=null; try{ pv=localStorage.getItem('esep_mapcur:'+(o.label||'map')); }catch(e){}
+    const f=pv&&c>=0&&pv!==st[c].id?st.findIndex(s=>s.id===pv):-1; return f>=0&&f===c-1&&st[f].status==='passed'?f:-1; })();
   const nodes=st.map((s,i)=>{
     const p=pts[i], cur=s.status==='current', passed=s.status==='passed', locked=!cur&&!passed;
-    const cls=`stn ${cur?'cur':passed?'passed':'locked'}`;
+    const cls=`stn ${cur?'cur':passed?'passed':'locked'}${celFrom>=0&&i===celFrom?' justdone':''}${celFrom>=0&&cur?' unlocking':''}`;
     // stars:null means "this route keeps no star score" (PV) — draw nothing rather than three empty stars
     const stars=(passed&&s.stars!=null)?`<span class="stars" aria-label="${s.stars} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<s.stars?'on':''}" aria-hidden="true">${STAR}</svg>`).join('')}</span>`:'';
     const face=locked?`<span class="lk">${LOCK}</span>`:(s.icon&&!passed&&!cur?`<svg viewBox="-24 -24 48 48" aria-hidden="true">${s.icon}</svg>`:`<span class="num">${i+1}</span>`);
@@ -88,14 +93,16 @@ function map(o){
     return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%;--d:${d}ms"${tap?` data-stn="${esc(s.id)}"`:''}>
       ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:64}):ava}</span>`:''}
       <div class="bub"><b>${esc(s.name)}</b><i>${esc(s.sub||s.id)}</i>${tap?`<button type="button" class="btn" data-go="${esc(s.id)}">${esc(go)}</button>`:''}</div>
-      <span class="dot"${tap?' role="button" tabindex="0"':''} aria-label="${i+1}. ${esc(s.name)}">${face}</span>
+      <span class="dot"${tap?' role="button" tabindex="0"':''} aria-label="${i+1}. ${esc(s.name)}">${face}${celFrom>=0&&cur?`<span class="unlk">${LOCK}</span><i class="spark" aria-hidden="true"></i>`:''}</span>
       ${stars}</div>`;
   }).join('');
   const cs=curIdx>=0?st[curIdx]:null;
+  const cel=celFrom>=0, fromIdx=celFrom;   // worked out above, before the nodes, from the value remembered last time
+  try{ if(cs) localStorage.setItem('esep_mapcur:'+(o.label||'map'),cs.id); }catch(e){}
   /* the current station's action lives in a card pinned to the bottom of the map, not in a bubble over the road */
   const card=cs?`<div class="mapgo"><div><b>${curIdx+1}-станция · ${esc(cs.name)}</b><i>${esc(cs.sub||cs.id)}</i></div><button type="button" class="btn" data-go="${esc(cs.id)}">${esc(go)}</button></div>`:'';
 
-  return `<div class="mapbox v5" style="--rc:${C};--rc-d:${CD}"><div class="mapinner">
+  return `<div class="mapbox v5" style="--rc:${C};--rc-d:${CD}"${cel?` data-cel="${fromIdx},${curIdx}"`:''}><div class="mapinner">
   <svg class="maproad" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.label||'Жол картасы')}">
     <defs>
       <linearGradient id="mp-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--sky1)"/><stop offset="1" stop-color="var(--sky2)"/></linearGradient>
@@ -134,7 +141,28 @@ function mapBind(fn){
 }
 function mapScroll(){ const el=document.querySelector('.stn.cur')||document.querySelector('.stn.open'), box=document.querySelector('.mapbox');
   if(!el||!box) return; const r=el.getBoundingClientRect(), b=box.getBoundingClientRect();
-  box.scrollTop += (r.top-b.top) - box.clientHeight*0.62; }
+  box.scrollTop += (r.top-b.top) - box.clientHeight*(box.dataset.cel?0.42:0.62);
+  if(box.dataset.cel) celebrate(box); }
+/* A station has just been passed: its stars pop in; the next coin loses its lock, flashes green and turns gold;
+   the pupil's animal hops along the road from one to the other; «up» plays if sound is on.
+   Everything is on classes and the Web Animations API; with «reduce motion» the map simply shows the end state. */
+function celebrate(box){
+  const [a,b]=box.dataset.cel.split(',').map(Number); delete box.dataset.cel;
+  const nodes=box.querySelectorAll('.stn'), from=nodes[a], to=nodes[b]; if(!from||!to) return;
+  const done=()=>{ to.classList.remove('unlocking','unlock'); from.classList.remove('justdone'); };
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){ done(); return; }
+  const fox=to.querySelector('.fox'), fd=from.querySelector('.dot'), td=to.querySelector('.dot');
+  setTimeout(()=>{ to.classList.add('unlock'); try{ window.Core&&Core.sound&&Core.sound('up'); }catch(e){} },650);
+  if(fox&&fd&&td&&fox.animate){ const f=fd.getBoundingClientRect(), t=td.getBoundingClientRect(), dx=f.left+f.width/2-(t.left+t.width/2), dy=f.top-t.top;
+    fox.style.animationPlayState='paused';
+    fox.animate([{transform:`translate(${dx}px,${dy}px)`},
+                 {transform:`translate(${dx*0.55}px,${dy*0.55-80}px) rotate(-8deg)`,offset:.5},
+                 {transform:'translate(0,6px) scale(1.08,.9)',offset:.85},
+                 {transform:'translate(0,0)'}],
+      {duration:900,delay:1250,easing:'cubic-bezier(.35,0,.3,1)',fill:'backwards'}).onfinish=()=>{ fox.style.animationPlayState=''; };
+  }
+  setTimeout(done,2300);
+}
 function stars(stage){ const t=(stage&&stage.tests)||[]; if(!t.length) return 0;
   const best=t.reduce((a,x)=>Math.max(a,x.n?x.ok/x.n:0),0);
   return best>=1?3:best>=0.9?2:best>=0.8?1:0; }
