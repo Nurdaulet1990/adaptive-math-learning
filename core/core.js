@@ -77,7 +77,7 @@
     function say(t,ms){ if(!el) return; const b=el.querySelector('.pp-say'); clearTimeout(sayT); b.textContent=t; b.hidden=false; b.classList.remove('in'); void b.offsetWidth; b.classList.add('in'); sayT=setTimeout(()=>{ b.hidden=true; },ms||2600); }
     /* keep clear of anything fixed to the bottom edge */
     function place(){ raf=0; if(!el) return; let h=0;
-      document.querySelectorAll('.actbar,#fb,.ruhint').forEach(x=>{ if(!x.firstChild&&x.id==='fb') return; const cs=getComputedStyle(x);
+      document.querySelectorAll('.actbar,#fb,.ruhint,.tabbar').forEach(x=>{ if(!x.firstChild&&x.id==='fb') return; const cs=getComputedStyle(x);
         /* measured by size, not position: the feedback sheet slides in from below, so at the moment it appears its
            top is still off-screen and a position-based check would leave the animal standing behind it */
         if(cs.position==='fixed'&&cs.display!=='none'&&x.offsetHeight) h=Math.max(h,x.offsetHeight+(parseFloat(cs.bottom)||0)); });

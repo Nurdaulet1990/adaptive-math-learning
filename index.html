@@ -23,7 +23,7 @@
 .rt-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 13px 7px}
 .rt-name{font-family:var(--disp);font-weight:600;font-size:1.05rem;color:var(--rc)}
 .rt-go{font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--rc);background:var(--fig);border-radius:999px;padding:3px 10px}
-.rt svg{width:100%;height:auto;display:block}
+.rt>svg{width:100%;height:auto;display:block}
 .rt-foot{display:flex;justify-content:space-between;padding:7px 13px 10px;font-size:.76rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
 /* "continue" card: the whole card is one link back to the station the pupil touched last */
 .go{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px 18px;margin-bottom:12px}
@@ -71,12 +71,46 @@
 .brd-bar b{display:block;height:100%;border-radius:999px;background:var(--muted);opacity:.55}
 .brd-bar b.mine{background:var(--accent);opacity:1}
 .sec{font-family:var(--disp);font-weight:600;font-size:1.15rem;margin:16px 2px 8px}
+/* ── tabs (look v3, step 2) ── */
+.tabs .app{padding-bottom:200px}
+.tab-h{margin:4px 2px 12px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:40;max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;
+  padding:8px 10px calc(10px + env(safe-area-inset-bottom));background:var(--card);box-shadow:0 -1px 0 var(--line),0 -10px 24px -16px rgba(20,30,40,.35)}
+.tabbar a{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;border-radius:14px;text-decoration:none;
+  color:var(--muted);font-weight:800;font-size:.74rem;transition:transform .09s,box-shadow .09s,background .15s}
+.tabbar svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tabbar a[aria-current="page"]{background:var(--accent);color:var(--accent-ink);font-weight:900;box-shadow:0 4px 0 var(--accent-d),var(--shine,inset 0 2px 0 rgba(255,255,255,.28))}
+.tabbar a:active{transform:translateY(4px);box-shadow:none}
+.tb-badge{position:absolute;top:2px;right:calc(50% - 26px);min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--gold);color:#1B2733;font-size:.7rem;font-weight:900;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 var(--gold-d);animation:v3-pop .45s .4s both}
+.tb-badge[hidden]{display:none}
+.tabp{animation:v3-rise .25s cubic-bezier(.2,.8,.2,1)}
+.go{box-shadow:var(--rim,0 4px 0 var(--line))}
+.ib{border:2px solid var(--gold);padding:12px 14px 6px}
+.ib h2{margin:0 0 4px;font-size:1.1rem}
+.ib-row{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.ib-row:first-of-type{border-top:0}
+.ib-row>div{flex:1;min-width:0;display:flex;flex-direction:column}
+.ib-row b{font-weight:900;font-size:.95rem}
+.ib-row span{font-weight:700;font-size:.82rem;color:var(--muted)}
+.ib-row span.good{color:var(--good)}
+.ib-row i{font-style:normal;font-weight:900;color:var(--gold)}
+.rk{display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit}
+.rk-n{flex:none;width:52px;height:52px;border-radius:16px;background:var(--accent);color:var(--accent-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;
+  box-shadow:0 4px 0 var(--accent-d),inset 0 2px 0 rgba(255,255,255,.28)}
+.rk-n b{font-family:var(--disp);font-weight:600;font-size:1.4rem}
+.rk-n small{font-size:.62rem;font-weight:900}
+.rk-m{flex:1;min-width:0}
+.rk-m b{display:block;font-weight:900;font-size:.95rem;margin-bottom:6px}
+.rk-bar{height:10px;border-radius:999px;background:var(--line);box-shadow:inset 0 2px 0 rgba(0,0,0,.07);overflow:hidden}
+.rk-bar i{display:block;height:100%;border-radius:999px;background:var(--accent);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.rk-w{flex:none;font-weight:800;font-size:.8rem;color:var(--good)}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <script src="core/pets.js?v=1"></script>
-<script src="core/core.js?v=15"></script>
+<script src="core/core.js?v=16"></script>
 <script src="room/routes.js?v=3"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
@@ -102,7 +136,7 @@
     let done=''; if(atS>0){ done=`M${pts[0].x},${pts[0].y}`; for(let i=1;i<=atS;i++){ const p=pts[i-1],q=pts[i]; done+=`C${p.x+step/2},${p.y} ${q.x-step/2},${q.y} ${q.x},${q.y}`; } }
     let dots=''; pts.forEach((p,i)=>{ if(i===atS) return;
       dots+=`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${i<atS?color:'var(--road-edge)'}"/>`; });
-    const me=atS>=0?`<circle cx="${pts[atS].x.toFixed(1)}" cy="${pts[atS].y.toFixed(1)}" r="9" fill="${color}" stroke="var(--card)" stroke-width="2"/><text x="${pts[atS].x.toFixed(1)}" y="${(pts[atS].y+4).toFixed(1)}" text-anchor="middle" font-size="11">${ava}</text>`:'';
+    const me=atS>=0?`<circle cx="${pts[atS].x.toFixed(1)}" cy="${pts[atS].y.toFixed(1)}" r="9" fill="${color}" stroke="var(--card)" stroke-width="2"/>${window.Pets?`<g transform="translate(${(pts[atS].x-11).toFixed(1)},${(pts[atS].y-13).toFixed(1)})">${Pets.svg(ava,{head:true,size:22})}</g>`:`<text x="${pts[atS].x.toFixed(1)}" y="${(pts[atS].y+4).toFixed(1)}" text-anchor="middle" font-size="11">${ava}</text>`}`:'';
     return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">
       <rect width="${W}" height="${H}" fill="var(--sky2)" opacity=".5"/>
       <path d="M0,28 L40,8 L70,26 L110,3 L148,24 L186,7 L226,27 L266,9 L304,25 L320,15 L320,${H} L0,${H}Z" fill="var(--mtn-far)" opacity=".55"/>
@@ -148,7 +182,7 @@
      the board answers a moment later with the authoritative total, which also carries challenge and room stars,
      and #starTot is quietly corrected. A pupil with no class gets no board — the route total stands. */
   const routeStars=Core.config.ROUTES.reduce((a,[code])=>a+((progress(code)||{}).stars||0),0);
-  const purse=`<a class="purse" href="#board" title="Жұлдыздар"><b id="starTot">${routeStars}</b><i>★</i></a>`;
+  const purse=`<a class="purse" href="#synyp" title="Жұлдыздар"><b id="starTot">${routeStars}</b><i>★</i></a>`;
   /* routeStars is what this device can work out on its own (stage tests, which live in the state). Practice,
      the daily goal, challenges and rooms are counted on the server, so the first paint is an undercount and
      esep_stars replaces it a moment later. Better a number that grows than a spinner.
@@ -159,36 +193,68 @@
   }).catch(()=>{});
 
   const r=resume(), hello=`Сәлем, ${esc(student.name.split(' ')[0])}!`;
-  let html=Core.topbar();
+  /* ── four tabs (look v3, step 2) ─────────────────────────────────────────────────────────────────────────
+     Бүгін: what to do now — continue, the day's goal, what is waiting (rooms, challenges), my place in class.
+     Бағыттар: the five routes, the ones I have started first. Жарыс: rooms and challenges in full.
+     Сынып: the class board. The tab lives in location.hash, so the phone's back button walks back through
+     tabs and a link can open one (#synyp). Everything is still one page and one request set, as before. */
+  let T1='', T2='', T3='', T4='';
   if(r){ const rc=r.code.toLowerCase();
-    html+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>
+    T1+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>
     <a class="go" href="${r.url}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
       <small>${esc(r.name)}</small><b>${r.allDone?'Барлық станция өтілді':r.n+'-станция'}</b>
       ${r.allDone||r.code==='PV'?'':`<span class="go-sub">Деңгей ${r.level}/3 · қатарынан ${r.streak}/3</span>`}
       <div class="go-bar"><div><i style="width:${Math.round(100*r.passed/r.total)}%"></i></div><span>${r.passed} / ${r.total}</span></div>
       <span class="btn wide">${r.allDone?'Қайталау':'Жалғастыру'}</span></a>`; }
-  else html+=`<div class="card"><h1 style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p></div>`;
-  html+=goalCard();
-  html+=`<div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
-  html+=`<div id="duel"></div>`;    // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
-  html+=`<div id="board"></div>`;
-  html+=`<div id="noclass"></div>`;   // shown only when the pupil has no class: the board cannot exist without one   // filled after the first paint: the board is one extra request and must never hold the page up
-  if(r) html+=`<div class="sec">Барлық бағыттар</div>`;
+  else T1+=`<div class="card"><h1 style="display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1><p>Бағытты таңда. Әр бағыт — өз жолы: станциядан станцияға жүресің.</p><a class="btn wide" href="#bagyt">Бағыттар</a></div>`;
+  T1+=goalCard();
+  T1+=`<div id="inbox"></div>`;     // filled from the rooms and challenges answers below
+  T1+=`<div id="rankmini"></div>`;  // filled from the board
+  T3+=`<h1 class="tab-h">Жарыс</h1><div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
+  T3+=`<div id="duel"></div>`;      // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
+  T4+=`<h1 class="tab-h">Сынып${student.klass?' · '+esc(student.klass):''}</h1><div id="board"><div class="card"><p class="note" style="margin:0">Тақта жүктелуде…</p></div></div>`;
+  T4+=`<div id="noclass"></div>`;   // shown only when the pupil has no class: the board cannot exist without one
+  T2+=`<h1 class="tab-h">Бағыттар</h1>`;
   /* how many stations a route has, for the card a child sees BEFORE the placement test —
      after it, p.total is the real thing. Hard-coded because the portal does not load any
      route's stages.js. Keep in step with <route>/stages.js. */
   const COUNT={WP:13,FR:50,PV:48,AR:41,TE:20};
-  Core.config.ROUTES.forEach(([code,name,url,status,grades])=>{
+  const began=code=>{ const p=progress(code); return p&&p.diag?((state[code]||{}).last||1):0; };
+  const order=Core.config.ROUTES.map((x,i)=>[x,i]).sort((a,b)=>(began(b[0][0])-began(a[0][0]))||(a[1]-b[1])).map(x=>x[0]);
+  let newShown=false;
+  order.forEach(([code,name,url,status,grades])=>{
     const p=progress(code), live=status==='live', color=`var(--${code.toLowerCase()},var(--accent))`;
     const total=p?p.total:(COUNT[code]||7);
     const at=p&&p.diag?p.cur:-1;
-    html+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
+    if(!(p&&p.diag)&&!newShown&&order.some(([c])=>began(c))){ T2+=`<div class="sec">Жаңа бағыттар</div>`; newShown=true; }
+    T2+=`<a class="rt${live?'':' soon'}" href="${live?url:'#'}" style="--rc:${color}">
       <div class="rt-head"><span class="rt-name">${esc(name)}</span><span class="rt-go">${live?(p&&p.diag?'жалғастыру':'бастау'):'жақында'}</span></div>
       ${strip(color,total,at)}
       <div class="rt-foot"><span>${p&&p.diag?`${p.passed} / ${total} станция`:`${total} станция · ${esc(grades)}-сынып`}</span><span>${p&&p.stars?'★ '+p.stars:''}</span></div></a>`;
   });
-  html+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
-  app.innerHTML=html;
+  T2+=`<div class="card" style="margin-top:12px"><p class="note">Мұғалім үшін: <a href="teacher/">есеп беру беті</a></p></div>`;
+  const TABS=[['bugin','Бүгін','<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',T1],
+              ['bagyt','Бағыттар','<path d="M4 19c4-1 3-6 8-7s5-6 8-7"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="5" r="1.5"/>',T2],
+              ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>',T3],
+              ['synyp','Сынып','<path d="M5 20v-6M12 20V6M19 20v-9"/>',T4]];
+  let html=Core.topbar()+TABS.map(([id,,,h])=>`<section class="tabp" id="t-${id}" hidden>${h}</section>`).join('')
+    +`<nav class="tabbar" aria-label="Негізгі мәзір">${TABS.map(([id,lb,ic])=>`<a href="#${id}" data-t="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg><span>${lb}</span>${id==='jarys'?'<b class="tb-badge" id="jbadge" hidden></b>':''}</a>`).join('')}</nav>`;
+  app.innerHTML=html; document.body.classList.add('tabs');
+  const LEGACY={board:'synyp',rooms:'jarys',duel:'jarys'};
+  function showTab(){ let t=(location.hash||'').slice(1); t=LEGACY[t]||t; if(!TABS.some(x=>x[0]===t)) t='bugin';
+    TABS.forEach(([id])=>{ document.getElementById('t-'+id).hidden=id!==t; });
+    document.querySelectorAll('.tabbar a').forEach(a=>{ if(a.dataset.t===t) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+    window.scrollTo(0,0); }
+  addEventListener('hashchange',showTab); showTab();
+  /* the Бүгін tab's «waiting for you» list: rooms and challenges each report in, and the list and the Жарыс badge are redrawn */
+  const WAIT={rooms:[],duel:[]};
+  /* Kazakh dative for a first name: Нұрлан → Нұрланға, Әли → Әлиге, Бекзат → Бекзатқа, Ерік → Ерікке */
+  function dat(n){ n=String(n); const low=n.toLowerCase(), v=[...low].reverse().find(ch=>'аәеиоөұүыіэюяу'.includes(ch))||'а';
+    const front='әеиөүіэ'.includes(v), last=low.slice(-1), hard='кқпстфхшщцч'.includes(last);
+    return n+(hard?(front?'ке':'қа'):(front?'ге':'ға')); }
+  function drawInbox(){ const rows=[...WAIT.rooms,...WAIT.duel], box=document.getElementById('inbox'), bd=document.getElementById('jbadge'); if(!box) return;
+    const acts=rows.filter(x=>x.href).length; if(bd){ bd.hidden=!acts; bd.textContent=acts; }
+    box.innerHTML=rows.length?`<div class="card ib"><h2>Сені күтіп тұр</h2>${rows.map(x=>`<div class="ib-row"><div><b>${x.t}</b><span${x.good?' class="good"':''}>${x.s}</span></div>${x.href?`<a class="btn gold sm" href="${x.href}">${x.go}</a>`:`<i>${x.go||''}</i>`}</div>`).join('')}</div>`:''; }
 
   /* ── classmate challenges: what is waiting for me, results of the ones I started, and the way in ── */
   const tbl=n=>(+n)+({2:'-ге',3:'-ке',4:'-ке',5:'-ке',6:'-ға',7:'-ге',8:'-ге',9:'-ға',10:'-ға'}[+n]||'-ге')+' көбейту';
@@ -201,6 +267,9 @@
       h+=`<div class="card"><h2 style="margin:0 0 2px">${r.outcome==='win'?`${nm} жауап берді — сен жеңдің!`:r.outcome==='tie'?`${nm} жауап берді — тең!`:`${nm} жауап берді — бұл жолы ол озды`}</h2>
       <p style="margin:0;font-weight:700">${esc(tbl(r.table))}: сен ${+r.my_ok}/10, ${nm} ${+r.opp_ok}/10 · ★ +${+r.stars}</p></div>`; });
     /* the way in is a card of its own, always there — as a one-line link under the goal nobody found it */
+    WAIT.duel=[...(l.incoming||[]).slice(0,3).map(c=>({t:`${esc(String(c.from_name).split(' ')[0])} сені шақырды`,s:`${esc(tbl(c.table))} · 10 есеп`,href:`challenge/?id=${+c.id}`,go:'Қабылдау'})),
+      ...(l.results||[]).filter(r=>r.new).map(r=>{ const nm=esc(String(r.opp_name).split(' ')[0]); return {t:r.outcome==='win'?`${nm} жауап берді — сен жеңдің!`:r.outcome==='tie'?`${nm} жауап берді — тең!`:`${nm} жауап берді`,s:`${esc(tbl(r.table))}: ${+r.my_ok}/10 және ${+r.opp_ok}/10`,good:r.outcome==='win',go:`★ +${+r.stars}`}; })];
+    drawInbox();
     h+=`<div class="card" id="duelGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Сыныптаспен жарыс</h2>
       <p class="note" style="margin:0">Өзің өткен көбейту кестесі бойынша 10 есеп — екеуіңе бірдей${l.stars?` · ★ ${+l.stars}`:''}</p></div>
       <a class="btn gold" href="challenge/" style="white-space:nowrap">Шақыру</a></div>`;
@@ -215,6 +284,9 @@
       <p style="margin:0 0 12px;font-weight:700">${esc(title(l.mine))} · код ${esc(l.mine.code)}</p><a class="btn gold wide" href="room/?id=${+l.mine.id}">Бөлмеге кіру</a></div>`;
     else shown.forEach(o=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} жарыс бөлмесін ашты</h2>
       <p style="margin:0 0 12px;font-weight:700">${esc(title(o))} · ${+o.n} ойыншы күтіп тұр</p><a class="btn gold wide" href="room/?code=${encodeURIComponent(o.code)}">Қосылу</a></div>`; });
+    WAIT.rooms=l.mine?[{t:l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен бөлмедесің',s:`${esc(title(l.mine))} · код ${esc(l.mine.code)}`,href:`room/?id=${+l.mine.id}`,go:'Кіру'}]
+      :shown.map(o=>({t:`${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} бөлме ашты`,s:`${esc(title(o))} · ${+o.n} ойыншы`,href:`room/?code=${encodeURIComponent(o.code)}`,go:'Қосылу'}));
+    drawInbox();
     const rec=l.record||{};
     h+=`<div class="card" id="roomGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2>
       <p class="note" style="margin:0">Кодпен кір немесе өзің өткен кез келген станция бойынша аш — бәріне бір мезгілде бірдей есептер${rec.played?` · ${+rec.wins} жеңіс, ${+rec.played} жарыс${rec.stars?`, ★ ${+rec.stars}`:''}`:''}</p></div>
@@ -252,7 +324,12 @@
      together — and `week` beside it is what was added since Monday. It never resets, so the board is also the
      one place where the purse in the header is authoritative; #starTot is corrected from it here.
      Nothing is drawn when offline, when the pupil has no class, or when nobody has a star yet. ── */
-  Core.board().then(b=>{ const box=document.getElementById('board'); if(!box||!b||!b.klass||!b.me) return;
+  Core.board().then(b=>{ const box=document.getElementById('board'); if(!box) return;
+    if(!b||!b.klass||!b.me){ box.innerHTML=student.klass?'<div class="card"><p class="note" style="margin:0">Тақта әзірге бос: жұлдыз жинай баста!</p></div>':''; return; }
+    { const mini=document.getElementById('rankmini'), me=b.me, up=(b.top||[]).find(x=>x.rank===me.rank-1);
+      if(mini&&me.n&&me.rank) mini.innerHTML=`<a class="card rk" href="#synyp"><div class="rk-n"><b>${+me.rank}</b><small>орын</small></div>
+        <div class="rk-m"><b>${me.rank===1?'Сен біріншісің!':up?`${esc(dat(String(up.name).split(' ')[0]))} дейін ${Math.max(1,up.n-me.n)} ★`:`${esc(b.klass)} тақтасы`}</b>
+        <div class="rk-bar"><i style="width:${up&&up.n?Math.round(100*me.n/up.n):100}%"></i></div></div>${me.week>0?`<span class="rk-w">+${+me.week} апта</span>`:''}</a>`; }
     /* 06_stars.sql may not have been run yet: that board still counts this week's answers, not stars. It is
        told apart by `week`, which only the star version sends. Until then the purse keeps the route total it
        already has and the card keeps its old wording — a page that ships before the migration must not
