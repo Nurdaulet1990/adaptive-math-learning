@@ -465,7 +465,7 @@
           { label: 'Алымы', expr: it.n + ' : ' + it.gcf, val: String(it.ansN) },
           { label: 'Бөлімі', expr: it.d + ' : ' + it.gcf, val: String(it.ansD) }],
         expl: it.n + '/' + it.d + ' = (' + it.n + ' : ' + it.gcf + ')/(' + it.d + ' : ' + it.gcf + ') = ' + F(it.ansN, it.ansD) + '.' };
-      if (lvl === 1) q.fig = { type: 'twobars', d1: it.d, n1: it.n, d2: it.ansD, n2: it.ansN, label1: F(it.n, it.d), label2: F(it.ansN, it.ansD) };
+      if (lvl === 1) q.fig = { type: 'twobars', d1: it.d, n1: it.n, d2: it.ansD, n2: it.ansN, label1: F(it.n, it.d), label2: '?' };   // the reduced fraction is the answer: its bar is drawn, its name is not
       else if (lvl === 2) q.hfig = { type: 'twobars', d1: it.d, n1: it.n, d2: it.ansD, n2: it.ansN };
       if (lvl < 3) Object.assign(q, choices4(fc(it.ansN, it.ansD),
         [fc(it.n - it.gcf, it.d - it.gcf), fc(it.ansN, it.d), fc(it.n, it.ansD), fc(it.ansD, it.ansN)]));

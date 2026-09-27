@@ -419,7 +419,7 @@
       stem: num(a) + ' ÷ ' + num(b) + ' = ?',
       kind: 'input',
       ans: String(q),
-      fig: lvl <= 2 ? { type: 'shift', a: a, b: b, k: k } : null,
+      fig: lvl === 1 ? { type: 'shift', a: a, b: b, k: k } : null,   // the worked shift on level 1 only; from level 2 it is the pupil's step (hint still has it)
       hfig: { type: 'shift', a: a, b: b, k: k },
       h1: 'Бөлгіш ондық болса, екеуін де ' + m + ' есе үлкейт — бөлінді өзгермейді.',
       h2: num(a) + ' ÷ ' + num(b) + ' = ' + num(a * m) + ' ÷ ' + num(b * m),

@@ -155,8 +155,9 @@
             (sp > 0 && j >= sp) ? C.b : C.a);
         }
       }
-      s += txt(pad - 14, pad + r * u / 2, String(r), { size: 13, fill: C.dim, mono: true });
-      s += txt(pad + c * u / 2 - 4, pad - 12, String(c), { size: 13, fill: C.dim, mono: true });
+      /* f.ask 'r' / 'c': that side is what the question asks — «?» instead of the number, the dots still count it */
+      s += txt(pad - 14, pad + r * u / 2, f.ask === 'r' ? '?' : String(r), { size: 13, fill: f.ask === 'r' ? C.b : C.dim, mono: true });
+      s += txt(pad + c * u / 2 - 4, pad - 12, f.ask === 'c' ? '?' : String(c), { size: 13, fill: f.ask === 'c' ? C.b : C.dim, mono: true });
       return svg(W, H, s, Math.min(W, 400));
     },
 
@@ -170,7 +171,8 @@
       for (var v = 0; v <= max; v += k) {
         var x = x0 + v * sc;
         s += line(x, 58, x, 70, { stroke: C.ink, sw: 2 });
-        s += txt(x, 86, String(v), { size: 12, mono: true, fill: C.dim });
+        var endAsked = f.ask === 'end' && v + k > max;   // the product is what k × t asks: its tick reads «?»
+        s += txt(x, 86, endAsked ? '?' : String(v), { size: endAsked ? 14 : 12, mono: true, fill: endAsked ? C.b : C.dim });
       }
       for (var i = 0; i < t; i++) {
         var xa = x0 + i * k * sc, xb = x0 + (i + 1) * k * sc, mid = (xa + xb) / 2;
@@ -209,7 +211,7 @@
         for (var j = 0; j < cs.length; j++) {
           var ww = cw[j];
           s += rect(x, y, ww, hh,{ fill: fills[fi % fills.length], stroke: C.ink, sw: 1.5, r: 2 });
-          s += txt(x + ww / 2, y + hh / 2 + 5, String(rs[i] * cs[j]), { size: 15, mono: true });
+          if (f.askCol !== j) s += txt(x + ww / 2, y + hh / 2 + 5, String(rs[i] * cs[j]), { size: 15, mono: true });   // an asked column shows no product
           x += ww; fi++;
         }
         s += txt(pad - 8, y + hh / 2 + 5, String(rs[i]), { anchor: 'end', size: 13, mono: true, fill: C.dim });
@@ -217,7 +219,7 @@
       }
       var cx = pad;
       for (var m = 0; m < cs.length; m++) {
-        s += txt(cx + cw[m] / 2, pad - 10, String(cs[m]), { size: 13, mono: true, fill: C.dim });
+        s += txt(cx + cw[m] / 2, pad - 10, f.askCol === m ? '?' : String(cs[m]), { size: f.askCol === m ? 15 : 13, mono: true, fill: f.askCol === m ? C.b : C.dim });
         cx += cw[m];
       }
       return svg(W, H, s, Math.min(W, 420));

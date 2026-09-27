@@ -251,13 +251,13 @@
       var s = '', x = pad;
       for (var i = 0; i < n; i++) {
         s += rect(x, 18, unit - 2, 34, { fill: C.aLite, stroke: C.a, sw: 1.5, r: 3 });
-        s += txt(x + unit / 2 - 1, 40, String(per), { size: 13, mono: true, fill: C.a });
+        s += txt(x + unit / 2 - 1, 40, f.ask === 'per' ? '?' : String(per), { size: 13, mono: true, fill: C.a });   // «?» when the share is what is asked
         x += unit;
       }
       if (rem) {
         var rw = unit * rem / per;
         s += rect(x, 18, rw - 2, 34, { fill: C.card, stroke: C.bad, sw: 1.5, r: 3, dash: '4 3' });
-        s += txt(x + rw / 2 - 1, 40, String(rem), { size: 13, mono: true, fill: C.bad });
+        s += txt(x + rw / 2 - 1, 40, f.ask === 'rem' ? '?' : String(rem), { size: 13, mono: true, fill: C.bad });
       }
       s += txt(W / 2, 68, 'барлығы ' + f.total, { size: 12, fill: C.dim });
       return svg(W, H, s, 460);
