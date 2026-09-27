@@ -290,3 +290,13 @@ textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 .btn.autogo::after{content:"";position:absolute;left:0;bottom:0;height:5px;width:100%;background:rgba(255,255,255,.6);transform-origin:left;animation:v3-fuse var(--autogo,2600ms) linear forwards}
 @keyframes v3-starwin{0%{transform:scale(0) rotate(-45deg);opacity:0}100%{transform:none;opacity:1}}
 @keyframes v3-fuse{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* the home button at the left of the top bar on every page but the home page (Core.topbar) */
+.homebtn{flex:none;width:44px;height:44px;margin-right:10px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--accent);
+  box-shadow:0 4px 0 var(--line),inset 0 2px 0 rgba(255,255,255,.3);text-decoration:none;transition:transform .09s,box-shadow .09s}
+.homebtn:active{transform:translateY(4px);box-shadow:none}
+.homebtn svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+/* next to the home button the brand word «Есеп жолы» would wrap on a phone: the button stands for it, and the
+   page's own name (the route) takes the place, in normal case */
+.top>.homebtn+.brand{flex:1;min-width:0;font-size:0;line-height:0}
+.top>.homebtn+.brand small{display:block;font-family:var(--disp);font-weight:600;font-size:.95rem;line-height:1.2;letter-spacing:0;text-transform:none;color:var(--rc,var(--ink));margin:0;padding-right:6px}
