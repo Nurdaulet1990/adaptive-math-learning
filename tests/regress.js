@@ -75,12 +75,8 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
   { const LADDER = ['FR-08', 'FR-01', 'FR-04', 'FR-07', 'FR-09', 'FR-10', 'FR-11'];
     const seed = {}; LADDER.forEach((id, i) => { seed[id] = stage(i < 2 ? 'passed' : i === 2 ? 'current' : 'locked', 3, i === 2 ? { testUnlocked: true } : {}); });
     const { page, ctx, errs } = await open('fr/', { FR: { diag: { placed: 'FR-04', t: 1 }, stages: seed } });
-    await page.waitForSelector('.mapgo [data-go]'); await page.click('.mapgo [data-go]');
-    for (let k = 0; k < 14 && !(await page.locator('#testBtn').count()); k++) {   // practise right until the test is offered
-      if (await page.locator('#nextBtn').count()) { await page.click('#nextBtn'); continue; }
-      if (await page.locator('.choice,#ans').count()) { await right(page); await page.waitForSelector('#nextBtn,#testBtn'); continue; }
-      const b = page.locator('.btn.wide'); if (await b.count()) await b.first().click(); await page.waitForTimeout(400); }
-    await page.click('#testBtn'); for (let i = 0; i < 10; i++) { await right(page); await page.waitForTimeout(750); }
+    // on level 3 the card under the map offers the stage test as its main button
+    await page.waitForSelector('.mapgo .mg-row [data-test]'); await page.click('.mapgo .mg-row [data-test]'); for (let i = 0; i < 10; i++) { await right(page); await page.waitForTimeout(750); }
     await page.waitForSelector('#homeBtn.autogo');
     T('pass: the result card shows the stars and a «Картаға» button filling up', await page.locator('.wincard .winstars svg.on').count() === 3 && /Картаға/.test(await page.locator('#homeBtn').innerText()));
     await page.waitForSelector('.mapbox', { timeout: 5000 }).catch(() => {});
@@ -91,12 +87,8 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
     T('pass flow: no page errors', errs.length === 0, errs); await ctx.close(); }
   { const seed = { 'FR-08': stage('passed'), 'FR-01': stage('current', 3, { testUnlocked: true }) };
     const { page, ctx } = await open('fr/', { FR: { diag: { placed: 'FR-01', t: 1 }, stages: seed } });
-    await page.waitForSelector('.mapgo [data-go]'); await page.click('.mapgo [data-go]');
-    for (let k = 0; k < 14 && !(await page.locator('#testBtn').count()); k++) {   // practise right until the test is offered
-      if (await page.locator('#nextBtn').count()) { await page.click('#nextBtn'); continue; }
-      if (await page.locator('.choice,#ans').count()) { await right(page); await page.waitForSelector('#nextBtn,#testBtn'); continue; }
-      const b = page.locator('.btn.wide'); if (await b.count()) await b.first().click(); await page.waitForTimeout(400); }
-    await page.click('#testBtn');
+    // on level 3 the card under the map offers the stage test as its main button
+    await page.waitForSelector('.mapgo .mg-row [data-test]'); await page.click('.mapgo .mg-row [data-test]');
     for (let i = 0; i < 10; i++) { await page.waitForFunction(() => window._Q && !window._Q.done && document.querySelector('.choice,#ans'));
       const wrong = await page.evaluate(() => { const a = String(window._Q.q.ans), c = [...document.querySelectorAll('.choice')].map(b => b.dataset.v).find(v => v !== a); return c || (a === '0' ? '1' : '0'); });
       if (await page.locator('#ans').count()) await page.fill('#ans', wrong); else await page.locator('.choice').evaluateAll((bs, v) => bs.find(b => b.dataset.v === v).click(), wrong);

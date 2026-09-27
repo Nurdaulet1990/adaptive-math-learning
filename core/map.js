@@ -100,7 +100,7 @@ function map(o){
   const cel=celFrom>=0, fromIdx=celFrom;   // worked out above, before the nodes, from the value remembered last time
   try{ if(cs) localStorage.setItem('esep_mapcur:'+(o.label||'map'),cs.id); }catch(e){}
   /* the current station's action lives in a card pinned to the bottom of the map, not in a bubble over the road */
-  const card=cs?`<div class="mapgo"><div><b>${curIdx+1}-станция · ${esc(cs.name)}</b><i>${esc(cs.sub||cs.id)}</i></div><button type="button" class="btn" data-go="${esc(cs.id)}">${esc(go)}</button></div>`:'';
+  const card=o.action!=null?o.action:cs?`<div class="mapgo"><div><b>${curIdx+1}-станция · ${esc(cs.name)}</b><i>${esc(cs.sub||cs.id)}</i></div><button type="button" class="btn" data-go="${esc(cs.id)}">${esc(go)}</button></div>`:'';
 
   return `<div class="mapbox v5" style="--rc:${C};--rc-d:${CD}"${cel?` data-cel="${fromIdx},${curIdx}"`:''}><div class="mapinner">
   <svg class="maproad" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(o.label||'Жол картасы')}">
@@ -141,7 +141,8 @@ function mapBind(fn){
 }
 function mapScroll(){ const el=document.querySelector('.stn.cur')||document.querySelector('.stn.open'), box=document.querySelector('.mapbox');
   if(!el||!box) return; const r=el.getBoundingClientRect(), b=box.getBoundingClientRect();
-  box.scrollTop += (r.top-b.top) - box.clientHeight*(box.dataset.cel?0.42:0.62);
+  const card=box.querySelector('.mapgo'), vis=box.clientHeight-(card?card.offsetHeight:0);   // the pinned card covers the bottom of the box
+  box.scrollTop += (r.top-b.top) - vis*(box.dataset.cel?0.42:0.62);
   if(box.dataset.cel) celebrate(box); }
 /* A station has just been passed: its stars pop in; the next coin loses its lock and turns gold in a ring of
    sparks (owner, 2026-09-27: no green flash — gold is the colour of «where you are»);
@@ -168,5 +169,20 @@ function stars(stage){ const t=(stage&&stage.tests)||[]; if(!t.length) return 0;
   const best=t.reduce((a,x)=>Math.max(a,x.n?x.ok/x.n:0),0);
   return best>=1?3:best>=0.9?2:best>=0.8?1:0; }
 
-window.Core=window.Core||{}; Core.map=map; Core.mapBind=mapBind; Core.mapScroll=mapScroll; Core.mapStars=stars;
+/* The one card under a route's map (runner.js and wp/screens.js hand it to Core.map as o.action): the station,
+   its level as three dots, and the button that matters NOW — practice while the pupil is on levels 1–2, the
+   stage test once she is on level 3 (or the practice has unlocked it), with the other one next to it, small.
+   Buttons carry data-pr / data-test / data-rediag; the route binds them. (2026-09-27: this replaces the map's
+   own card, the «Қазіргі станция» card and the hint that said the same things a second time.) */
+function stationAction(o){
+  const lv=o.level||1, testFirst=lv>=3||o.testUnlocked;
+  const dots=[1,2,3].map(l=>`<i class="${l<lv?'done':l===lv?'on':''}"></i>`).join('');
+  const pr=`<button type="button" class="btn${testFirst?' ghost sm':''}" data-pr="${esc(o.id)}">Жаттығу</button>`;
+  const te=`<button type="button" class="btn gold${testFirst?'':' ghost sm'}" data-test="${esc(o.id)}">${testFirst?'Кезең тесті':'Тест (10)'}</button>`;
+  return `<div class="mapgo mg2"><div class="mg-row"><div class="mg-info"><b>${o.n}-станция · ${esc(o.name)}</b>
+      <i><span class="dots">${dots}</span> Деңгей ${lv}/3 · қатарынан ${o.streak||0}/3</i></div>${testFirst?te:pr}</div>
+    <div class="mg-sub">${testFirst?pr:te}<span>${testFirst?'8/10 — келесі станция · 10/10 — ★★★':'3-деңгейде тестке дайынсың'}</span>
+      <button type="button" class="mg-link" data-rediag>Тым оңай ма?</button></div></div>`;
+}
+window.Core=window.Core||{}; Core.map=map; Core.mapBind=mapBind; Core.mapScroll=mapScroll; Core.mapStars=stars; Core.stationAction=stationAction;
 })();
