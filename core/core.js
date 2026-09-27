@@ -33,6 +33,12 @@
     addEventListener('load',()=>{ navigator.serviceWorker.register(sw.href,{scope:new URL('./',sw).href}).catch(()=>{}); });
   }catch(e){} })();
 
+  /* the site's home page, worked out from where core.js itself is served (…/core/core.js → …/), so it is right
+     both on GitHub Pages (/adaptive-math-learning/) and on localhost; the top bar shows a home button on every
+     page that is not it */
+  const ROOT=(()=>{ try{ return new URL('../',document.currentScript.src).href; }catch(e){ return null; } })();
+  const atHome=()=>{ try{ const h=new URL(ROOT).pathname, p=location.pathname.replace(/index\.html$/,''); return p===h; }catch(e){ return true; } };
+  const HOME_SVG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5"/><path d="M6.5 10v9.5h4.2v-5.2h2.6v5.2h4.2V10"/></svg>';
   const SESSION_KEY='esep_session_v1', CACHE_KEY='esep_cache_v1';
   const ls={get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }, del(k){ try{ localStorage.removeItem(k); }catch(e){} }};
   const enc=encodeURIComponent;
@@ -365,7 +371,7 @@
     winStars(n){ const P='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
       return `<div class="winstars" aria-label="${n} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<n?'on':''}" style="animation-delay:${.15+k*.18}s" aria-hidden="true">${P}</svg>`).join('')}</div>`; },
     pet:petSVG, petName, pickPet, petSay:(t,ms)=>pal.say(t,ms), petMood:(m,ms)=>pal.mood(m,ms), petOff:v=>pal.off(v),
-    topbar(sub){ return `<div class="top"><div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<button type="button" class="avachip" onclick="Core.pickPet()" aria-label="Жолсерігің${petName()?': '+petName():''}. Ауыстыру">${petSVG(null,{head:true,size:38})}</button>`:''}</div>`; },
+    topbar(sub){ return `<div class="top">${ROOT&&!atHome()?`<a class="homebtn" href="${ROOT}" aria-label="Басты бет" title="Басты бет">${HOME_SVG}</a>`:''}<div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<button type="button" class="avachip" onclick="Core.pickPet()" aria-label="Жолсерігің${petName()?': '+petName():''}. Ауыстыру">${petSVG(null,{head:true,size:38})}</button>`:''}</div>`; },
     /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */
   };
   window.Core=Core;

@@ -157,7 +157,7 @@ function showMap(){
     <div class="strip"><div><b>${done}/${LEVEL_ORDER.length}</b><span>станция</span></div><div><b>★ ${stars}</b><span>жұлдыз</span></div><div><b>${MODULES.length}</b><span>бөлім</span></div></div>
     <button id="pvdiag" style="width:100%;min-height:50px;margin-bottom:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;font:600 1rem Fredoka,system-ui,sans-serif;cursor:pointer">${fresh?'🎯 Диагностика — қай жерден бастау керек?':'🎯 Қайта диагностика — бәрі тым оңай ма?'}</button>
     ${Core.map({stages, color:'var(--pv,#3D6DB5)', colorDark:'var(--pv-d,#2E538B)', avatar:Core.avatar(), go:'Жаттығу', label:'Орын мәні жолы'})}
-    <p class="hint">Станцияны басып көр · <a href="../">барлық бағыттар</a></p></div>`;
+    <p class="hint">Станцияны басып көр · <a href="../#bagyt">барлық бағыттар</a></p></div>`;
   showBack(false); Core.mapScroll();
   /* Look the station up BY ITS ID, not by turning the number back into a position. The number stopped
      being the position the moment STAGE_NO was written out and 28 twins were inserted — this line still

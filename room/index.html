@@ -13,7 +13,7 @@
 <title>Есеп жолы · Жарыс бөлмесі</title>
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="../core/ui.css?v=15">
+<link rel="stylesheet" href="../core/ui.css?v=16">
 <style>
 /* room/ — a challenge room («жарыс бөлмесі»): one pupil or the teacher opens it, anyone with the code comes in,
    everybody gets the same sheet at the same moment — on ANY station of the routes AR, FR, TE, WP. Owner: platform owner.
@@ -46,7 +46,7 @@
 <body>
 <div id="app" class="app"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=17"></script>
+<script src="../core/core.js?v=18"></script>
 <script src="../core/figs.js?v=8"></script>
 <script src="routes.js?v=3"></script>
 <script>
@@ -58,7 +58,7 @@
   const first=s=>String(s||'').split(' ')[0];
   const RNAME=Object.fromEntries((Core.config.ROUTES||[]).map(r=>[r[0],r[1]]));
   const top=()=>Core.topbar('Жарыс бөлмесі');
-  const home=`<p class="note" style="margin:0 0 10px"><a href="../">← Басты бет</a></p>`;
+  const home=`<p class="note" style="margin:0 0 10px"><a href="../#jarys">← Жарыс</a></p>`;
   const WHY={not_found:'Мұндай бөлме жоқ немесе ол жабылып қалған.',started:'Бұл жарыс басталып кетті — келесісіне үлгер.',hosting:'Алдымен өз бөлмеңді жап.',playing:'Сен қазір басқа жарыста ойнап жатырсың.',
     full:'Бөлме толы.',not_passed:'Бөлмені тек өзің өткен станция бойынша аша аласың.',daily_limit:'Бүгінге 10 бөлме жеткілікті. Ертең тағы аш.',alone:'Кемінде екі ойыншы керек.',closed:'Уақыт бітіп қалды.',
     busy:'Қазір бос код жоқ. Сәлден соң қайтала.',locked:'Тым көп қате код. 10 минуттан кейін қайтала.',stage:'Бұл станция бойынша жарыс өткізуге болмайды.',thin:'Бұл станцияда жарысқа есеп жеткіліксіз.',session:'Қайта кіру керек.'};
