@@ -47,11 +47,11 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
     } catch (e) { return route.fulfill({ status: /permission denied/.test(e.message) ? 401 : 400, contentType: 'application/json', body: JSON.stringify({ message: e.message }) }).catch(() => {}); }
     finally { await c.query('reset role').catch(() => {}); c.release(); } };
 
-  const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+  const browser = await chromium.launch(); const ctx = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 1000, height: 900 } });
   await ctx.route(/supabase\.co/, backend); await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   const errs = []; const B = 'http://localhost:8767/';
   const tp = await ctx.newPage(); tp.on('pageerror', e => errs.push('teacher: ' + e.message)); await tp.goto(B + 'teacher/'); await tp.waitForSelector('#tpin');
-  await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(500);
+  await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('.ttabs'); await tp.click('.ttabs a[href="#oqu"]'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(500);   // the table is on the Оқушылар tab (v3)
   const rowText = async name => (await tp.locator('table.t3 tr', { hasText: name }).first().innerText()).replace(/\s+/g, ' ');
 
   // 1 ─ the class table: id AND name, in «барлық бағыт» and in one route
@@ -60,7 +60,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   T('pv/stages.js is current with pv/index.html (node pv/stages_gen.js --check)', (() => { try { execFileSync('node', [path.join(ROOT, 'pv', 'stages_gen.js'), '--check']); return true; } catch (e) { return false; } })());
   T('class table: a stage id named «constructor» is shown bare — no «Object», nothing from the prototype', /constructor/.test(await rowText('Әлихан Ж.')) && !/Object|function/.test(await rowText('Әлихан Ж.')), await rowText('Әлихан Ж.'));
   T('class table: a pupil with no «current» station shows the highest PASSED one, marked ✓ өтті — never a dash', new RegExp('PV-12 ' + PV['PV-12'].name.replace(/[()]/g, '\\$&') + ' ✓ өтті').test(await rowText('Бекзат Р.')) && /AR-05 Кесте 5 ✓ өтті/.test(await rowText('Бекзат Р.')), await rowText('Бекзат Р.'));
-  await tp.selectOption('select >> nth=0', 'AR'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(400);
+  await tp.click('[data-route="AR"]'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(400);
   T('class table (AR only): id and name', new RegExp('AR-12 ' + AR['AR-12'].name).test(await rowText('Дана К.')), await rowText('Дана К.'));
 
   // 2 ─ CSV: a name column next to the id
@@ -68,10 +68,10 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   T('CSV has a «Кезең атауы» column and the AR-12 line carries the name', /;Кезең;Кезең атауы;Деңгей;/.test(csv) && new RegExp('"AR";"AR-12";"' + AR['AR-12'].name + '"').test(csv) && /"AR";"AR-05";"Кесте 5 \(өтті\)";"3"/.test(csv), csv.slice(0, 400));
 
   // 3 ─ the printed report, class 3А, all routes: after each pupil's stage its name; under every pupil three examples of that stage at the pupil's level
-  await tp.selectOption('select >> nth=0', 'ALL'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
-  await tp.selectOption('select >> nth=1', '3А'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
+  await tp.click('[data-route="ALL"]'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
+  await tp.click('[data-klass="3А"]'); await tp.waitForSelector('table.t3'); await tp.waitForTimeout(300);
   await tp.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
-  await tp.getByRole('link', { name: 'Басып шығару' }).click(); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
+  await tp.locator('button', { hasText: 'Басып шығару' }).first().click(); await tp.waitForSelector('table.prt'); await tp.waitForTimeout(300);
   const rep = async () => (await tp.locator('#app').innerText()).replace(/\s+/g, ' ');
   /* the pupil's line for a route, and the examples row right under it (if any) */
   const ln = async (name, route) => { const tr = tp.locator('table.prt tr', { hasText: name }).filter({ hasText: route }).first(); const t = (await tr.innerText()).replace(/\s+/g, ' ');
@@ -97,7 +97,7 @@ const cur = level => ({ status: 'current', level: level || 2, streak: 1, tests: 
   T('back to the list', (await tp.locator('#app').innerText()).includes('Айгүл С.'));
 
   // 4 ─ the pupil card names stages too
-  await tp.locator('table.t3 tr', { hasText: 'Айгүл С.' }).first().click(); await tp.waitForSelector('.kv'); await tp.waitForTimeout(300);
+  await tp.locator('table.t3 tr', { hasText: 'Айгүл С.' }).first().click(); await tp.waitForSelector('details.more'); await tp.click('details.more summary'); await tp.waitForSelector('.kv');   // v3: the old card is folded under the learning path await tp.waitForTimeout(300);
   T('pupil card: the current stage carries its name', new RegExp('AR-05 ' + AR['AR-05'].name + ' · деңгей 2').test((await tp.locator('#app').innerText()).replace(/\s+/g, ' ')), (await tp.locator('.kv').first().innerText()).replace(/\s+/g, ' '));
   T('no direct table request was ever made', !seen.some(x => !/\/rpc\/esep_/.test(x)), [...new Set(seen.filter(x => !/\/rpc\/esep_/.test(x)))]);
   T('no page errors', errs.length === 0, errs);
