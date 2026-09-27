@@ -47,24 +47,20 @@ function showHome(){
   else {
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
-    html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div></div>`;
+    html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${R.nAns?acc()+'%':'–'}</b><span>дұрыс</span></div></div>`;
     const IC=routeIcons(); const rc=CFG.route.toLowerCase();
     html+=Core.map({color:CFG.color||`var(--${rc})`, colorDark:CFG.colorDark||`var(--${rc}-d)`,
       avatar:Core.avatar(), label:CFG.title, go:'Жаттығу',
+      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked}):undefined,
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
           sub:s.status==='current'?`Деңгей ${s.level}/3 · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
-      +`<p class="maphint">Станцияны басып көр.</p>`;
-    html+=`<div class="card" style="margin-top:12px"><div class="qbar"><span>Қазіргі станция</span><span class="chip">${cur}</span></div><h2>${esc(stageName(cur))}</h2>
-      <p>Деңгей ${st.level}/3 · <span class="dots">${[1,2,3].map(l=>`<i class="${l<st.level?'done':l===st.level?'on':''}"></i>`).join('')}</span> · қатарынан дұрыс: ${st.streak}</p>
-      <div class="row"><button class="btn" data-pr="${cur}">Жаттығу</button><button class="btn gold" data-test="${cur}">Кезең тесті (10 есеп)</button></div>
-      <p class="note" style="margin-top:10px">Келесі станцияға өту үшін тесттен 10 есептің 8-ін шығару керек. 10/10 — үш жұлдыз.</p>
-      <p class="note" style="margin-top:10px"><button class="btn plain" id="b_rediag">Бәрі тым оңай ма? Қайта диагностика</button></p></div>`;
+      ;
   }
-  html+=`<div class="card"><div class="stat"><div><b>${Math.round((R.time||0)/60000)}</b><span>минут</span></div><div><b>${R.nAns||0}</b><span>есеп</span></div><div><b>${acc()}%</b><span>дұрыс</span></div></div><p class="note" style="margin:8px 0 0"><a href="../#bagyt">← Барлық бағыттар</a></p></div>`;
   app().innerHTML=html; persist(); if(Core.mapScroll) Core.mapScroll();
   const bd=$('b_diag'); if(bd) bd.onclick=()=>startDiag();
   const br=$('b_rediag'); if(br) br.onclick=askRediag;
+  app().querySelectorAll('[data-rediag]').forEach(b=>b.onclick=askRediag);
   app().querySelectorAll('[data-pr]').forEach(b=>b.onclick=()=>startPractice(b.dataset.pr));
   app().querySelectorAll('[data-test]').forEach(b=>b.onclick=()=>startTest(b.dataset.test));
   /* for a tester, tapping a station also MOVES there, so the card under the map — and its

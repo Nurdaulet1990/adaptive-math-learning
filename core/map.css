@@ -159,3 +159,24 @@
 @keyframes mp-unlk{0%{transform:none;opacity:1}40%{transform:translateY(-8px) rotate(-12deg) scale(1.2)}100%{transform:translateY(-46px) rotate(20deg) scale(1.5);opacity:0}}
 @keyframes mp-spark{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.4);opacity:0}}
 @media (prefers-reduced-motion: reduce){.v5 .stn.justdone .stars svg,.v5 .stn.unlock .unlk,.v5 .stn.unlock .spark{animation:none!important}}
+
+/* ── the route page's one action card (Core.stationAction) and a quieter map box (2026-09-27) ── */
+.mapbox{scrollbar-width:none;max-height:min(72vh,860px)}
+.mapbox::-webkit-scrollbar{display:none}
+@media (min-height:900px){.mapbox{max-height:min(78vh,980px)}}
+.mapgo.mg2{flex-direction:column;align-items:stretch;gap:10px}
+.mg2 .mg-row{display:flex;align-items:center;gap:12px}
+.mg2 .mg-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.mg2 .mg-info i{display:flex;align-items:center;gap:8px}
+.mg2 .btn{min-height:50px;padding:10px 20px;border:0;border-radius:14px;font-family:var(--disp);font-weight:600;font-size:1.02rem;cursor:pointer;
+  background:var(--rc);color:#fff;box-shadow:0 5px 0 var(--rc-d),inset 0 2px 0 rgba(255,255,255,.28)}
+.mg2 .btn.gold{background:var(--gold);color:#1B2733;box-shadow:0 5px 0 var(--gold-d),inset 0 2px 0 rgba(255,255,255,.35)}
+.mg2 .btn.ghost{background:var(--card);color:var(--rc);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.mg2 .btn.gold.ghost{color:var(--gold-d)}
+.mg2 .btn.sm{min-height:44px;padding:6px 14px;font-size:.9rem}
+.mg2 .btn:active{transform:translateY(4px);box-shadow:none}
+.mg2 .mg-sub{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:.78rem;font-weight:700;color:var(--muted)}
+.mg2 .mg-sub>span{flex:1;min-width:120px}
+.mg2 .mg-link{border:0;background:none;padding:0 2px;min-height:44px;font:inherit;font-weight:800;color:var(--accent);text-decoration:underline;cursor:pointer}
+.mapgo.mg2>.mg-row,.mapgo.mg2>.mg-sub{flex:none;flex-direction:row}
+.mapgo.mg2>.mg-row>.btn{flex:none}
