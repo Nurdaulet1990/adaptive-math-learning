@@ -302,7 +302,7 @@ function heatHTML(rows,route){ const names=RNM[route]||{}; const ids=Object.keys
 /* ── tasks for a class or single pupils (supabase/16_tasks.sql) ─────────────────────────────────────────────────
    The form on top, the tasks below with who has done them. Progress comes from the server (the pupils' answer log
    after the task was published), so this page only shows it. */
-const TK_ROUTES=['TE','AR','FR','WP'];
+const TK_ROUTES=['TE','AR','FR','WP','PV'];   // PV too since 2026-09-28: its levels log answers and «level passed» with PV-xx ids like the others
 async function showTasks(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view; if(!T.tok) return login(); T.tab='task';
   if(location.hash!=='#task') history.replaceState(null,'','#task');
   T.app.innerHTML=tbar()+`<div class="card"><p>Жүктелуде…</p></div>`;
