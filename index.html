@@ -14,7 +14,7 @@
 <!-- Kazakh is locked: the browser may not translate this page. The ҚАЗ/РУС switch removes this meta for pupils who need Russian. -->
 <meta name="google" content="notranslate">
 <script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
-<link rel="stylesheet" href="core/ui.css?v=18">
+<link rel="stylesheet" href="core/ui.css?v=20">
 <style>
 /* portal: one landscape strip per route */
 .rt{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:block;text-decoration:none;color:inherit;margin-bottom:10px}
@@ -177,7 +177,7 @@
 <body>
 <div id="app" class="app"></div>
 <script src="core/pets.js?v=1"></script>
-<script src="core/core.js?v=21"></script>
+<script src="core/core.js?v=23"></script>
 <script src="room/routes.js?v=4"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
@@ -340,7 +340,7 @@
       const st=(t.stages||[]).map(id=>{ const n=NM[t.route]&&Object.prototype.hasOwnProperty.call(NM[t.route],id)?NM[t.route][id].name:''; return `<b>${esc(id)}</b>${n?' '+esc(n):''}`; }).join(' · ');
       let due=''; if(t.due){ const d=new Date(t.due+'T00:00:00'); const late=d<today&&!p.done; due=`<span class="tk-due${late?' late':''}">${late?'Мерзімі өтті · ':''}${d.getDate()} ${MON[d.getMonth()]}${late?'':'ке дейін'}</span>`; }
       const what=t.kind==='test'?(t.stages.length>1?`${t.stages.length} кезең тестін тапсыр`:'Кезең тестін тапсыр'):`${t.goal} есепті дұрыс шығар`;
-      const go=`${R[2]}?task=${encodeURIComponent(t.stages[0])}${t.kind==='test'?'&test=1':''}`;
+      const go=`${R[2]}?task=${encodeURIComponent(t.stages[0])}${t.kind==='test'?'&test=1':''}&tid=${+t.id}&tn=${+p.n}&to=${+p.of}&tk=${t.kind==='test'?'test':'answers'}&ts=${encodeURIComponent(t.stages.join(','))}`;   // core.js shows «Тапсырма n / of» while she works
       return `<div class="card tk${p.done?' done':''}" style="--rc:var(--${rc},var(--accent));--rc-d:var(--${rc}-d,var(--accent-d))">
         <div class="tk-top"><span class="tk-tag">${p.done?'✓ Орындалды':'Мұғалімнің тапсырмасы'}</span>${due}</div>
         <div class="tk-what">${esc(what)}</div><div class="tk-st">${esc(R[1])} · ${st}</div>

@@ -83,7 +83,7 @@ function renderQuestion(q,o){
   const ladder=o.ladder&&!o.noHints;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop"><button class="qx" id="homeBtn" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||o.sub||'')}</span></div>
+   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" id="homeBtn" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||o.sub||'')}</span></div>
    <div class="stem">${stemHTML(q.stem,false)}</div>${q.exprHTML?`<div class="expr">${q.exprHTML}</div>`:''}${fig?`<div class="fig">${fig}</div>`:''}${input}
    <div id="hints"></div></div>
    <div class="actbar" id="qbar">${ladder?`<button class="btn plain" id="hintBtn">Кеңес 1/5</button>`:''}${o.onSkip?`<button class="btn plain" id="skipBtn">Білмеймін</button>`:''}<button class="btn" id="ansBtn" disabled>Тексеру</button></div>

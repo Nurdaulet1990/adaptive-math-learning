@@ -122,8 +122,11 @@ const mapWrap=document.createElement('style'); mapWrap.textContent=
      instead of stretching across the whole window now that the sidebar is gone. */
   #main>*{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto}
   /* narrow screens: keep the header text clear of the fixed «← Карта» button */
-  @media (max-width:660px){ #main>.header{padding-left:96px} }
-  #pvback{position:fixed;left:10px;top:8px;z-index:999;font:700 13px Nunito,system-ui,sans-serif;background:var(--card);
+  @media (max-width:660px){ #main>.header{padding-left:150px} }
+  .homebtn,#pvhome{flex:none;width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--accent,#0E7C9B);
+    box-shadow:0 3px 0 var(--line);text-decoration:none} .homebtn svg,#pvhome svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+  #pvhome{position:fixed;left:10px;top:6px;z-index:999}
+  #pvback{position:fixed;left:58px;top:8px;z-index:999;font:700 13px Nunito,system-ui,sans-serif;background:var(--card);
     border:1px solid var(--line);border-radius:999px;padding:7px 13px;color:var(--ink);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08)}`;
 document.head.appendChild(mapWrap);
 
@@ -182,6 +185,8 @@ loadScript('../core/map.js?v=13').then(()=>Core.start('PV')).then(rs=>{ R=rs; if
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);
+  /* the home page, always one tap away — a teacher's task opens straight inside a level, where there is no top bar */
+  if(Core.root){ const home=document.createElement('a'); home.id='pvhome'; home.href=Core.root; home.setAttribute('aria-label','Басты бет'); home.title='Басты бет'; home.innerHTML=Core.homeSVG; document.body.appendChild(home); }
   state.module=null; state.level=null; renderSidebar(); showMap();
   /* a teacher's task (portal → ?task=PV-07): open that level at once, even one the pupil has not unlocked and
      even before the placement test — the teacher chose it (as core/runner.js does); then drop the parameter so a
