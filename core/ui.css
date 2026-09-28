@@ -304,3 +304,12 @@ textarea.log{width:100%;height:120px;font:12px/1.4 ui-monospace,Menlo,Consolas,m
 /* the way to the teacher page, under the pupils' login (owner: «I cannot find the teacher's entry from here») */
 .note.tlink{margin:16px 0 0;padding-top:12px;border-top:1px solid var(--line);text-align:center}
 .note.tlink a{font-weight:800}
+
+/* a teacher's task in progress (core.js · task): a pill at the bottom-left, lifted above any bottom bar */
+#taskpill{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:calc(16px + env(safe-area-inset-bottom));z-index:44;display:flex;align-items:center;gap:7px;
+  min-height:40px;padding:0 14px 0 10px;border-radius:999px;background:var(--card);color:var(--ink);box-shadow:0 4px 0 var(--line),0 8px 18px -10px rgba(0,0,0,.3);
+  font-weight:900;font-size:.9rem;overflow:hidden;transition:bottom .25s cubic-bezier(.2,.8,.2,1)}
+#taskpill svg{width:20px;height:20px;fill:none;stroke:var(--accent);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#taskpill span{color:var(--muted);font-weight:800}
+#taskpill i{position:absolute;left:0;bottom:0;height:4px;background:var(--good);transition:width .35s ease}
+.has-pet .quiz{padding-bottom:260px}

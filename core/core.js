@@ -89,7 +89,8 @@
         if(cs.position==='fixed'&&cs.display!=='none'&&x.offsetHeight) h=Math.max(h,x.offsetHeight+(parseFloat(cs.bottom)||0)); });
       el.style.bottom=h?`${Math.round(h+10)}px`:'';
       /* something tappable underneath (a card's button on the home page)? then only peek in from the edge */
-      el.classList.toggle('peek',covers()); }
+      el.classList.toggle('peek',covers());
+      const tp=document.getElementById('taskpill'); if(tp) tp.style.bottom=h?`${Math.round(h+14)}px`:''; }
     function covers(){ const r=el.getBoundingClientRect(); if(!r.width) return false;
       const x0=r.left-(el.classList.contains('peek')||el.classList.contains('away')?46:0);   // test where it WOULD stand, or it flips back and forth
       const pts=[[x0+r.width*.3,r.top+r.height*.55],[x0+r.width*.6,r.top+r.height*.4],[x0+r.width*.5,r.bottom-12]];
@@ -107,7 +108,7 @@
     function mount(){ if(el||!document.body||ls.get('esep_pet_off')===1) return;
       el=document.createElement('button'); el.type='button'; el.id='petpal'; el.className='petpal';
       el.innerHTML='<span class="pp-say" hidden></span><span class="pp-body"></span><span class="pp-shade" aria-hidden="true"></span>';
-      document.body.appendChild(el); document.body.classList.add('has-pet'); draw();
+      document.body.appendChild(el); document.body.classList.add('has-pet'); draw(); try{ task.draw(); }catch(e){}
       el.onclick=()=>{ el.classList.remove('jump'); void el.offsetWidth; el.classList.add('jump'); if(mood==='idle') say(pick(TAP),1800); };
       new MutationObserver(watch).observe(document.body,{childList:true,subtree:true});
       addEventListener('resize',soon);
@@ -205,7 +206,39 @@
   function expired(){ syncing=false; dirty=true; session=null; ls.del(SESSION_KEY); location.reload(); }
   function setOnline(ok){ Core.online=ok; const el=document.getElementById('netdot'); if(el){ el.title=ok?'Байланыс бар':'Байланыс жоқ — деректер кейін жіберіледі'; el.style.background=ok?'var(--good,#2E9E5B)':'var(--bad,#CF4B3E)'; } }
   const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,10);
-  function pushEvent(e){ if(!session) return; e.u=e.u||uid(); cache.queue.push({sid:session.id,t:new Date().toISOString(),ev:e}); if(cache.queue.length>3000) cache.queue.shift(); ls.set(CACHE_KEY,cache); schedule(); }
+  /* ── a teacher's task while the pupil works on it (owner, 2026-09-28: «I keep doing questions, it never says it
+     is finished, and there is no count») ─────────────────────────────────────────────────────────────────────
+     The portal's task card opens a route with ?task=ST&tid=…&tn=<done so far>&to=<goal>&tk=answers|test&ts=<stations>.
+     Core reads that once (before the route drops the parameters) into sessionStorage, shows a small pill
+     «Тапсырма 3 / 20» on every question screen, counts what the SERVER would count — right answers on the task's
+     stations, or stage tests passed there — and at the goal shows «Тапсырма орындалды!» with a way home. The
+     server stays the judge: the portal reloads the real progress. */
+  const task=(function(){ const KEY='esep_task_v1'; let t=null;
+    try{ t=JSON.parse(sessionStorage.getItem(KEY)||'null'); }catch(e){}
+    try{ const q=new URLSearchParams(location.search); if(q.get('tid')){
+      t={id:+q.get('tid')||0,kind:q.get('tk')==='test'?'test':'answers',n:Math.max(0,+q.get('tn')||0),of:Math.max(1,+q.get('to')||1),
+         stages:String(q.get('ts')||q.get('task')||'').split(',').filter(x=>/^[A-Z]{2}-\d{2}$/.test(x)),passed:[],done:false};
+      sessionStorage.setItem(KEY,JSON.stringify(t)); } }catch(e){}
+    const save=()=>{ try{ t?sessionStorage.setItem(KEY,JSON.stringify(t)):sessionStorage.removeItem(KEY); }catch(e){} };
+    function draw(){ if(!document.body) return; let el=document.getElementById('taskpill');
+      if(!t||t.done||!session){ if(el) el.remove(); return; }
+      if(!el){ el=document.createElement('div'); el.id='taskpill'; el.setAttribute('role','status'); document.body.appendChild(el); }
+      el.innerHTML=`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 11l2 2 4-4"/></svg><span>Тапсырма</span><b>${t.n} / ${t.of}</b><i style="width:${Math.round(100*t.n/t.of)}%"></i>`; }
+    function finish(){ const box=document.createElement('div'); box.className='petpick taskdone'; box.setAttribute('role','dialog'); box.setAttribute('aria-modal','true');
+      box.innerHTML=`<div class="pk-card" style="text-align:center"><div class="pk-hero">${petSVG(null,{mood:'happy',size:110})}</div>
+        <h2 style="margin:6px 0 4px">Тапсырма орындалды!</h2><p class="note" style="margin:0 0 14px">${t.of} / ${t.of} · мұғалімің көреді</p>
+        <div class="row"><button type="button" class="btn plain" data-x>Тағы жаттығамын</button><a class="btn" href="${ROOT||'../'}">Басты бетке</a></div></div>`;
+      box.querySelector('[data-x]').onclick=()=>box.remove(); document.body.appendChild(box); pal.mood('happy',2600); try{ sound('up'); }catch(e){} }
+    function observe(ev){ if(!t||t.done||!ev||!t.stages.includes(ev.stage)) return;
+      if(t.kind==='answers'&&ev.ev==='answer'&&ev.ok&&ev.mode!=='diag') t.n++;
+      else if(t.kind==='test'&&ev.ev==='test'&&ev.pass&&!t.passed.includes(ev.stage)){ t.passed.push(ev.stage); t.n=t.passed.length; }
+      else return;
+      if(t.n>=t.of){ t.n=t.of; t.done=true; save(); draw(); setTimeout(finish,900); return; }
+      save(); draw(); const left=t.of-t.n; if(t.kind==='answers'&&(left===5||left===1)) pal.say(left===1?'Тағы бір есеп!':'Тағы 5 есеп қалды!',1800); }
+    return {draw,observe,active:()=>!!(t&&!t.done)};
+  })();
+
+  function pushEvent(e){ if(!session) return; try{ task.observe(e); }catch(err){} e.u=e.u||uid(); cache.queue.push({sid:session.id,t:new Date().toISOString(),ev:e}); if(cache.queue.length>3000) cache.queue.shift(); ls.set(CACHE_KEY,cache); schedule(); }
   /* Leaving the page: try to hand the unsent events over with a keep-alive request — but do NOT take them out of
      the queue. The browser never tells us whether such a request arrived, so the queue stays until a normal sync
      confirms it. Every event carries a random `u`; the server ignores a (pupil, u) it already has, so sending

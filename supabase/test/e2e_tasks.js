@@ -62,7 +62,14 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   T('pupil: «Бастау» opens TE-03 practice straight away — no placement test first, though she never started the route', await ap.evaluate(() => !!window._Q && window._Q.o && window._Q.o.mode === 'practice' && (window._Q.q.stage === 'TE-03' || window._Q.o.stId === 'TE-03' || /TE-03/.test(JSON.stringify(window._Q.o)))), await ap.evaluate(() => window._Q && { mode: window._Q.o && window._Q.o.mode, o: JSON.stringify(window._Q.o).slice(0, 120) }));
   const right = async () => { await ap.waitForFunction(() => window._Q && !window._Q.done && document.querySelector('.choice,#ans')); const a = await ap.evaluate(() => String(window._Q.q.ans));
     if (await ap.locator('#ans').count()) await ap.fill('#ans', a); else await ap.locator('.choice').evaluateAll((bs, v) => bs.find(b => b.dataset.v === v).click(), a); await ap.click('#ansBtn'); };
-  for (let i = 0; i < 3; i++) { await right(); await ap.waitForSelector('#nextBtn'); if (i < 2) await ap.click('#nextBtn'); }
+  T('while working: the pill shows «Тапсырма 0 / 3»', /Тапсырма\s*0 \/ 3/.test(await ap.locator('#taskpill').innerText()), await ap.locator('#taskpill').count());
+  for (let i = 0; i < 3; i++) { await right(); await ap.waitForSelector('#nextBtn');
+    if (i === 1) { T('…and counts every right answer (2 / 3)', /2 \/ 3/.test(await ap.locator('#taskpill').innerText()));
+      if (process.env.SHOTS) { await ap.setViewportSize({ width: 390, height: 844 }); await ap.waitForTimeout(400); await ap.screenshot({ path: path.join(process.env.SHOTS, 'task-pill.png') }); await ap.setViewportSize({ width: 1100, height: 900 }); } }
+    if (i < 2) await ap.click('#nextBtn'); }
+  await ap.waitForSelector('.taskdone', { timeout: 5000 }).catch(() => {});
+  if (process.env.SHOTS) { await ap.setViewportSize({ width: 390, height: 844 }); await ap.waitForTimeout(600); await ap.screenshot({ path: path.join(process.env.SHOTS, 'task-done-dialog.png') }); await ap.setViewportSize({ width: 1100, height: 900 }); }
+  T('at the goal: «Тапсырма орындалды!» with a way home, the pill gone', /Тапсырма орындалды/.test(await ap.locator('.taskdone').innerText().catch(() => '')) && (await ap.locator('#taskpill').count()) === 0);
   await ap.waitForTimeout(3500);   // the answers go to the server in the next sync
   const got = +(await pg.query(`select count(*) n from public.events where ev->>'stage'='TE-03' and ev->>'ok'='true'`)).rows[0].n;
   T('the three right answers on TE-03 reached the server', got === 3, got);
