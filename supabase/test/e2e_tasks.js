@@ -16,7 +16,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const pg = conn(DB); await pg.connect(); const file = f => pg.query(fs.readFileSync(path.join(DIR, f), 'utf8'));
   await file('test/00_baseline_guess.sql');
   const te = { diag: { placed: 'TE-01', t: Date.now() }, stages: { 'TE-01': { status: 'current', level: 1, streak: 0, tests: [], seenCard: true } } };
-  await pg.query(`insert into students(name,pin,klass,state) values ('Айгүл С.','1111','3А',$1::jsonb),('Дана К.','2222','3Ә',$1::jsonb)`, [JSON.stringify({ TE: te })]);
+  // Айгүл has never opened Теңдеулер (no placement test yet): the task must still open straight away, not the placement test
+  await pg.query(`insert into students(name,pin,klass,state) values ('Айгүл С.','1111','3А','{}'::jsonb),('Дана К.','2222','3Ә',$1::jsonb)`, [JSON.stringify({ TE: te })]);
   await file('01_additive.sql'); await file('02_lock.sql'); await file('08_classes.sql'); await file('16_tasks.sql');
   await pg.query(`insert into esep_private.classes(name) values ('3А'),('3Ә') on conflict do nothing`);
   await pg.query(`select esep_private.set_teacher_secret('мұғалім-құпиясы-2026')`);
@@ -58,7 +59,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   T('pupil: Бүгін carries a badge 1', (await ap.locator('#bbadge').innerText()) === '1');
   await ap.click('#tasks .tk-go'); await ap.waitForURL(/te\//);
   for (let k = 0; k < 4 && !(await ap.locator('.choice,#ans').count()); k++) { const b = ap.locator('.btn.wide'); if (await b.count()) await b.first().click(); await ap.waitForTimeout(500); }
-  T('pupil: «Бастау» opens TE-03 practice straight away (a station she had not reached)', await ap.evaluate(() => window._Q && /TE-03/.test(JSON.stringify(window._Q.q.id || '') + (document.body.innerText || '')) || !!window._Q));
+  T('pupil: «Бастау» opens TE-03 practice straight away — no placement test first, though she never started the route', await ap.evaluate(() => !!window._Q && window._Q.o && window._Q.o.mode === 'practice' && (window._Q.q.stage === 'TE-03' || window._Q.o.stId === 'TE-03' || /TE-03/.test(JSON.stringify(window._Q.o)))), await ap.evaluate(() => window._Q && { mode: window._Q.o && window._Q.o.mode, o: JSON.stringify(window._Q.o).slice(0, 120) }));
   const right = async () => { await ap.waitForFunction(() => window._Q && !window._Q.done && document.querySelector('.choice,#ans')); const a = await ap.evaluate(() => String(window._Q.q.ans));
     if (await ap.locator('#ans').count()) await ap.fill('#ans', a); else await ap.locator('.choice').evaluateAll((bs, v) => bs.find(b => b.dataset.v === v).click(), a); await ap.click('#ansBtn'); };
   for (let i = 0; i < 3; i++) { await right(); await ap.waitForSelector('#nextBtn'); if (i < 2) await ap.click('#nextBtn'); }
