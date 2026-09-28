@@ -407,6 +407,8 @@
     /** the tasks the teacher gave this pupil (supabase/16_tasks.sql): [{id,route,stages,kind,goal,due,note,p:{n,of,done}}], or null
         when the server has no such function yet / offline — the page then simply shows no task card */
     async myTasks(){ if(!session) return null; try{ const r=await rpc('esep_my_tasks',{p_token:session.token}); return Array.isArray(r)?r:null; }catch(e){ return null; } },
+    /** the site's home page (…/core/core.js → …/): for «home» buttons in screens that do not use Core.topbar */
+    root:ROOT, homeSVG:HOME_SVG,
     pet:petSVG, petName, pickPet, petSay:(t,ms)=>pal.say(t,ms), petMood:(m,ms)=>pal.mood(m,ms), petOff:v=>pal.off(v),
     topbar(sub){ return `<div class="top">${ROOT&&!atHome()?`<a class="homebtn" href="${ROOT}" aria-label="Басты бет" title="Басты бет">${HOME_SVG}</a>`:''}<div class="brand">Есеп жолы<small>${esc(sub||'Математика · 1–5 сынып')}</small></div><div class="who">${session?`<b>${esc(session.name)}</b> <i id="netdot" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line);vertical-align:middle"></i><br>`:''}${langLinks()} · <button type="button" class="mutebtn" data-mute onclick="Core.toggleMute()" title="Дыбыс">${muted?'🔇':'🔊'}</button>${session?` · <a href="#" onclick="Core.logout();return false" class="muted">шығу</a>`:''}</div>${session?`<button type="button" class="avachip" onclick="Core.pickPet()" aria-label="Жолсерігің${petName()?': '+petName():''}. Ауыстыру">${petSVG(null,{head:true,size:38})}</button>`:''}</div>`; },
     /* topbar layout note: the avatar sits in normal flow (see .avachip) so a two-line route name can't collide with it */
