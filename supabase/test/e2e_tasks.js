@@ -82,6 +82,15 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await tp.click('text=Аяқтау'); await tp.waitForSelector('.tkc.closed');
   await ap.reload(); await ap.waitForSelector('.tabbar'); await ap.waitForTimeout(1500);
   T('closed by the teacher → gone from the pupil', (await ap.locator('#tasks .tk').count()) === 0);
+  // ── Орын мәні (PV, the legacy route) can be given too, and its level opens straight away ──
+  await tp.click('.tchip:has-text("PV · ")'); await tp.waitForSelector('.tkst input');
+  const pvRow = tp.locator('.tkck', { hasText: 'PV-12' }).first(); const pvName = (await pvRow.innerText()).replace(/\s+/g, ' ');
+  await pvRow.locator('input').check(); await tp.locator('.tchip', { hasText: '3А сыныбы' }).click(); await tp.click('#tkGo'); await tp.waitForSelector('.tkc');
+  T('teacher: a PV task is published', /PV · PV-12/.test((await tp.locator('.tkc').first().innerText()).replace(/\s+/g, ' ')), pvName);
+  await ap.goto(B + '?pv'); await ap.waitForSelector('#tasks .tk'); await ap.click('#tasks .tk-go'); await ap.waitForURL(/pv\//);
+  await ap.waitForFunction(() => typeof state !== 'undefined' && state.level, null, { timeout: 15000 }).catch(() => {});   // PV keeps `state` as a top-level let, not on window
+  const lv = await ap.evaluate(() => ({ level: typeof state !== 'undefined' && state.level, diag: typeof state !== 'undefined' && state.diagnostic, url: location.search }));
+  T('pupil: «Бастау» opens that PV level at once — locked for her, no placement test first', lv.level && !lv.diag && lv.url === '' && await ap.evaluate(l => typeof STAGE_NO !== 'undefined' && STAGE_NO[l] === 12, lv.level)   /* PV-12 = STAGE_NO 12 */, lv);
   T('no page errors', errs.length === 0, errs.slice(0, 3));
   await browser.close(); await pool.end(); await pg.end(); srv.close();
   const failed = out.filter(x => !x).length; console.log(failed ? `${failed} FAILED of ${out.length}` : `ALL ${out.length} PASS`);

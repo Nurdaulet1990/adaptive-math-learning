@@ -182,5 +182,13 @@ loadScript('../core/map.js?v=13').then(()=>Core.start('PV')).then(rs=>{ R=rs; if
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);
-  state.module=null; state.level=null; renderSidebar(); showMap(); });
+  state.module=null; state.level=null; renderSidebar(); showMap();
+  /* a teacher's task (portal → ?task=PV-07): open that level at once, even one the pupil has not unlocked and
+     even before the placement test — the teacher chose it (as core/runner.js does); then drop the parameter so a
+     reload shows the map. Only this one level is let through the lock. (2026-09-28) */
+  const tk=new URLSearchParams(location.search).get('task'), te=tk&&LEVEL_ORDER.find(x=>stageId(x.levelId)===tk);
+  if(te){ history.replaceState(null,'',location.pathname+location.hash);
+    const _unl=isLevelUnlocked; isLevelUnlocked=function(id){ return id===te.levelId||_unl.apply(this,arguments); };
+    selectLevel(te.moduleId,te.levelId); }
+  });
 })();
