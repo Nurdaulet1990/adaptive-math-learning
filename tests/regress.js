@@ -11,11 +11,11 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
   const srv = http.createServer((q, s) => { let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
     fs.readFile(f, (e, b) => e ? (s.writeHead(404), s.end()) : (s.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }), s.end(b))); }).listen(8767);
   const browser = await chromium.launch();
-  async function open(url, state) { const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } }); const page = await ctx.newPage(); const posted = [];
-    await ctx.route(/supabase\.co/, r => { const q = r.request(); if (q.method() === 'GET' || /rpc\/esep_resume/.test(q.url())) { const row = { id: 's1', name: 'Сынақ О.', klass: '3А', state, time_ms: 0 }; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(/rpc\//.test(q.url()) ? row : [row]) }); }
+  async function open(url, state, klass = '3А') { const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } }); const page = await ctx.newPage(); const posted = [];
+    await ctx.route(/supabase\.co/, r => { const q = r.request(); if (q.method() === 'GET' || /rpc\/esep_resume/.test(q.url())) { const row = { id: 's1', name: 'Сынақ О.', klass, state, time_ms: 0 }; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(/rpc\//.test(q.url()) ? row : [row]) }); }
       try { posted.push(JSON.parse(q.postData() || 'null')); } catch (e) {} return r.fulfill({ status: 200, contentType: 'application/json', body: /esep_save/.test(q.url()) ? 'true' : /esep_events/.test(q.url()) ? '1' : 'null' }); });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
-    await page.addInitScript(() => localStorage.setItem('esep_session_v1', JSON.stringify({ id: 's1', name: 'Сынақ О.', klass: '3А', token: 'a'.repeat(48) })));
+    await page.addInitScript(k => localStorage.setItem('esep_session_v1', JSON.stringify({ id: 's1', name: 'Сынақ О.', klass: k, token: 'a'.repeat(48) })), klass);
     const errs = []; page.on('pageerror', e => errs.push(e.message)); await page.goto('http://localhost:8767/' + url); return { page, ctx, errs, posted }; }
   // answer the question on screen correctly, whatever its kind
   async function right(page) { await page.waitForFunction(() => window._Q && !window._Q.done && document.querySelector('.choice,#ans'));
@@ -127,6 +127,18 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'wp/bank.js'), 'utf8').replace(/^\s*const BANK/m, 'this.BANK'), ctx);
     const it = ctx.BANK.items.find(x => x.id === 'WP-12-P01'); const [hens, goats] = it.ans.match(/\d+/g).map(Number);
     T('WP-12-P01: the keyed answer satisfies the problem (14 heads, 44 legs) and the old key is rejected', hens + goats === 14 && 2 * hens + 4 * goats === 44 && ctx.isCorrect(it, '6 тауық, 8 лақ') && !ctx.isCorrect(it, '8 тауық, 6 лақ'), it.ans); }
+
+  // ── the diagnostic starts at the pupil's grade (owner 2026-09-29: a grade-2 child's first question came from the middle of the route) ──
+  const firstProbe = async (url, klass, click) => { const { page, ctx } = await open(url, {}, klass); await page.waitForSelector(click); await page.click(click);
+    await page.waitForFunction(() => window._Q && window._Q.q); const st = await page.evaluate(() => window._Q.o.sub); await ctx.close(); return st; };
+  T('AR, class «3 QYRAN»: the first diagnostic probe is the first grade-3 station (AR-09), not the middle', await firstProbe('ar/', '3 QYRAN', '#b_diag') === 'AR-09', await firstProbe('ar/', '3 QYRAN', '#b_diag'));
+  T('AR, class «2 SAMURYQ»: first probe AR-01 (the first grade-2 station)', await firstProbe('ar/', '2 SAMURYQ', '#b_diag') === 'AR-01');
+  T('AR, class «БАРЫС» (no grade): the climb starts at AR-01, as before', await firstProbe('ar/', 'БАРЫС', '#b_diag') === 'AR-01');
+  T('FR, class «БАРЫС» (no grade): the middle of the route, as before', await firstProbe('fr/', 'БАРЫС', '#b_diag') === 'FR-25');
+  T('FR, class «4 QYRAN»: the first grade-4 station', /^FR-/.test(await firstProbe('fr/', '4 QYRAN', '#b_diag')) && (await firstProbe('fr/', '4 QYRAN', '#b_diag')) !== 'FR-25');
+  T('WP, class «2 SAMURYQ»: WP-03, the first grade-2 station', await firstProbe('wp/', '2 SAMURYQ', 'button[onclick="startDiag()"]') === 'WP-03');
+  T('WP, class «5 QYRAN» (no station starts at grade 5): the first station whose range reaches grade 5 (WP-06)', await firstProbe('wp/', '5 QYRAN', 'button[onclick="startDiag()"]') === 'WP-06');
+  T('TE, class «3А» (a grade with no space): TE-… the first grade-3 station', /^TE-/.test(await firstProbe('te/', '3А', '#b_diag')) && (await firstProbe('te/', '3А', '#b_diag')) !== 'TE-10');
 
   await browser.close(); srv.close(); const bad = out.filter(x => !x).length; console.log(bad ? `${bad} FAILED of ${out.length}` : `ALL ${out.length} PASS`); process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack || e.message); process.exit(2); });

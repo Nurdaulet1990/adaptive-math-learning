@@ -17,7 +17,7 @@
    be read, from the generated pv/stages.js). */
 (function(){
   'use strict';
-  const V='2';                                   // BUMP whenever ANY route's stages / figs / generators change: two devices holding
+  const V='3';                                   // BUMP whenever ANY route's stages / figs / generators change: two devices holding
                                                  // different cached copies would build different sheets from the same seed
   const ROOT=(document.currentScript&&document.currentScript.src||'').replace(/room\/routes\.js.*$/,'');
   const FILES=Object.assign(Object.create(null),{ AR:['stages.js','figs.js','figs2.js','generate.js','generate2.js'], FR:['stages.js','figs.js','generate.js'],

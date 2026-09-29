@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0E7C9B">
+<link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+<title>Есеп жолы · Тестілеу нұсқаулығы</title>
+<meta name="google" content="notranslate">
+<link rel="stylesheet" href="../core/ui.css?v=20">
+<style>
+/* obs/test.html — the assistant's testing handbook: what testing is, how to try each part of the app, how to write
+   a fault so it can be fixed. Read on a phone; the checkboxes are remembered on that phone (localStorage) so a
+   checklist can be walked through across a break. Nothing here talks to the server. Owner: platform owner. */
+.h{margin:18px 0 6px;font-family:var(--disp);font-weight:600;font-size:1.15rem}
+.card p{margin:6px 0}
+ol,ul{margin:6px 0 6px 20px;padding:0} li{margin:5px 0}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.ck input{width:24px;height:24px;flex:none;margin-top:2px;accent-color:var(--rc)}
+.ck label{flex:1} .ck small{display:block;color:var(--muted);font-weight:600}
+.ex{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:.92rem}
+.ex b{color:var(--rc)}
+.warn{border-left:4px solid var(--bad);padding-left:10px}
+.tip{border-left:4px solid var(--gold);padding-left:10px}
+nav.toc a{display:inline-block;margin:3px 6px 3px 0;padding:6px 12px;border-radius:999px;background:var(--card);border:2px solid var(--line);font-weight:800;font-size:.9rem;color:var(--ink);text-decoration:none}
+@media print{ .top,nav.toc,.noprint{display:none} .card{border:0;padding:0 0 10px} }
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="brand">Есеп жолы<small>Тестілеу нұсқаулығы</small></div><span><a href="./" class="muted">бақылау формасы</a></span></div>
+
+<div class="card">
+<h2>Бұл не?</h2>
+<p>Сіз сабақта <b>бақылаушысыз</b>, кейде — <b>тестілеушісіз</b>. Тестілеу дегеніміз — қосымшаны <b>бала қалай қолданса, солай</b> қолданып көріп, күткеніңіздей болмаған әр жерін жазып қою. Мақсат «бәрі істейді» деп дәлелдеу емес, <b>істемейтінін табу</b>. Кішкентай да болса — кнопка бір рет баспады, жазу сыймады, сан жаңылды — бәрі керек.</p>
+<p class="tip">Ереже: <b>күмәндансаңыз — жазыңыз.</b> Артық жазба зиян емес, жазылмаған қате — зиян.</p>
+<nav class="toc"><a href="#dayin">Дайындық</a><a href="#kunde">Әр сабақ алдында</a><a href="#kiru">Кіру</a><a href="#portal">Басты бет</a><a href="#route">Бағыттар</a><a href="#room">Жарыс</a><a href="#teacher">Мұғалім беті</a><a href="#phone">Телефон</a><a href="#jazu">Қалай жазу</a><a href="#joq">Не істемеу</a></nav>
+</div>
+
+<div class="card" id="dayin">
+<div class="h">1 · Дайындық</div>
+<ul>
+<li><b>Тестілеуші аккаунт:</b> аты <b>tester</b> (кез келген PIN, кез келген сынып). Оған барлық станция ашық, есептеулерге кірмейді. Балалардың аккаунтымен тестілемеңіз — олардың нәтижесі бұзылады.</li>
+<li><b>Құрылғылар:</b> балалар қолданатын телефон/планшет түрі болса — соны алыңыз. Бір қате Android-та шығып, iPhone-да шықпауы мүмкін: <b>қай құрылғыда</b> болғанын әрқашан жазыңыз.</li>
+<li><b>Жаңа нұсқа шықты ма?</b> Мұғалім «жаңарттық» десе — бетті <b>қатты жаңартыңыз</b>: компьютерде Ctrl+F5, телефонда бетті жауып, браузердің кэшін тазалап немесе жасырын терезеде ашыңыз. Әйтпесе ескі нұсқаны тестілейсіз.</li>
+<li><b>Интернет:</b> сабақ алдында телефонда бір бет ашылатынын тексеріңіз. Wi-Fi нашар болса — бұл да жазба (обсервация формасында «Интернет» жолы бар).</li>
+</ul>
+</div>
+
+<div class="card" id="kunde">
+<div class="h">2 · Әр сабақ алдында · 5 минут</div>
+<p class="note">Балалар кірмей тұрып бір өзіңіз өтіңіз. Біреуі істемесе — мұғалімге бірден айтыңыз, сабақ жоспары өзгеруі мүмкін.</p>
+<div class="ck"><input type="checkbox" id="k1"><label for="k1">Басты бет ашылды, tester болып кірдім</label></div>
+<div class="ck"><input type="checkbox" id="k2"><label for="k2">Бүгін сабақта қолданылатын бағыт ашылды, бір есеп шығардым, «Кеңес» басылды</label></div>
+<div class="ck"><input type="checkbox" id="k3"><label for="k3">Жарыс болатын болса — бөлме ашылды, код шықты (мұғалім бетінен немесе tester-ден)</label></div>
+<div class="ck"><input type="checkbox" id="k4"><label for="k4">Мұғалім беті ашылады (мұғалімнен сұраңыз, құпия сөзді өзіңіз жазбаңыз)</label></div>
+<div class="ck"><input type="checkbox" id="k5"><label for="k5">Балалар кіретін құрылғыларда бет жаңа нұсқа (қатты жаңарттым)</label></div>
+</div>
+
+<div class="card" id="kiru">
+<div class="h">3 · Кіру және тіркелу</div>
+<div class="ck"><input type="checkbox" id="a1"><label for="a1">Жаңа оқушы тіркеледі: аты, PIN (4 сан), сынып тізімнен, мектеп коды<small>Сынып тізімде жоқ болса — мұғалім бетіндегі «Баптау» → Сыныптар</small></label></div>
+<div class="ck"><input type="checkbox" id="a2"><label for="a2">Қате PIN — кірмейді, түсінікті хабар шығады</label></div>
+<div class="ck"><input type="checkbox" id="a3"><label for="a3">Бір атпен екінші рет тіркелуге тырысу — не болады? (аты бар оқушы PIN сұрайды)</label></div>
+<div class="ck"><input type="checkbox" id="a4"><label for="a4">PIN ұмытқан бала: мұғалім беті → Оқушылар → оқушы → «PIN-ді ұмытса» → жаңа PIN; бала жаңасымен кіреді</label></div>
+<div class="ck"><input type="checkbox" id="a5"><label for="a5">«Бұл құрылғыда бұрын кірген» тізімі: бір телефонда екі бала кезектесіп кірсе — әрқайсысы өз бетін көреді ме?</label></div>
+<div class="ck"><input type="checkbox" id="a6"><label for="a6">Шығу («шығу») → қайта кіру → прогресс сақталған</label></div>
+</div>
+
+<div class="card" id="portal">
+<div class="h">4 · Басты бет (портал)</div>
+<div class="ck"><input type="checkbox" id="p1"><label for="p1">Төрт қойынды ашылады: Бүгін · Бағыттар · Жарыс · Сынып</label></div>
+<div class="ck"><input type="checkbox" id="p2"><label for="p2">Бүгін: жұлдыз саны, күндізгі мақсат, тапсырма (мұғалім берген болса) көрінеді</label></div>
+<div class="ck"><input type="checkbox" id="p3"><label for="p3">Бір есеп шығарған соң басты бетке қайтқанда сандар өзгерді ме?</label></div>
+<div class="ck"><input type="checkbox" id="p4"><label for="p4">Сынып: класс тақтасында өз сыныбы, өз орны (аты бірінші сөзбен) көрінеді</label></div>
+<div class="ck"><input type="checkbox" id="p5"><label for="p5">Тіл ауыстыру (ҚАЗ / РУС) — беттер аударылады, бұзылмайды</label></div>
+</div>
+
+<div class="card" id="route">
+<div class="h">5 · Бағыттар (WP · FR · PV · AR · TE)</div>
+<p class="note">Әр бағытта — бір рет. Балалар қай станцияда болса, соны әсіресе.</p>
+<div class="ck"><input type="checkbox" id="r1"><label for="r1">Диагностика: сұрақтар шығады, аяғында станцияға қояды, карта ашылады</label></div>
+<div class="ck"><input type="checkbox" id="r2"><label for="r2">Жаттығу: 10 есеп қатарынан. Дұрыс/қате хабары дұрыс па? Сан жауабын әртүрлі жазып көріңіз (бос орынмен, 0-мен басталатын)</label></div>
+<div class="ck"><input type="checkbox" id="r3"><label for="r3">«Кеңес»: 5 қадамға дейін басып көріңіз — әр қадам мағыналы ма, жауапты ерте ашып қоймай ма?</label></div>
+<div class="ck"><input type="checkbox" id="r4"><label for="r4">«Білмеймін» — не болады? Келесі есеп ұқсас па?</label></div>
+<div class="ck"><input type="checkbox" id="r5"><label for="r5">Сурет/сызба: экранға сыяды ма, сандары оқылады ма, суреттегі сан есептегі санмен бірдей ме?</label></div>
+<div class="ck"><input type="checkbox" id="r6"><label for="r6">Кезең тесті: ашылады, өткен соң келесі станция ашылады, жұлдыз қосылады, картаға өзі қайтады</label></div>
+<div class="ck"><input type="checkbox" id="r7"><label for="r7">Есептің өзі: <b>дұрыс жауабы шынымен дұрыс па?</b> Күмәнданған есепті сөзбе-сөз көшіріп жазыңыз (станция + есеп + қосымша айтқан жауап)</label></div>
+<div class="ck"><input type="checkbox" id="r8"><label for="r8">Бетті есептің ортасында жаңартып жіберу (F5) — не болады? Прогресс қалды ма?</label></div>
+<div class="ck"><input type="checkbox" id="r9"><label for="r9">PV (Орын мәні): 100 ішінде қосу/азайтуда есептің қасында <b>кубик кестесі</b> және бағанда «1» / сызылған сан тұр ма?</label></div>
+</div>
+
+<div class="card" id="room">
+<div class="h">6 · Жарыс бөлмесі және сыныптаспен жарыс</div>
+<div class="ck"><input type="checkbox" id="j1"><label for="j1">Бөлме ашу (мұғалім немесе оқушы) → 4 таңбалы код шығады</label></div>
+<div class="ck"><input type="checkbox" id="j2"><label for="j2">Екінші құрылғыдан кодпен кіру; қате код — кірмейді</label></div>
+<div class="ck"><input type="checkbox" id="j3"><label for="j3">«Бастау» → екі құрылғыда да <b>бірдей есептер</b> шықты ма? (бірінші есепті салыстырыңыз)</label></div>
+<div class="ck"><input type="checkbox" id="j4"><label for="j4">Біреуі ортасында бетті жаңартады — қайта кіргенде жалғастыра ала ма, уақыт дұрыс па?</label></div>
+<div class="ck"><input type="checkbox" id="j5"><label for="j5">Аяқталған соң: үздік үштік + өз орны; мұғалім бетінде толық тізім және қателер</label></div>
+<div class="ck"><input type="checkbox" id="j6"><label for="j6">Сыныптаспен жарыс (Шақыру): шақыру жіберу → екінші бала қабылдап шығару → екеуіне де нәтиже келді ме?</label></div>
+</div>
+
+<div class="card" id="teacher">
+<div class="h">7 · Мұғалім беті <small class="note">(мұғаліммен бірге)</small></div>
+<div class="ck"><input type="checkbox" id="t1"><label for="t1">Оқушылар тізімі: бүгін жұмыс істеген балалардың есеп саны өсті ме?</label></div>
+<div class="ck"><input type="checkbox" id="t2"><label for="t2">Оқушыға басу → есептер тізімі: бала жаңа ғана шығарған есеп сонда ма?</label></div>
+<div class="ck"><input type="checkbox" id="t3"><label for="t3">«Басып шығару»: әр оқушының кезеңі атауымен, астында мысал есептер</label></div>
+<div class="ck"><input type="checkbox" id="t4"><label for="t4">Тапсырма: мұғалім тапсырма берді → бала басты бетінде көрді → орындады → мұғалімде «орындады» болды</label></div>
+</div>
+
+<div class="card" id="phone">
+<div class="h">8 · Телефон мен планшет</div>
+<div class="ck"><input type="checkbox" id="f1"><label for="f1">Кішкентай экран: кнопкалар сыяды, ештеңе экраннан шықпайды, жазу қиылмайды</label></div>
+<div class="ck"><input type="checkbox" id="f2"><label for="f2">Пернетақта шыққанда жауап жолы көрінеді ме (жабылып қалмайды ма)?</label></div>
+<div class="ck"><input type="checkbox" id="f3"><label for="f3">Экранды бұру (көлденең) — бет бұзылмайды</label></div>
+<div class="ck"><input type="checkbox" id="f4"><label for="f4">Интернетті өшіріп бір есеп шығарып, қайта қосу — жауап сақталды ма? (басты беттегі сан)</label></div>
+<div class="ck"><input type="checkbox" id="f5"><label for="f5">Басты экранға орнату (PWA) — ашылады ма?</label></div>
+</div>
+
+<div class="card" id="jazu">
+<div class="h">9 · Қатені қалай жазу керек</div>
+<p>Бақылау формасында «Мәселе қосу» → түрі <b>«Қате / бағдарлама істемеді»</b>. «Не болды?» жолына мына төрт нәрсені жазыңыз — соның бәрі болмаса қатені қайталап таба алмаймыз:</p>
+<div class="ex"><b>Қадамдар:</b> не істедіңіз, ретімен. <br><b>Күткенім:</b> не болуы керек еді. <br><b>Болғаны:</b> экранда не көрдіңіз (жазуын сөзбе-сөз). <br><b>Қайда:</b> бағыт + станция (AR-05), оқушы, құрылғы (Android/iPhone/компьютер, браузер).</div>
+<p class="ex" style="margin-top:8px"><b>Мысал:</b> AR-05, Ерасыл, Samsung телефон, Chrome. Жауапты жазып «Тексеру» бастым — ештеңе болмады, екінші рет бассам «Қате» деді, жауап дұрыс еді (5×9=45). Бетті жаңарттым — келесі есепке өтті.</p>
+<ul>
+<li><b>Скриншот</b> алыңыз (телефонда экран суреті), файл атына станцияны жазып мұғалімге WhatsApp-пен жіберіңіз. Формада «скриншот бар» деп белгілеңіз.</li>
+<li>Есептің <b>мазмұны</b> қате деп ойласаңыз (жауабы дұрыс емес, сурет сәйкес емес) — түрі «Қате», есепті сөзбе-сөз көшіріңіз.</li>
+<li>Балаға <b>түсініксіз</b> болғаны (қате емес, бірақ бала не істерін білмеді) — түрі «Түсініксіз болды», бала не деді — соны жазыңыз.</li>
+<li>Бір мәселе бірнеше балада қайталанса — бір мәселе, «Оқушы» жолына «5 бала» деп жазыңыз.</li>
+</ul>
+</div>
+
+<div class="card" id="joq">
+<div class="h">10 · Не істемеу керек</div>
+<ul class="warn">
+<li>Балалардың аккаунтын <b>өшірмеңіз</b>, кезеңін қолмен ауыстырмаңыз — тек мұғалім айтса.</li>
+<li>Мұғалімнің құпия сөзін сұрамаңыз, жазбаңыз; бақылаушы кодын балаларға бермеңіз.</li>
+<li>Балалардың орнына жауап бермеңіз (тесттегі сандар бұзылады). Көрсету керек болса — tester аккаунтын ашыңыз.</li>
+<li>Балалардың аты-жөнін формадан басқа жерге (чат, әлеуметтік желі) жазбаңыз.</li>
+</ul>
+<p class="note noprint" style="margin-top:12px"><a href="#" onclick="document.querySelectorAll('.ck input').forEach(c=>c.checked=false);save();return false">Белгілерді тазалау</a> · <a href="./">бақылау формасына</a></p>
+</div>
+</div>
+<script>
+/* the checkboxes are remembered on this phone only */
+'use strict';
+const K='esep_obs_test_ck';
+function save(){ try{ localStorage.setItem(K,JSON.stringify([...document.querySelectorAll('.ck input')].filter(c=>c.checked).map(c=>c.id))); }catch(e){} }
+try{ const on=new Set(JSON.parse(localStorage.getItem(K)||'[]')); document.querySelectorAll('.ck input').forEach(c=>{ c.checked=on.has(c.id); c.onchange=save; }); }catch(e){}
+</script>
+</body>
+</html>

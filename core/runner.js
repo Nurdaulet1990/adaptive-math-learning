@@ -215,9 +215,19 @@ function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,st
    flag it stays a plain binary search, so WP/FR/PV are unchanged. Why: binary search opens on the middle
    stage, ~50% likely to be failed by design — on AR's 41 stages that is the 8/9 division facts (AR-21)
    as question one, for a child who has never multiplied. See ROUTE_CONVENTION.md §10. */
+/* Where the diagnostic starts (owner, 2026-09-29): a grade-2 child's first question used to come from the
+   MIDDLE of the route — on WP a grade 3–5 stage — because a binary search starts in the middle. Now the first
+   probe is the first station written for the pupil's grade (the grade is the front of the class name, «2 SAMURYQ»);
+   the search then goes up or down from there as before, so a strong pupil is still placed high. A class with
+   no grade, or a grade the route does not reach, starts in the middle as before. */
+function diagFirst(ids){ const s=Core._session&&Core._session(); const m=/^\s*(\d)/.exec((s&&s.klass)||''); if(!m) return null; const g=+m[1];
+  const gr=id=>{ const row=STAGES.find(r=>r[0]===id); const mm=/(\d)\s*[–-]?\s*(\d)?/.exec(String(row&&row[5]||'')); return mm?[+mm[1],+(mm[2]||mm[1])]:null; };
+  let i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]===g; }); if(i<0) i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]<=g&&g<=r[1]; });
+  if(i<0){ const all=ids.map(gr).filter(Boolean); if(all.length&&all.every(r=>r[1]<g)) i=ids.length-1; }
+  return i<0?null:i; }
 function startDiag(again){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
   DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),again:!!again,cur:null,
-      climb:CFG.placement==='climb',step:0,bracketed:false}; nextDiag(); }
+      climb:CFG.placement==='climb',step:0,bracketed:false,first:diagFirst(ids)}; nextDiag(); }
 /* A pupil who rushed the first diagnostic lands far below what they can do and then grinds
    through stages they already own. The re-diagnostic exists for that, and it can only move them
    FORWARD (see finishDiag): a second bad run must not cost a child stages they really passed,
@@ -247,7 +257,8 @@ function nextDiag(){
      raises `lo` or lowers `hi`, so it cannot run forever — the worst case is about 2·log2(stations) + the
      climb, which is roughly 20 questions on AR. The wall clock stays as a valve for an abandoned tab. */
   if(DG.lo>DG.hi||Date.now()-DG.start>30*60000) return finishDiag();
-  const mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
+  let mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
+  if(DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once
   DG.cur=mid;
   const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
