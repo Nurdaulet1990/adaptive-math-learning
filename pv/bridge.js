@@ -36,7 +36,15 @@ function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.
      so the position is recomputed from it rather than trusted. This also self-heals a saved value from
      any future insertion. */
   let u=0; LEVEL_ORDER.forEach((e,i)=>{ if(state.completed[e.levelId]) u=Math.max(u,i+1); });
-  state.unlockedUpTo=Math.min(u,LEVEL_ORDER.length-1);
+  /* The teacher moved the pupil («Кезеңді қолмен қою» on the teacher page). That rewrites the MIRROR — the
+     `stages` rows the map and the portal read — and leaves a `moved` note; `completed`, which is what this app
+     actually runs on, it cannot know about. So the home page showed the new station and the app opened the old
+     one. The note is applied once, here, on the next load: every station before the chosen one counts as done,
+     the chosen one and everything after it is open again — exactly what the teacher's stage rows say. */
+  const mv=R.moved; if(mv&&mv.to&&mv.t!==R.movedApplied){ const ci=LEVEL_ORDER.findIndex(e=>stageId(e.levelId)===mv.to);
+    if(ci>=0){ LEVEL_ORDER.forEach((e,i)=>{ if(i<ci) state.completed[e.levelId]=true; else delete state.completed[e.levelId]; }); u=ci; state.started=true; R.completed=state.completed; R.started=true; }
+    R.movedApplied=mv.t; }
+  state.unlockedUpTo=Math.min(u,LEVEL_ORDER.length-1); R.unlockedUpTo=state.unlockedUpTo;   // mirror() reads R's copy — keep it the healed one
   /* the tester account — see Core.tester in core/core.js. PV counts unlocked levels rather than
      marking each one, so here it is one number. */
   if(Core.tester){ state.unlockedUpTo=LEVEL_ORDER.length-1; state.started=true; } }

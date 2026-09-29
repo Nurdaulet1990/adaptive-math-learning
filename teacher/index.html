@@ -572,7 +572,9 @@ async function patchRoute(id,fn){ const fresh=((await trpc('esep_t_students'))||
 async function setStage(id,stId){ const route=SR||T.route;
   if(!stId){ $('tmsg').textContent='Алдымен кезеңді таңда.'; return; }
   if(!/^[A-Z]{2}-\d{2}$/.test(stId)||!stId.startsWith(route+'-')) { $('tmsg').textContent='Кезең коды: '+route+'-01 түрінде.'; return; }
-  try{ await patchRoute(id,rs=>{ const ids=Object.keys(rs.stages).sort(); if(!ids.includes(stId)) ids.push(stId); ids.sort(); ids.forEach(k=>{ rs.stages[k]=rs.stages[k]||{status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; rs.stages[k].status=k<stId?'passed':(k===stId?'current':'locked'); }); if(!rs.diag) rs.diag={t:Date.now(),placed:stId,results:{},n:0,manual:true}; }); showStudent(id,SR); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
+  try{ await patchRoute(id,rs=>{ const ids=Object.keys(rs.stages).sort(); if(!ids.includes(stId)) ids.push(stId); ids.sort(); ids.forEach(k=>{ rs.stages[k]=rs.stages[k]||{status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; rs.stages[k].status=k<stId?'passed':(k===stId?'current':'locked'); }); if(!rs.diag) rs.diag={t:Date.now(),placed:stId,results:{},n:0,manual:true};
+      rs.moved={to:stId,t:Date.now()};   // PV runs on its own `completed` list, not on these rows: pv/bridge.js applies this note on the pupil's next load
+    }); showStudent(id,SR); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 async function resetDiag(id){ try{ await patchRoute(id,rs=>{ rs.diag=null; Object.keys(rs.stages).forEach(k=>{ rs.stages[k].status='locked'; }); }); showStudent(id,SR); }catch(e){ $('tmsg').textContent='Қате: '+e.message; } }
 /* the class a pupil is in: set once at registration, afterwards only here (supabase/15_klass_lock.sql) */
 function klassOpts(cur){ const names=[...new Set([...(T.classes||[]).filter(c=>c.listed!==false).map(c=>c.name),...(T.rows||[]).map(r=>r.klass).filter(Boolean)])].sort();
