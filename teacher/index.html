@@ -132,7 +132,7 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <script src="../core/pets.js?v=1"></script>
 <script src="../core/core.js?v=23"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="../room/routes.js?v=4"></script>
+<script src="../room/routes.js?v=5"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -193,7 +193,7 @@ const vcell=(n,acc,h)=>{ const [t,c]=verdict(n,acc,h); return `<td style="color:
 const VLEGEND='Қорытынды: <b>Меңгерді</b> — дұрыс ≥80%, кеңес &lt;1 · <b>Кеңеспен</b> — дұрыс, бірақ кеңес ≥2 · <b>Болжайды</b> — дұрыс &lt;50%, кеңесті қолданбайды · <b>Қиналады</b> — дұрыс &lt;60%, кеңес ≥2 · <b>Үйреніп жатыр</b> — аралық · «—» 5 есептен аз.';
 const TABS=[['bugin','Бүгін','<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],['oqu','Оқушылар','<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 14.2c1.8.6 3 2.2 3.4 4.8"/>'],
   ['task','Тапсырма','<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l2 2 4-4M8.5 16h7"/>'],
-  ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>'],['bap','Баптау','<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>']];
+  ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>'],['baq','Бақылау','<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.6"/>'],['bap','Баптау','<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>']];
 /* v3 header: brand, the four tabs, the class chips and «шығу». Tabs live in location.hash (#bugin #oqu #jarys #bap,
    a pupil is #s=<id>), so the browser's back button walks back through them. Before login: brand only. */
 function tbar(sub){ const logged=T&&T.tok;
@@ -226,7 +226,7 @@ function login(note){ const PETS=['🦊','🐻','🦉','🐯','🐢'];
   $('tshow').onclick=()=>{ const on=$('tpin').type==='password'; $('tpin').type=on?'text':'password'; $('tshow').setAttribute('aria-pressed',String(on)); $('tpin').focus(); };
   const go=async()=>{ const v=($('tpin').value||'').trim(); if(!v) return; $('tgo').disabled=true; $('pinMsg').textContent='Тексерілуде…';
     try{ const r=await rpc('esep_t_login',{p_secret:v});
-      if(r&&r.token){ T.tok=r.token; sessionStorage.setItem('esep_tt',r.token); return showTeacher(); }
+      if(r&&r.token){ T.tok=r.token; sessionStorage.setItem('esep_tt',r.token); return render(); }   // the tab in the hash, if any (#baq after the assistant's link)
       $('pinMsg').classList.add('warn'); $('pinMsg').textContent=r&&r.error==='locked'?'Тым көп қате әрекет. 10 минуттан кейін қайталаңыз.':r&&r.error==='not_configured'?'Құпия сөз әлі орнатылмаған (supabase/README).':'Құпия сөз дұрыс емес.'; }
     catch(e){ $('pinMsg').textContent='Базаға қосылу мүмкін болмады.'; }
     $('tgo').disabled=false; };
@@ -702,12 +702,60 @@ async function showRoom(id,keep){ clearTimeout(T.rpoll); if(!T.tok) return login
   if($('rleft')) $('rleft').textContent=num(s.starts_in)>0?Math.ceil(num(s.starts_in)/1000):mmss(s.left);
   if(s.status!=='done') T.rpoll=setTimeout(()=>showRoom(id,true),s.status==='running'?1000:2000); }
 
+/* ── «Бақылау»: the assistant's observation and feedback forms (supabase/17_observations.sql, obs/). The teacher sets
+      the observer code here, gives it with the obs/ link to the assistant, and reads what comes back: one card per
+      lesson (class, devices, login, network, mood, problems) or per feedback sheet, and a count of problems by type
+      over everything — that is the list of what to fix. Every value shown was typed by the assistant: escaped. ── */
+const OBS_ROUTE={WP:'Мәтінді есептер',FR:'Бөлшектер',PV:'Орын мәні',AR:'Көбейту мен бөлу',TE:'Теңдеулер',ROOM:'Жарыс бөлмесі'};
+const OBS_TYPE={bug:'Қате / бағдарлама',confuse:'Түсініксіз',hard:'Тым қиын',easy:'Тым оңай',device:'Құрылғы / интернет',login:'Кіре алмады',other:'Басқа'};
+const OBS_WORD={login:{all:'бәрі кірді',some:'кейбіреуі кіре алмады'},net:{good:'жақсы',some:'кейде үзілді',bad:'нашар / жоқ'},solo:{most:'көбі',half:'жартысы',few:'азы'},
+  device:{phone:'телефон',tablet:'планшет',pc:'компьютер',board:'тақта'},loginwhy:{pin:'PIN ұмытты',name:'аты табылмады',net:'интернет',other:'басқа'}};
+const MOODS={4:'😀',3:'🙂',2:'😐',1:'🙁'};
+const wd=(t,k)=>esc((OBS_WORD[t]||{})[k]||k||'—');
+async function showObs(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const gen=T.view; if(!T.tok) return login(); T.tab='baq';
+  if(location.hash!=='#baq') history.replaceState(null,'','#baq');
+  T.app.innerHTML=tbar()+`<div class="card"><p>Жүктелуде…</p></div>`;
+  let list=[], st=null, missing=false; try{ st=await trpc('esep_t_observer_status'); list=(await trpc('esep_t_observations'))||[]; }catch(e){ if(!T.tok) return; missing=true; }
+  if(gen!==T.view) return;
+  if(missing){ T.app.innerHTML=tbar()+`<div class="card"><h2>Бақылау әлі орнатылмаған</h2><p class="note">Supabase SQL editor-да <b>supabase/17_observations.sql</b> файлын бір рет іске қосыңыз.</p></div>`; return; }
+  const rows=list.filter(o=>o&&o.form&&typeof o.form==='object').filter(o=>!T.klass||(o.klass||'')===T.klass);
+  const url=location.href.replace(/teacher\/.*$/,'obs/');
+  /* problems by type, over every lesson form shown */
+  const byType={}; let nIss=0; rows.forEach(o=>(Array.isArray(o.form.issues)?o.form.issues:[]).forEach(i=>{ const k=String(i&&i.type||'other'); byType[k]=(byType[k]||0)+1; nIss++; }));
+  const issueHTML=i=>`<div style="padding:6px 0;border-top:1px solid var(--line)"><b>${esc(OBS_TYPE[i.type]||i.type||'—')}</b>${i.where?` · ${esc(i.where)}`:''}${i.who?` · <span class="muted">${esc(i.who)}</span>`:''}<br>${esc(i.what||'')}${i.did?`<br><span class="muted">Бақылаушы: ${esc(i.did)}</span>`:''}</div>`;
+  const lesson=o=>{ const f=o.form; const iss=Array.isArray(f.issues)?f.issues:[];
+    return `<div class="card" id="obs${num(o.id)}"><div class="qbar"><span><b>${esc(fmtDT(o.t))}</b> · <span class="chip">${esc(o.klass||'—')}</span> · ${esc(o.author)}</span><span>${MOODS[num(f.mood)]||''} ${iss.length?`<span class="chip gold">${iss.length} мәселе</span>`:''}</span></div>
+      <div class="kv"><span>Бағыт</span><span>${(Array.isArray(f.routes)?f.routes:[]).map(r=>esc(OBS_ROUTE[r]||r)).join(', ')||'—'}</span>
+        <span>Оқушы · мин</span><span>${num(f.n)||'—'} · ${num(f.mins)||'—'}</span>
+        <span>Құрылғы</span><span>${(Array.isArray(f.devices)?f.devices:[]).map(d=>wd('device',d)).join(', ')||'—'}</span>
+        <span>Кіру</span><span>${wd('login',f.login)}${f.login==='some'?` (${num(f.nlogin)}: ${(Array.isArray(f.loginwhy)?f.loginwhy:[]).map(w=>wd('loginwhy',w)).join(', ')||'—'})`:''}</span>
+        <span>Интернет</span><span>${wd('net',f.net)}</span><span>Өз бетімен</span><span>${wd('solo',f.solo)}</span></div>
+      ${f.good?`<p style="margin:8px 0 0"><b>Жақсы өтті:</b> ${esc(f.good)}</p>`:''}
+      ${iss.length?`<div style="margin-top:8px"><b>Мәселелер</b>${iss.map(issueHTML).join('')}</div>`:''}
+      ${f.sugg?`<p style="margin:8px 0 0"><b>Ұсыныс:</b> ${esc(f.sugg)}</p>`:''}
+      <p class="note" style="margin-top:8px"><a href="#" onclick="obsDel(${num(o.id)});return false">өшіру</a></p></div>`; };
+  const feedback=o=>{ const f=o.form; return `<div class="card" id="obs${num(o.id)}"><div class="qbar"><span><b>${esc(fmtDT(o.t))}</b> · <span class="chip good">Пікір</span> · ${esc(o.author)}${f.period?` · ${esc(f.period)}`:''}</span><span>${f.score?'★ '+num(f.score)+'/5':''}</span></div>
+      ${(Array.isArray(f.top)?f.top:[]).length?`<p style="margin:8px 0 0"><b>Ең үлкен мәселелер:</b></p><ol style="margin:4px 0 0 20px">${f.top.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:''}
+      ${[['liked','Ұнағаны'],['disliked','Ұнамағаны'],['teacher','Мұғалімге жетіспейтіні'],['ideas','Ұсыныстар']].map(([k,l])=>f[k]?`<p style="margin:8px 0 0"><b>${l}:</b> ${esc(f[k])}</p>`:'').join('')}
+      <p class="note" style="margin-top:8px"><a href="#" onclick="obsDel(${num(o.id)});return false">өшіру</a></p></div>`; };
+  T.app.innerHTML=tbar('бақылау')+`<div class="card"><h2>Бақылаушы</h2>
+      <p class="note">Көмекші сабақтан кейін телефоннан форма толтырады: <b>${esc(url)}</b>. Оған осы сілтеме мен код керек; сол бетте <a href="${esc(url)}test.html" target="_blank">тестілеу нұсқаулығы</a> бар. ${st&&st.set?'Код қойылған.':'<b>Код әлі қойылмаған</b> — форма жұмыс істемейді.'}</p>
+      <div class="row" style="align-items:center"><input class="big" id="obsCode" placeholder="жаңа код (кемінде 4 таңба)" autocomplete="off" style="flex:1;font-size:1rem;padding:10px"><button class="btn ghost" id="obsSet">Кодты қою</button></div>
+      <p class="note" id="obsMsg" style="margin-top:6px">${esc(msg||'')}</p></div>
+    ${nIss?`<div class="card"><h2>Мәселелер түрі бойынша · ${nIss}</h2><div class="kv">${Object.keys(byType).sort((x,y)=>byType[y]-byType[x]).map(k=>`<span>${esc(OBS_TYPE[k]||k)}</span><span>${byType[k]}</span>`).join('')}</div></div>`:''}
+    ${rows.length?rows.map(o=>o.kind==='feedback'?feedback(o):lesson(o)).join(''):`<div class="card"><p class="note">Әзірге форма келген жоқ${T.klass?' ('+esc(T.klass)+')':''}.</p></div>`}`;
+  $('obsSet').onclick=async()=>{ const v=($('obsCode').value||'').trim(); if(!v){ $('obsMsg').textContent='Кодты жазыңыз.'; return; }
+    try{ const r=await trpc('esep_t_observer_code',{p_code:v}); $('obsMsg').textContent=r&&r.error?'Код 4–40 таңба болсын.':'Код қойылды: '+v+' — көмекшіге беріңіз.'; if(r&&r.set) $('obsCode').value=''; }catch(e){ $('obsMsg').textContent='Қате: '+e.message; } };
+}
+async function obsDel(id){ try{ await trpc('esep_t_obs_delete',{p_id:id}); const el=$('obs'+id); if(el) el.remove(); }catch(e){} }
+
 /* ── v3 router: the hash picks the view ── */
 function render(){ const h=(location.hash||'').slice(1);
   if(h.startsWith('s=')){ const [id,rt]=h.slice(2).split('&r='); return showStudent(decodeURIComponent(id),rt||undefined); }
-  T.tab=['bugin','oqu','task','jarys','bap'].includes(h)?h:'bugin';
+  T.tab=['bugin','oqu','task','jarys','baq','bap'].includes(h)?h:'bugin';
   if(T.tab==='jarys') return showRooms();
   if(T.tab==='task') return showTasks();
+  if(T.tab==='baq') return showObs();
   return showTeacher(); }
 addEventListener('hashchange',render);
 render();

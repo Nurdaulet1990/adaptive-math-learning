@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0E7C9B">
+<link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+<title>Есеп жолы · Бақылау</title>
+<meta name="google" content="notranslate">
+<link rel="stylesheet" href="../core/ui.css?v=20">
+<style>
+/* obs/ — the assistant's forms: a lesson observation after every lesson, a feedback sheet now and then. Filled on a
+   phone in the classroom, so: big controls, chips instead of dropdowns where the choice is short, and a form that
+   is NOT lost when the school wifi drops — it waits in localStorage and goes when the network is back.
+   Sent through public.esep_obs_add with the observer code the teacher set (supabase/17_observations.sql).
+   Owner: platform owner. */
+.f{display:flex;flex-direction:column;gap:14px}
+.f label{display:block;font-weight:800;margin:0 0 6px;font-size:.95rem}
+.f label small{font-weight:600;color:var(--muted)}
+.f input.big,.f select.big,.f textarea{font-size:1.05rem;padding:11px 12px}
+.f textarea{width:100%;min-height:76px;font:inherit;font-size:1.05rem;font-weight:600;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:11px 12px;resize:vertical}
+.f textarea:focus,.f select.big:focus{border-color:var(--rc);outline:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font:inherit;font-weight:800;font-size:.95rem;min-height:42px}
+.chips button[aria-pressed="true"]{background:var(--rc);border-color:var(--rc);color:#fff}
+.chips.mood button{font-size:1.5rem;padding:4px 12px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px} .two>div{min-width:0} .f input[type=datetime-local]{min-width:0;width:100%}
+.issue{border:2px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;position:relative}
+.issue .x{position:absolute;top:8px;right:10px;border:0;background:none;color:var(--muted);font-size:1.3rem;font-weight:800}
+.issue h4{margin:0;font-size:.9rem;color:var(--muted)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;min-height:46px;border:2px solid var(--line);background:var(--card);border-radius:14px;font:inherit;font-weight:800}
+.tabs button[aria-pressed="true"]{background:var(--rc);border-color:var(--rc);color:#fff}
+.ok{background:var(--good-soft,#E6F6EC);color:var(--good);border-radius:14px;padding:12px;font-weight:800}
+.pend{font-size:.85rem;color:var(--gold);font-weight:800}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<script src="../core/core.js?v=23"></script>
+<script>
+'use strict';
+const rpc=Core._rpc, esc=Core.esc, $=id=>document.getElementById(id);
+const ROUTES=[['WP','Мәтінді есептер'],['FR','Бөлшектер'],['PV','Орын мәні'],['AR','Көбейту мен бөлу'],['TE','Теңдеулер'],['ROOM','Жарыс бөлмесі']];
+const ISSUE_TYPES=[['bug','Қате / бағдарлама істемеді'],['confuse','Түсініксіз болды'],['hard','Тым қиын'],['easy','Тым оңай'],['device','Құрылғы / интернет'],['login','Кіре алмады'],['other','Басқа']];
+const ls={get:k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch(e){} }, del:k=>{ try{ localStorage.removeItem(k); }catch(e){} }};
+const S={code:ls.get('esep_obs_code')||'', author:ls.get('esep_obs_author')||'', tab:'lesson', classes:[], issues:[], msg:''};
+const pad2=n=>String(n).padStart(2,'0'); const nowLocal=()=>{ const d=new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
+const app=$('app');
+const chips=(name,list,multi)=>`<div class="chips${name==='mood'?' mood':''}" data-chips="${name}" data-multi="${multi?1:0}">${list.map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="false">${esc(l)}</button>`).join('')}</div>`;
+const picked=name=>[...document.querySelectorAll(`[data-chips="${name}"] button[aria-pressed="true"]`)].map(b=>b.dataset.v);
+const head=`<div class="top"><div class="brand">Есеп жолы<small>Сабақ бақылауы</small></div><span><a href="../" class="muted">портал</a></span></div>`;
+
+/* ── the queue: a form that could not be sent waits here and is retried on load and after every send ── */
+const Q={get:()=>{ try{ return JSON.parse(ls.get('esep_obs_queue')||'[]'); }catch(e){ return []; } }, set:v=>ls.set('esep_obs_queue',JSON.stringify(v))};
+async function send(form){ const r=await rpc('esep_obs_add',{p_code:S.code,p_author:S.author,p_form:form}); if(r&&r.error) throw new Error(r.error); return r; }
+async function flush(){ const q=Q.get(); if(!q.length) return; const left=[]; for(const f of q){ try{ await send(f); }catch(e){ if(e.message==='code'||e.message==='bad_input'){ continue; } left.push(f); } } Q.set(left); }
+
+function login(note){ app.innerHTML=head+`<div class="card"><h2>Бақылаушы</h2>
+    <p class="note">Мұғалім берген кодты және өз атыңызды бір рет жазыңыз — телефон есте сақтайды. Алдымен <a href="test.html">тестілеу нұсқаулығын</a> оқып шығыңыз.</p>
+    <div class="f"><div><label>Атыңыз</label><input class="big" id="au" value="${esc(S.author)}" placeholder="Айгүл"></div>
+    <div><label>Бақылаушы коды</label><input class="big" id="cd" value="${esc(S.code)}" placeholder="код" autocomplete="off"></div>
+    <button class="btn wide" id="go">Кіру</button><p class="note" id="lm">${esc(note||'')}</p></div></div>`;
+  $('go').onclick=()=>{ S.author=($('au').value||'').trim(); S.code=($('cd').value||'').trim(); if(!S.author||!S.code){ $('lm').textContent='Екеуін де толтырыңыз.'; return; }
+    ls.set('esep_obs_author',S.author); ls.set('esep_obs_code',S.code); main(); }; }
+
+async function main(){ if(!S.code||!S.author) return login();
+  if(!S.classes.length){ try{ S.classes=(await rpc('esep_classes',{}))||[]; }catch(e){ S.classes=[]; } }
+  const q=Q.get().length;
+  app.innerHTML=head+`<div class="card"><div class="qbar"><span>Бақылаушы: <b>${esc(S.author)}</b></span><span><a href="test.html" class="muted">тестілеу нұсқаулығы</a> · <a href="#" class="muted" onclick="S.code='';localStorage.removeItem('esep_obs_code');login();return false">кодты ауыстыру</a></span></div>
+    ${q?`<p class="pend">Жіберілмеген ${q} форма күтіп тұр — интернет болғанда өзі кетеді.</p>`:''}
+    <div class="tabs"><button type="button" aria-pressed="${S.tab==='lesson'}" onclick="S.tab='lesson';main()">Сабақ бақылауы</button><button type="button" aria-pressed="${S.tab==='feedback'}" onclick="S.tab='feedback';main()">Пікір</button></div>
+    ${S.tab==='lesson'?lessonForm():feedbackForm()}
+    <div style="height:10px"></div><button class="btn wide gold" id="send">Жіберу</button><p class="note" id="msg" style="margin-top:8px">${S.msg}</p></div>`;
+  S.msg='';
+  document.querySelectorAll('[data-chips] button').forEach(b=>b.onclick=()=>{ const box=b.parentElement; if(box.dataset.multi!=='1') box.querySelectorAll('button').forEach(x=>{ if(x!==b) x.setAttribute('aria-pressed','false'); }); b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true'); });
+  if($('addIssue')) $('addIssue').onclick=()=>{ readIssues(); S.issues.push({}); renderIssues(); };   // keep what is typed in the earlier ones
+  renderIssues();
+  $('send').onclick=submit;
+  flush().then(()=>{ if(Q.get().length!==q) main(); });
+}
+function lessonForm(){ return `<div class="f">
+    <div class="two"><div><label>Күні, уақыты</label><input class="big" type="datetime-local" id="dt" value="${nowLocal()}"></div>
+      <div><label>Сынып</label><select class="big" id="kl"><option value="">—</option>${S.classes.map(c=>`<option>${esc(c)}</option>`).join('')}</select></div></div>
+    <div><label>Қай бағытта жұмыс істеді <small>(бірнешеуін таңдауға болады)</small></label>${chips('routes',ROUTES,true)}</div>
+    <div class="two"><div><label>Оқушы саны</label><input class="big" type="number" inputmode="numeric" id="n" min="1" max="40"></div>
+      <div><label>Ұзақтығы <small>(мин)</small></label><input class="big" type="number" inputmode="numeric" id="mins" min="5" max="90" value="40"></div></div>
+    <div><label>Құрылғы</label>${chips('devices',[['phone','Телефон'],['tablet','Планшет'],['pc','Компьютер'],['board','Интерактивті тақта']],true)}</div>
+    <div><label>Кіру</label>${chips('login',[['all','Бәрі кірді'],['some','Кейбіреуі кіре алмады']],false)}
+      <div class="two" style="margin-top:8px"><div><input class="big" type="number" inputmode="numeric" id="nlogin" min="0" max="40" placeholder="неше оқушы"></div>
+      <div>${chips('loginwhy',[['pin','PIN ұмытты'],['name','аты табылмады'],['net','интернет'],['other','басқа']],true)}</div></div></div>
+    <div><label>Интернет</label>${chips('net',[['good','Жақсы'],['some','Кейде үзілді'],['bad','Нашар / жоқ']],false)}</div>
+    <div><label>Оқушылардың көңіл-күйі</label>${chips('mood',[['4','😀'],['3','🙂'],['2','😐'],['1','🙁']],false)}</div>
+    <div><label>Мұғалімнің көмегінсіз істей алды ма?</label>${chips('solo',[['most','Көбі'],['half','Жартысы'],['few','Азы']],false)}</div>
+    <div><label>Не жақсы өтті?</label><textarea id="good" placeholder="Мысалы: жарыс бөлмесі бәріне ұнады; AR-05 бәрі өзі шығарды"></textarea></div>
+    <div><label>Мәселелер <small>— әрқайсысын бөлек жазыңыз</small></label><div id="issues" class="f"></div><div style="height:8px"></div><button type="button" class="btn ghost sm" id="addIssue">+ Мәселе қосу</button></div>
+    <div><label>Ұсыныс</label><textarea id="sugg" placeholder="Нені өзгерту керек деп ойлайсыз?"></textarea></div>
+  </div>`; }
+function renderIssues(){ const box=$('issues'); if(!box) return;
+  box.innerHTML=S.issues.map((it,i)=>`<div class="issue" data-i="${i}"><button type="button" class="x" data-del="${i}" aria-label="өшіру">×</button><h4>Мәселе ${i+1}</h4>
+      <div><label>Түрі</label><select class="big" data-f="type">${ISSUE_TYPES.map(([v,l])=>`<option value="${v}" ${it.type===v?'selected':''}>${esc(l)}</option>`).join('')}</select></div>
+      <div class="two"><div><label>Оқушы <small>(болса)</small></label><input class="big" data-f="who" value="${esc(it.who||'')}" placeholder="аты"></div>
+        <div><label>Қайда <small>(бағыт, станция)</small></label><input class="big" data-f="where" value="${esc(it.where||'')}" placeholder="AR-05, жарыс…"></div></div>
+      <div><label>Не болды?</label><textarea data-f="what" placeholder="Экранда не көрдіңіз, оқушы не істеді, не күтті">${esc(it.what||'')}</textarea></div>
+      <div><label>Сіз не істедіңіз? <small>(болса)</small></label><input class="big" data-f="did" value="${esc(it.did||'')}" placeholder="бетті жаңарттым, PIN қайтардым…"></div></div>`).join('')||'<p class="note">Мәселе болмаса — бос қалдырыңыз.</p>';
+  box.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ readIssues(); S.issues.splice(+b.dataset.del,1); renderIssues(); }); }
+function readIssues(){ document.querySelectorAll('.issue').forEach(el=>{ const it=S.issues[+el.dataset.i]; if(!it) return; el.querySelectorAll('[data-f]').forEach(f=>{ it[f.dataset.f]=(f.value||'').trim().slice(0,600); }); }); }
+function feedbackForm(){ return `<div class="f">
+    <div><label>Кезең <small>(мысалы «23–27 қыркүйек»)</small></label><input class="big" id="period" placeholder="аптасы"></div>
+    <div><label>Ең үлкен 3 мәселе</label><input class="big" id="p1" placeholder="1."><div style="height:6px"></div><input class="big" id="p2" placeholder="2."><div style="height:6px"></div><input class="big" id="p3" placeholder="3."></div>
+    <div><label>Оқушыларға ең ұнағаны</label><textarea id="liked"></textarea></div>
+    <div><label>Оқушыларға ұнамағаны / қиын болғаны</label><textarea id="disliked"></textarea></div>
+    <div><label>Мұғалімге не жетіспейді? <small>(мұғалім беті, есептер, тапсырма…)</small></label><textarea id="teacher"></textarea></div>
+    <div><label>Ұсыныстар</label><textarea id="ideas"></textarea></div>
+    <div><label>Жалпы баға</label>${chips('score',[['1','1'],['2','2'],['3','3'],['4','4'],['5','5']],false)}</div>
+  </div>`; }
+const val=id=>(($(id)||{}).value||'').trim();
+function collect(){ if(S.tab==='lesson'){ readIssues();
+    return {kind:'lesson',at:val('dt'),klass:val('kl'),routes:picked('routes'),n:+val('n')||null,mins:+val('mins')||null,devices:picked('devices'),login:picked('login')[0]||'',nlogin:+val('nlogin')||0,loginwhy:picked('loginwhy'),
+      net:picked('net')[0]||'',mood:+(picked('mood')[0]||0)||null,solo:picked('solo')[0]||'',good:val('good').slice(0,2000),issues:S.issues.filter(i=>i.what||i.who||i.where),sugg:val('sugg').slice(0,2000)}; }
+  return {kind:'feedback',period:val('period'),top:[val('p1'),val('p2'),val('p3')].filter(Boolean),liked:val('liked').slice(0,2000),disliked:val('disliked').slice(0,2000),teacher:val('teacher').slice(0,2000),ideas:val('ideas').slice(0,2000),score:+(picked('score')[0]||0)||null}; }
+async function submit(){ const f=collect();
+  if(f.kind==='lesson'&&!f.klass){ $('msg').textContent='Сыныпты таңдаңыз.'; return; }
+  if(f.kind==='feedback'&&!f.top.length&&!f.liked&&!f.ideas){ $('msg').textContent='Бірдеңе жазыңыз.'; return; }
+  $('send').disabled=true; $('msg').textContent='Жіберілуде…';
+  try{ await send(f); S.issues=[]; S.msg='<span class="ok">Жіберілді ✓ Рахмет!</span>'; main(); }
+  catch(e){ if(e.message==='code'){ $('msg').textContent='Код дұрыс емес — мұғалімнен сұраңыз.'; $('send').disabled=false; return; }
+    if(e.message==='locked'){ $('msg').textContent='Тым көп қате код. 10 минуттан кейін қайталаңыз.'; $('send').disabled=false; return; }
+    if(e.message==='bad_input'){ $('msg').textContent='Форма тым үлкен — қысқартыңыз.'; $('send').disabled=false; return; }
+    const q=Q.get(); q.push(f); Q.set(q); S.issues=[]; S.msg='<span class="pend">Интернет жоқ — форма сақталды, кейін өзі кетеді.</span>'; main(); } }
+main();
+</script>
+</body>
+</html>

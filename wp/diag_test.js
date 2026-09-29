@@ -1,9 +1,19 @@
 /* wp/diag_test.js — diagnostic (binary search over stages, lvl-3 items) and the 10-item stage test. Owner: Nurdaulet. */
 'use strict';
 let DG=null;
+/* Where the diagnostic starts (owner, 2026-09-29): a grade-2 child's first question used to come from the
+   MIDDLE of the route — on WP a grade 3–5 stage — because a binary search starts in the middle. Now the first
+   probe is the first station written for the pupil's grade (the grade is the front of the class name, «2 SAMURYQ»);
+   the search then goes up or down from there as before, so a strong pupil is still placed high. A class with
+   no grade, or a grade the route does not reach, starts in the middle as before. */
+function diagFirst(ids){ const s=Core._session&&Core._session(); const m=/^\s*(\d)/.exec((s&&s.klass)||''); if(!m) return null; const g=+m[1];
+  const gr=id=>{ const row=STAGES.find(r=>r[0]===id); const mm=/(\d)\s*[–-]?\s*(\d)?/.exec(String(row&&row[5]||'')); return mm?[+mm[1],+(mm[2]||mm[1])]:null; };
+  let i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]===g; }); if(i<0) i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]<=g&&g<=r[1]; });
+  if(i<0){ const all=ids.map(gr).filter(Boolean); if(all.length&&all.every(r=>r[1]<g)) i=ids.length-1; }
+  return i<0?null:i; }
 function startDiag(again){
   const ids=STAGES.map(s=>s[0]).filter(stageL3);
-  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again, cur:null};
+  DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again, cur:null, first:diagFirst(ids)};
   nextDiag();
 }
 /* A pupil who rushed the first diagnostic is parked below what they can do. The re-diagnostic is
@@ -25,7 +35,8 @@ function nextDiag(){
       if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } } }
   /* No question cap — the search is what ends it. Same rule and same reason as core/runner.js. */
   if(DG.lo>DG.hi || Date.now()-DG.start>30*60000){ return finishDiag(); }
-  const mid=Math.floor((DG.lo+DG.hi)/2); const st=DG.ids[mid]; DG.cur=mid;
+  let mid=Math.floor((DG.lo+DG.hi)/2); if(DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once (same as core/runner.js)
+  const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
