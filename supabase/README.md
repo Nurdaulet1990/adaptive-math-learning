@@ -104,6 +104,7 @@ node supabase/test/e2e_challenge.js   # 11 项：两个浏览器各扮一个学�
 node supabase/test/e2e.js    # 22 项：真页面 → 拦截所有 supabase 请求 → 以 anon 角色打到本地库；含恶意 state / 事件、离线、教师页
 node supabase/test/e2e_teacher_print.js   # 20 项：教师页关卡带名称（表格、CSV、学生卡）、整班打印报告（每条路线最高几关附 3 道例题、⚡ 速度关不出题、PV / 未知关卡只列编号、同种子同例题）
 node supabase/test/e2e_pv_placement.js   # 5 项：PV 定位测试的每道题都记为 diag 答题（计入 nAns、进事件表、带正确答案）
+node supabase/test/e2e_pv_move.js        # 8 项：老师在老师页给 PV 学生指定关卡后，PV 进去就是那一关（向前、向后、从未打开过 PV 的学生）
 ```
 
 `test/00_baseline_guess.sql` 是我**猜的**现有表结构，只用于演练，绝不要在线上跑。
