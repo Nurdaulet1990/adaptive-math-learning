@@ -116,7 +116,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await tp.locator('tr', { hasText: 'Айгүл С.' }).first().click(); await tp.waitForSelector('#setst'); await tp.waitForTimeout(500);
   T('teacher: hostile event/state values render as text, nothing executes', (await tp.evaluate(() => window.__xss)) === undefined && (await tp.locator('img').count()) === 0 && /onerror/.test(await tp.locator('#app').innerText()) && !/NaN/.test(await tp.locator('#app').innerText()));
   await pg.query(`update students set state = jsonb_set(state, '{AR}', '{"nAns": 77}'::jsonb) where id=$1`, [me]);   // progress made after the teacher's list was loaded
-  await tp.fill('#setst', 'FR-03'); await tp.getByRole('button', { name: 'Қою' }).click(); await tp.waitForTimeout(1200);
+  await tp.evaluate(() => { document.getElementById('setst').value = 'FR-03'; });   // a select since the stage is picked from a list await tp.getByRole('button', { name: 'Қою' }).click(); await tp.waitForTimeout(1200);
   row = (await pg.query(`select state from students where id=$1`, [me])).rows[0].state;
   T('teacher sets a stage from a stale list: the change lands AND the pupil\'s newer progress elsewhere survives', row.FR.stages['FR-03'].status === 'current' && row.AR && row.AR.nAns === 77 && row._t > Date.now() - 60000, { fr: row.FR.stages['FR-03'], ar: row.AR });
   await tp.fill('#newpin', '2468'); await tp.getByRole('button', { name: 'Сақтау' }).click(); await tp.waitForFunction(() => /Жаңа PIN сақталды/.test(document.getElementById('tmsg').textContent));
