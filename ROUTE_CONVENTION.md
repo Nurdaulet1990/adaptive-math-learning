@@ -299,7 +299,7 @@ because the self-check enforces the default.
 
 The route supplies questions; these rules are the platform's and are identical on every route.
 
-**Per-stage state:** `{status, level, streak, wrong, l3streak, testUnlocked, tests[], seenCard}`.
+**Per-stage state:** `{status, level, streak, wrong, l3streak, testUnlocked, tests[], seenCard, l3win[], cool}`.
 
 **One free retry.** In practice, the first wrong answer on a question (before hint step 5) is not
 graded: the choice greys out, the input clears, and the pupil is told to think again or take a hint.
@@ -313,7 +313,13 @@ cannot answer at hint 5; that step ends the question.)
 **Level down:** 2 wrong answers **with no correct answer between them** → `level--` (min 1), streak
 and the wrong-counter reset, and the teaching card is shown again. Any correct answer clears the
 counter, even a hinted one; reaching hint step 5 does *not* add to it.
-**Test unlocks:** 3 counted-correct in a row *at level 3*.
+**Test unlocks (the gate, `Core.testGate` in core/map.js, 2026-09-30):** on level 3, **at least 8 of the last
+10 practice answers right without a hint** (`l3win`, one entry per level-3 answer, a hinted answer counts as a
+miss) and, after a failed test, **5 more practice answers** (`cool`). The card under the map shows the test button
+grey with what is missing («Тест · 6/8», «Тест · тағы 3 есеп») until then; levels 1–2 show no test button at
+all. `testUnlocked` is kept in step with the gate for older readers. A teacher's task (`?task=X&test=1`), a passed
+station retaken for its stars, and the tester account are not gated. Before this the test was one tap away from
+level 1 and some pupils never practised — they retook it until ten random questions fell their way.
 **Twin item:** after a wrong answer or after seeing the full solution, the next item is labelled
 «ұқсас есеп» and logged as `twin`. Practice already only draws from the stage's own generator, so
 this is a signal to the pupil, not a different question. A level drop cancels it.
@@ -365,7 +371,8 @@ Automatic; the route only has to make sure enough distinct level-3 items exist (
   drawn the test runs short; below 6 it refuses to open.
 - **Pass = `ceil(n × 0.8)`** — 8 of 10 on a full test, but 6 of 7 on a thin stage.
 - Passing marks the stage `passed` and opens the next row. Failing re-locks the test and resets
-  `l3streak`; the level stays at 3, so the pupil practises there and retries.
+  `l3streak` and sets `cool = 5`; the level stays at 3, so the pupil practises there — five more answers, and
+  the last ten still 8 right — and retries.
 - **Stars are a ratio of the best result ever recorded** (pass or fail): ≥100% → ★★★, ≥90% → ★★,
   ≥80% → ★. On a full 10-item test that is 10/10, 9/10, 8/10. A short test is judged by the same
   ratio — 7/7 is three stars, 6/7 is 0.857 and so one — which means a thin stage can never award two.

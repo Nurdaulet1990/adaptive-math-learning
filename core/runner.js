@@ -19,7 +19,7 @@ const routeFigs=()=>(typeof FIGS!=='undefined'&&FIGS)||{};
 function figHTML(f){ if(!f) return ''; if(typeof f==='string') return f; const RF=routeFigs(); if(RF[f.type]) return RF[f.type](f); if(window.renderFig) return renderFig(f.type,f.fp||''); return ''; }
 
 /* ── state ── */
-function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; }); return st; }
+function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false,l3win:[],cool:0}; if(Core.gateMigrate) Core.gateMigrate(st[id]); }); return st; }
 const persist=()=>Core.save(R);
 function log(ev){ if(ev.ev==='answer'){ const a=Object.assign({},ev); delete a.ev; Core.answer(a); } else Core.event(ev); }
 /* every station tappable, no placement test — see Core.tester in core/core.js */
@@ -45,7 +45,7 @@ function showHome(){
   /* a teacher's task (portal → ?task=TE-08 or ?task=TE-08&test=1): open that station at once — even one the
      pupil has not reached, the teacher chose it — then drop the parameter so a reload shows the map */
   { const qp=new URLSearchParams(location.search), tk=qp.get('task');
-    if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk):startPractice(tk); } }
+    if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk,true):startPractice(tk); } }
   const cur=currentStage(); let html=topbar();
   if(!R.diag){ html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Сен қай кезеңнен бастайтыныңды анықтайды: тапқанша сұрайды, сондықтан есеп саны алдын ала белгісіз — көбіне 10–20 есеп. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" id="b_diag">Диагностиканы бастау</button></div>`; }
   else {
@@ -55,7 +55,7 @@ function showHome(){
     const IC=routeIcons(); const rc=CFG.route.toLowerCase();
     html+=Core.map({color:CFG.color||`var(--${rc})`, colorDark:CFG.colorDark||`var(--${rc}-d)`,
       avatar:Core.avatar(), label:CFG.title, go:'Жаттығу',
-      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked}):undefined,
+      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked,gate:Core.testGate?Core.testGate(st):undefined}):undefined,
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:IC[id],
           sub:s.status==='current'?`Деңгей ${s.level}/3 · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
@@ -123,7 +123,7 @@ function finishAnswer(v,btn){
   $('fb').innerHTML=`<div class="fb ${ok?'ok':'no'}">${ok?'Дұрыс! ✓':'Қате. Дұрыс жауабы: '+ansShow}${o.mode==='practice'&&q.expl?`<span class="expl">${esc(q.expl)}</span>`:''}</div>`;
   o.onAnswer(ok);
   if(o.mode==='practice'){ const st=R.stages[PR.stId];
-    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn ${ok?'good':''}" id="nextBtn">${PR.twin&&!ok?'Ұқсас есеп':'Жалғастыру'}</button>${st.testUnlocked?`<button class="btn gold" id="testBtn">Тест</button>`:''}</div>`);
+    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn ${ok?'good':''}" id="nextBtn">${PR.twin&&!ok?'Ұқсас есеп':'Жалғастыру'}</button>${(st.status==='passed'||(Core.testGate?Core.testGate(st).open:st.testUnlocked))?`<button class="btn gold" id="testBtn">Тест</button>`:''}</div>`);
     $('nextBtn').onclick=afterAnswerNav; const tb=$('testBtn'); if(tb) tb.onclick=()=>startTest(PR.stId); }
 }
 
@@ -150,7 +150,7 @@ function nextPractice(){
     sub:PR.isTwin?'ұқсас есеп':stageName(PR.stId),onAnswer:onPracticeAnswer,ladder:true});
 }
 function onPracticeAnswer(ok){
-  const st=R.stages[PR.stId]; const q=PR.q; const counted=ok&&PR.hints<3;
+  const st=R.stages[PR.stId]; const q=PR.q; const counted=ok&&PR.hints<3; const atL3=st.level===3;
   log({ev:'answer',mode:'practice',stage:PR.stId,lvl:st.level,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,type:q.type,...qinfo(q)});
   let msg='';
   if(PR.hints>=5){ st.streak=0; if(st.level===3) st.l3streak=0; PR.twin=true; msg='Енді ұқсас есепті өзің шығар.'; }
@@ -159,9 +159,10 @@ function onPracticeAnswer(ok){
     else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; }
     else { st.streak=0; st.wrong++; if(st.level===3) st.l3streak=0; PR.twin=true; }
     if(st.streak>=3&&st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
-    if(st.level===3&&st.l3streak>=3&&!st.testUnlocked){ st.testUnlocked=true; msg='Кезең тесті ашылды!'; }
     if(st.wrong>=2&&st.level>1){ st.level--; st.wrong=0; st.streak=0; PR.twin=false; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
   }
+  /* the stage-test gate (Core.testGate, core/map.js): every level-3 answer counts, hints included — as a miss */
+  if(atL3&&Core.noteL3){ const was=st.testUnlocked; const g=Core.noteL3(st,ok&&PR.hints===0); if(g.open&&!was) msg='Кезең тесті ашылды!'; }
   persist();
   const fbEl=document.querySelector('.fb'); if(fbEl&&msg){ const d=document.createElement('div'); d.className='hint'; d.innerHTML='<small>Жол</small>'+esc(msg); fbEl.after(d); }
 }
@@ -281,7 +282,10 @@ function finishDiag(){
 }
 
 /* ── stage test ── */
-function startTest(stId){
+function startTest(stId,force){
+  /* the gate (core/map.js): a pupil takes the test when the practice says she is ready; a teacher's task
+     (force), a passed station retaken for its stars, and the tester account go straight in */
+  if(!force&&!Core.tester&&Core.testGate){ const st=R.stages[stId]; if(st&&st.status!=='passed'&&!Core.testGate(st).open) return showHome(); }
   const qs=[]; const seen=new Set(); for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=makeItem(stId,3); if(c&&!seen.has(c.stem+c.ans)) q=c; } if(q){ seen.add(q.stem+q.ans); qs.push(q); } }
   if(qs.length<6){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңге тест есептері жеткіліксіз</h2><button class="btn wide" id="homeBtn">Артқа</button></div>`; $('homeBtn').onclick=showHome; return; }
   TS={stId,qs,i:0,ok:0}; PR={stId,mode:'test'}; nextTest();
@@ -296,7 +300,7 @@ function finishTest(){
   const won=TS.ok>=TS.qs.length?3:TS.ok/TS.qs.length>=0.9?2:TS.ok/TS.qs.length>=0.8?1:0;   // the same rule as Core.mapStars
   let html=topbar()+`<div class="card${pass?' wincard':''}"><h2>${pass?'Кезең өтілді!':'Әзірге өтпеді'}</h2>${pass&&Core.winStars?Core.winStars(won):''}<p>Нәтиже: <b>${TS.ok}/${TS.qs.length}</b> (өту үшін ${need} керек).</p>`;
   if(pass){ st.status='passed'; const i=stageIdx(TS.stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; if(R.stages[nx].status==='locked') R.stages[nx].status='current';   /* re-passing an old station (to earn its stars) must not drag a later, already passed one back to 'current' */ html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; } }
-  else { st.testUnlocked=false; st.l3streak=0; html+=`<p class="note">3-деңгейде тағы жаттығып, қайта тапсыр.</p>`; }
+  else { st.testUnlocked=false; st.l3streak=0; st.cool=(Core.GATE||{cool:5}).cool; html+=`<p class="note">3-деңгейде тағы ${st.cool} есеп жаттығып, қайта тапсыр.</p>`; }
   html+=`<button class="btn wide" id="homeBtn">${pass?'Картаға':'Жалғастыру'}</button></div>`; persist(); TS=null; PR=null; app().innerHTML=html; $('homeBtn').onclick=showHome;
   if(pass&&Core.autoGo) Core.autoGo($('homeBtn'),showHome);   // back to the map on its own, where the pass is played
 }
@@ -308,6 +312,6 @@ window.Runner={
     const pv=new URLSearchParams(location.search).get('preview'); // ?preview=FR-03&lvl=2 → show one generated item (for authors)
     if(pv&&R.stages[pv]){ const lvl=+(new URLSearchParams(location.search).get('lvl')||2); PR={stId:pv,hints:0,step:0}; const q=makeItem(pv,lvl); PR.q=q; PR.t0=Date.now(); renderQuestion(q,{mode:'practice',title:`Алдын ала қарау · ${pv} · L${lvl}`,sub:'preview',onAnswer:()=>{},ladder:true}); $('nextBtn')&&($('nextBtn').onclick=()=>location.reload()); return; }
     showHome(); },
-  home:()=>showHome(), state:()=>R,
+  home:()=>showHome(), state:()=>R, test:(id,force)=>startTest(id,force),
 };
 })();

@@ -174,15 +174,33 @@ function stars(stage){ const t=(stage&&stage.tests)||[]; if(!t.length) return 0;
    stage test once she is on level 3 (or the practice has unlocked it), with the other one next to it, small.
    Buttons carry data-pr / data-test / data-rediag; the route binds them. (2026-09-27: this replaces the map's
    own card, the «Қазіргі станция» card and the hint that said the same things a second time.) */
+/* The stage-test GATE (owner, 2026-09-30). The test used to be one tap away at any level — «Тест (10)» sat on the
+   card from level 1, and `testUnlocked` was written but never read — so some pupils never practised: they retook
+   the test until ten random questions happened to fall their way. It opens now when, on level 3, at least NEED of
+   the last WIN practice answers were right without a hint (the test's own bar, 8 of 10), and, after a failed test,
+   only once COOL more practice answers have been given. Practice is where the learning is; the test confirms it.
+   Every route reads the same rule from here — runner.js for AR/FR/TE, wp/practice.js for WP. */
+const GATE={win:10,need:8,cool:5};
+function testGate(st){ st=st||{}; const w=Array.isArray(st.l3win)?st.l3win:[]; const wins=w.filter(Boolean).length; const cool=Math.max(0,st.cool|0); const level=st.level||1;
+  return {open:level>=3&&wins>=GATE.need&&cool===0, wins, need:GATE.need, cool, level}; }
+/* one level-3 practice answer: `clean` = right without a hint. Returns the gate afterwards. */
+function noteL3(st,clean){ st.l3win=(Array.isArray(st.l3win)?st.l3win:[]).concat(clean?1:0).slice(-GATE.win); if((st.cool|0)>0) st.cool=(st.cool|0)-1; const g=testGate(st); st.testUnlocked=g.open; return g; }
+/* a stage row saved before the gate existed: an unlock earned under the old rule (three in a row) is honoured
+   once, so a pupil who was told «тест ашылды» yesterday still finds it open today. */
+function gateMigrate(st){ if(!st||st.l3win!==undefined) return st; st.l3win=st.testUnlocked?Array(GATE.need).fill(1):[]; st.cool=0; st.testUnlocked=testGate(st).open; return st; }
 function stationAction(o){
-  const lv=o.level||1, testFirst=lv>=3||o.testUnlocked;
+  const lv=o.level||1, g=o.gate||{open:!!o.testUnlocked,wins:0,need:GATE.need,cool:0}, testFirst=g.open;
   const dots=[1,2,3].map(l=>`<i class="${l<lv?'done':l===lv?'on':''}"></i>`).join('');
   const pr=`<button type="button" class="btn${testFirst?' ghost sm':''}" data-pr="${esc(o.id)}">Жаттығу</button>`;
-  const te=`<button type="button" class="btn gold${testFirst?'':' ghost sm'}" data-test="${esc(o.id)}">${testFirst?'Кезең тесті':'Тест (10)'}</button>`;
+  /* level 3, gate shut: the test button is there but grey, and says what is still missing */
+  const te=testFirst?`<button type="button" class="btn gold" data-test="${esc(o.id)}">Кезең тесті</button>`
+    :lv>=3?`<button type="button" class="btn ghost sm" disabled>${g.cool>0?`Тест · тағы ${g.cool} есеп`:`Тест · ${g.wins}/${g.need}`}</button>`:'';
+  const sub=testFirst?'8/10 — келесі станция · 10/10 — ★★★':lv>=3?(g.cool>0?`Тест өтпеді — тағы ${g.cool} есеп жаттығу, сосын қайта`:`Соңғы 10 есептен ${g.need} дұрыс (кеңессіз) → тест ашылады`):'3-деңгейге жеткенде тест ашылады';
   return `<div class="mapgo mg2"><div class="mg-row"><div class="mg-info"><b>${o.n}-станция · ${esc(o.name)}</b>
       <i><span class="dots">${dots}</span> Деңгей ${lv}/3 · қатарынан ${o.streak||0}/3</i></div>${testFirst?te:pr}</div>
-    <div class="mg-sub">${testFirst?pr:te}<span>${testFirst?'8/10 — келесі станция · 10/10 — ★★★':'3-деңгейде тестке дайынсың'}</span>
+    <div class="mg-sub">${testFirst?pr:te}<span>${sub}</span>
       <button type="button" class="mg-link" data-rediag>Тым оңай ма?</button></div></div>`;
 }
 window.Core=window.Core||{}; Core.map=map; Core.mapBind=mapBind; Core.mapScroll=mapScroll; Core.mapStars=stars; Core.stationAction=stationAction;
+Core.GATE=GATE; Core.testGate=testGate; Core.noteL3=noteL3; Core.gateMigrate=gateMigrate;
 })();

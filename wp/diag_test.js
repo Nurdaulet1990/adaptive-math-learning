@@ -61,7 +61,10 @@ function finishDiag(){
 
 /* ── stage test ── */
 let TS=null;
-function startTest(stId){
+function startTest(stId,force){
+  /* the gate (core/map.js): a pupil takes the test when the practice says she is ready; a teacher's task
+     (force), a passed station retaken for its stars, and the tester account go straight in */
+  if(!force&&!Core.tester&&Core.testGate){ const st=R.stages[stId]; if(st&&st.status!=='passed'&&!Core.testGate(st).open) return showHome(); }
   const qs=[]; const used=new Set();
   for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=drawItem(stId,3); if(c&&!used.has(c.id)) q=c; } if(q){ used.add(q.id); qs.push(q); } }
   if(qs.length<6){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңге тест есептері жеткіліксіз</h2><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
@@ -78,7 +81,7 @@ function finishTest(){
   const won=TS.ok>=TS.qs.length?3:TS.ok/TS.qs.length>=0.9?2:TS.ok/TS.qs.length>=0.8?1:0;   // the same rule as Core.mapStars
   let html=topbar()+`<div class="card${pass?' wincard':''}"><h2>${pass?'Кезең өтілді!':'Әзірге өтпеді'}</h2>${pass&&Core.winStars?Core.winStars(won):''}<p>Нәтиже: <b>${TS.ok}/${TS.qs.length}</b> (өту үшін ${need} керек).</p>`;
   if(pass){ st.status='passed'; const i=stageIdx(TS.stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; if(R.stages[nx].status==='locked') R.stages[nx].status='current';   /* re-passing an old station (to earn its stars) must not drag a later, already passed one back to 'current' */ html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; } }
-  else { st.testUnlocked=false; st.l3streak=0; html+=`<p class="note">3-деңгейде тағы жаттығып, қайта тапсыр.</p>`; }
+  else { st.testUnlocked=false; st.l3streak=0; st.cool=(Core.GATE||{cool:5}).cool; html+=`<p class="note">3-деңгейде тағы ${st.cool} есеп жаттығып, қайта тапсыр.</p>`; }
   html+=`<button class="btn wide" id="homeBtn" onclick="showHome()">${pass?'Картаға':'Жалғастыру'}</button></div>`;
   persist(); TS=null; PR=null; app().innerHTML=html;
   if(pass&&Core.autoGo) Core.autoGo(document.getElementById('homeBtn'),showHome);   // back to the map on its own, where the pass is played

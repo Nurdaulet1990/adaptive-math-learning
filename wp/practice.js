@@ -17,7 +17,7 @@ function nextPractice(){
     sub:twin?'ұқсас есеп':stageName(PR.stId),onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
-  const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3;
+  const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3; const atL3=st.level===3;
   log({ev:'answer',mode:'practice',stage:PR.stId,lvl:st.level,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)});
   let msg='';
   if(PR.hints>=5){ st.streak=0; if(st.level===3) st.l3streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
@@ -26,9 +26,10 @@ function onPracticeAnswer(ok){
     else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; if(PR.isTwin&&PR.hints<4) PR.twinOf=null; }
     else { st.streak=0; st.wrong++; if(st.level===3) st.l3streak=0; if(q.tpl) PR.twinOf=q.tpl; }
     if(st.streak>=3 && st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
-    if(st.level===3 && st.l3streak>=3 && !st.testUnlocked){ st.testUnlocked=true; msg='Кезең тесті ашылды!'; }
     if(st.wrong>=2 && st.level>1){ st.level--; st.wrong=0; st.streak=0; PR.twinOf=null; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
   }
+  /* the stage-test gate (Core.testGate, core/map.js): every level-3 answer counts, hints included — as a miss */
+  if(atL3&&Core.noteL3){ const was=st.testUnlocked; const g=Core.noteL3(st,ok&&PR.hints===0); if(g.open&&!was) msg='Кезең тесті ашылды!'; }
   persist();
   const fbEl=document.querySelector('.fb'); if(fbEl&&msg){ const d=document.createElement('div'); d.className='hint'; d.innerHTML='<small>Жол</small>'+esc(msg); fbEl.after(d); }
 }
