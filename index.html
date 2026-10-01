@@ -177,8 +177,8 @@
 <body>
 <div id="app" class="app"></div>
 <script src="core/pets.js?v=1"></script>
-<script src="core/core.js?v=23"></script>
-<script src="room/routes.js?v=6"></script>
+<script src="core/core.js?v=24"></script>
+<script src="room/routes.js?v=7"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
 (async function(){
@@ -266,6 +266,13 @@
      Сынып: the class board. The tab lives in location.hash, so the phone's back button walks back through
      tabs and a link can open one (#synyp). Everything is still one page and one request set, as before. */
   let T1='', T2='', T3='', T4='';
+  /* today's review (core.js reviewPlan): compulsory, so it comes first — the routes themselves show it instead of
+     their map until it is done */
+  if(Core.reviewPending&&Core.reviewPending()){ const rv=Core.reviewPlan();
+    T1+=`<div class="card tk" style="--rc:var(--gold);--rc-d:var(--gold-d)"><div class="tk-top"><span class="tk-tag">Бүгінгі қайталау</span></div>
+      <div class="tk-what">${rv.items.length*rv.per} есеп — өткен станциялардан</div><div class="tk-st">Жаңа станцияға дейін · 3–4 минут</div>
+      <a class="btn wide tk-go" href="review/">Бастау</a></div>`; }
+  else if(state._review&&state._review.done&&state._review.n){ const rv=state._review; T1+=`<p class="note" style="margin:0 0 8px">✓ Бүгінгі қайталау: ${rv.ok}/${rv.n}</p>`; }
   T1+=`<div id="tasks"></div>`;   // the teacher's tasks, filled from esep_my_tasks below (16_tasks.sql)
   if(r){ const rc=r.code.toLowerCase();
     T1+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>

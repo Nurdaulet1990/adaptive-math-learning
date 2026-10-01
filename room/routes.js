@@ -17,14 +17,14 @@
    be read, from the generated pv/stages.js). */
 (function(){
   'use strict';
-  const V='4';                                   // BUMP whenever ANY route's stages / figs / generators change: two devices holding
+  const V='5';                                   // BUMP whenever ANY route's stages / figs / generators change: two devices holding
                                                  // different cached copies would build different sheets from the same seed
   const ROOT=(document.currentScript&&document.currentScript.src||'').replace(/room\/routes\.js.*$/,'');
-  const FILES=Object.assign(Object.create(null),{ AR:['stages.js','figs.js','figs2.js','generate.js','generate2.js'], FR:['stages.js','figs.js','generate.js'],
+  const FILES=Object.assign(Object.create(null),{ AR:['stages.js','figs.js','figs2.js','generate.js','generate2.js'], FR:['stages.js','figs.js','bank.js','util.js','generate.js','generate2.js'],   // FR's generators live in TWO files (generate2.js: part, part_of, frspeed …) — missing here until 2026-10-01, so every FR station from FR-08 on produced nothing in a room, in the printed report and in the review
                 TE:['stages.js','figs.js','generate.js'], WP:['stages.js','bank.js','generate.js'] });
   const FOLDER={AR:'ar',FR:'fr',TE:'te',WP:'wp'};
   const NAMES={AR:'ar',FR:'fr',TE:'te',WP:'wp',PV:'pv'};   // routes with a stages.js to read NAMES from: PV's is generated (pv/stages_gen.js), names only
-  const NO_ROOM=new Set(['speed']);              // a whole timed drill inside one "question" — it is a game of its own
+  const NO_ROOM=new Set(['speed','frspeed']);              // a whole timed drill inside one "question" — it is a game of its own
   const FAST=new Set(['table','divfact']);       // recall facts: ten of them, three minutes
   const cache=Object.create(null), names=Object.create(null);
 

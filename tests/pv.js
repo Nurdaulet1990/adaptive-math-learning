@@ -23,8 +23,12 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
 const html = fs.readFileSync(path.join(ROOT, 'pv/index.html'), 'utf8')
   .replace(/<script src="discs\.js[^"]*"><\/script>/,
            '<script>' + fs.readFileSync(path.join(ROOT, 'pv/discs.js'), 'utf8') + '</script>')
+  .replace(/<script src="facts\.js[^"]*"><\/script>/,
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/facts.js'), 'utf8') + '</script>')
   .replace(/<script src="fluency\.js[^"]*"><\/script>/,
-           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/fluency.js'), 'utf8') + '</script>');
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/fluency.js'), 'utf8') + '</script>')
+  .replace(/<script src="modtest\.js[^"]*"><\/script>/,
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/modtest.js'), 'utf8') + '</script>');
 const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.org/pv/', pretendToBeVisual: true });
 const w = dom.window;
 w.addEventListener('error', () => {});

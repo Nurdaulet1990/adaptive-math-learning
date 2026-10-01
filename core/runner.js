@@ -46,6 +46,7 @@ function showHome(){
      pupil has not reached, the teacher chose it — then drop the parameter so a reload shows the map */
   { const qp=new URLSearchParams(location.search), tk=qp.get('task');
     if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk,true):startPractice(tk); } }
+  if(Core.reviewGate&&R.diag&&Core.reviewGate(app(),topbar())) return;   // today's review first (core.js), once the pupil is placed
   const cur=currentStage(); let html=topbar();
   if(!R.diag){ html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Сен қай кезеңнен бастайтыныңды анықтайды: тапқанша сұрайды, сондықтан есеп саны алдын ала белгісіз — көбіне 10–20 есеп. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" id="b_diag">Диагностиканы бастау</button></div>`; }
   else {

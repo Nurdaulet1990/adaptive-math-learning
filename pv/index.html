@@ -699,7 +699,7 @@ h1,h2,h3,h4 { font-family: 'Fredoka', sans-serif; text-wrap: balance; }
 </div>
 
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=23"></script>
+<script src="../core/core.js?v=24"></script>
 <!-- the DM disc chart with the exchange drawn; genOps uses it from three digits up -->
 <script src="discs.js?v=2"></script>
 <script>
@@ -867,6 +867,10 @@ const FLU_LVL = new Set(MODULES.flatMap(m => m.levels.filter(l => l.flu).map(l =
 function getLevelGlobalIndex(levelId) {
   return LEVEL_ORDER.findIndex(x => x.levelId === levelId);
 }
+/* The next level still to do, from position i on. A level can be reopened after it was passed (a module test,
+   pv/modtest.js, sends a pupil back to the level she missed), so «next» is the first gap in `completed`, not
+   simply i. (2026-10-01) */
+function nextOpenIdx(i) { for (let k = Math.max(0, i); k < LEVEL_ORDER.length; k++) if (!state.completed[LEVEL_ORDER[k].levelId]) return k; return LEVEL_ORDER.length - 1; }
 /* The placement ladder walks the PARENTS only. A twin asks its parent's question word for word, so
    probing both spends a rung to learn nothing — and with twins in, a 48-rung ladder had become 76. The
    result is translated back to a LEVEL_ORDER position at the end, where the unlocking happens, so the
@@ -2942,8 +2946,8 @@ function showLevelComplete(ws) {
     // Unlock next level
     const curIdx = getLevelGlobalIndex(state.level);
     if(curIdx < LEVEL_ORDER.length - 1 && state.unlockedUpTo <= curIdx) {
-      state.unlockedUpTo = curIdx + 1;
-      const nextEntry = LEVEL_ORDER[curIdx + 1];
+      state.unlockedUpTo = nextOpenIdx(curIdx + 1);
+      const nextEntry = LEVEL_ORDER[state.unlockedUpTo];
       const nextMod = MODULES.find(m=>m.id===nextEntry.moduleId);
       const nextLvl = nextMod.levels.find(l=>l.id===nextEntry.levelId);
       unlockMsg = `<p style="font-size:14px;color:var(--success);margin-top:8px">🔓 Жаңа деңгей ашылды: ${nextMod.icon} ${nextLvl.name}</p>`;
@@ -2975,7 +2979,7 @@ window.goNextLevel = function() {
   // Use global ordering
   const curIdx = getLevelGlobalIndex(state.level);
   if(curIdx < LEVEL_ORDER.length - 1) {
-    const next = LEVEL_ORDER[curIdx + 1];
+    const next = LEVEL_ORDER[nextOpenIdx(curIdx + 1)];
     selectLevel(next.moduleId, next.levelId);
   } else {
     state.module = null;
@@ -2990,7 +2994,9 @@ renderSidebar();
 renderMain();
 </script>
 <div id="app"></div>
+<script src="facts.js?v=1"></script>
 <script src="fluency.js?v=1"></script>
-<script src="bridge.js?v=24"></script>
+<script src="modtest.js?v=1"></script>
+<script src="bridge.js?v=25"></script>
 </body>
 </html>
