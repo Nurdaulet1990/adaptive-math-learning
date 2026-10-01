@@ -268,7 +268,7 @@
       host.innerHTML=`<div class="top"><div class="brand">Есеп жолы<small>Математика · 1–5 сынып</small></div><div class="who">${langLinks()}</div></div>
       <div class="card"><h1>Сәлем!</h1><p>Атыңды және 4 таңбалы PIN кодыңды жаз. Бірінші рет кірсең — PIN-ді өзің ойлап тап және есте сақта.</p>
       <input class="big" id="c_nm" placeholder="Аты-жөні (мысалы: Айгүл С.)" autocomplete="off">
-      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сынып (тек бірінші рет)</option></select></div>
+      <div style="height:8px"></div><div class="row"><input class="big" id="c_pin" inputmode="numeric" maxlength="4" placeholder="PIN (4 сан)" autocomplete="off" style="flex:1"><select class="big" id="c_kl" style="flex:1"><option value="">Сыныбың</option></select></div>
       <div id="c_codebox" style="display:none"><div style="height:8px"></div><input class="big" id="c_code" placeholder="Мектеп коды" autocomplete="off" autocapitalize="off"></div>
       <div style="height:12px"></div><p class="note" style="margin:0 0 6px">Жолда сені кім ертіп жүреді?</p>
       <div class="avarow" id="c_ava">${AVATARS.map(a=>`<button type="button" class="ava${a===avatar()?' on':''}" data-a="${a}" aria-label="${petName(a)}">${petSVG(a,{head:true,size:38})}</button>`).join('')}</div>
@@ -280,12 +280,14 @@
       /* The class is chosen, never typed: one child's «5 БАРЫС» and another's «БАРЫС5» used to be two classes,
          which split every class board into groups of one. The list is the teacher's, from esep_classes(). */
       rpc('esep_classes',{}).then(list=>{ const sel=$('c_kl'); if(!sel||!Array.isArray(list)||!list.length) return;
-        sel.innerHTML='<option value="">Сынып (тек бірінші рет)</option>'+klassOptions(list);   // an existing pupil\'s class is kept by the server (15_klass_lock.sql); only the teacher moves her
-        const last=ls.get('esep_klass'); if(last&&list.indexOf(last)>=0) sel.value=last;
+        sel.innerHTML='<option value="">Сыныбың</option>'+klassOptions(list);   // an existing pupil\'s class is kept by the server (15_klass_lock.sql); only the teacher moves her
+        /* chosen on EVERY login, and never pre-filled (18_login_klass.sql, 2026-10-01): the class is what tells two
+           children with the same name apart, and on a classroom tablet the last pupil's class is usually the wrong one */
       }).catch(()=>{});
       async function go(){
         const name=($('c_nm').value||'').trim().replace(/\s+/g,' '), pin=($('c_pin').value||'').trim(), klass=($('c_kl').value||'').trim().toUpperCase();
         if(!name) return msg('Атыңды жаз.'); if(!/^\d{4}$/.test(pin)) return msg('PIN — 4 сан болу керек.');
+        if(!klass&&$('c_kl').options.length>1) return msg('Сыныбыңды таңда.');
         $('c_go').disabled=true; msg('Қосылып жатыр…');
         try{
           const r=await rpc('esep_login',{p_name:name,p_pin:pin,p_klass:klass,p_code:($('c_code').value||'').trim()});
@@ -295,13 +297,15 @@
             return msg(r.error==='pin'?'Бұл атпен оқушы бар, бірақ PIN басқа. PIN-ді тексер немесе атыңа тегіңнің әрпін қос.'
                       :r.error==='locked'?'Қате PIN тым көп терілді. 10 минуттан кейін қайтала немесе мұғалімге айт.'
                       :r.error==='klass'?'Сыныпты тізімнен таңда. Тізімде жоқ болса — мұғалімге айт.'
+                      :r.error==='klass_needed'?'Сыныбыңды таңда.'
+                      :r.error==='klass_wrong'?'Бұл сыныпта мұндай оқушы жоқ — сыныбыңды тексер. Бірінші рет кірсең, атыңа тегіңнің бірінші әрпін қос (мысалы: Аружан С.).'
                       :'Атың мен 4 санды PIN-ді тексер.'); }
           finish(r.student,r.token);
         }catch(e){ console.error(e); $('c_go').disabled=false; msg('Қосылу мүмкін болмады. Интернетті тексер де, қайта бас.'); }
       }
       function finish(row,token){ session={id:row.id,name:row.name,klass:row.klass||'',token}; ls.set(SESSION_KEY,session); const kn=ls.get('esep_known_v1')||{}; kn[row.id]={id:row.id,name:row.name}; ls.set('esep_known_v1',kn); resolve(row); }
       $('c_ava').onclick=e=>{ const b=e.target.closest('button[data-a]'); if(!b) return; pickAva=b.dataset.a; ls.set('esep_ava',pickAva); $('c_ava').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); };
-      $('c_go').onclick=go; $('c_pin').onkeydown=e=>{ if(e.key==='Enter') go(); }; $('c_kl').onchange=()=>ls.set('esep_klass',$('c_kl').value);
+      $('c_go').onclick=go; $('c_pin').onkeydown=e=>{ if(e.key==='Enter') go(); };
       /* "was here before" is a shortcut for typing the name — the PIN is still asked, so a classmate can't walk in */
       const kb=$('c_known'); if(kb) kb.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; $('c_nm').value=b.textContent; $('c_pin').value=''; $('c_pin').focus(); msg('PIN кодыңды жаз.'); };
       setTimeout(()=>{ const i=$('c_nm'); if(i) i.focus(); },50);

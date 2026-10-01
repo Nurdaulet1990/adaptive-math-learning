@@ -38,7 +38,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 
   // 1 ─ a pupil who has done the first three PV levels
   const page = await ctx.newPage(); page.on('pageerror', e => errs.push('pv: ' + e.message));
-  await page.goto(B + 'pv/'); await page.waitForSelector('#c_nm'); await page.fill('#c_nm', 'Айару М.'); await page.fill('#c_pin', '1111'); await page.click('#c_go'); await page.waitForSelector('#pvdiag', { timeout: 15000 });
+  await page.goto(B + 'pv/'); await page.waitForSelector('#c_nm'); await page.fill('#c_nm', 'Айару М.'); await page.fill('#c_pin', '1111'); await page.waitForFunction(() => document.getElementById('c_kl').options.length > 1, null, { timeout: 5000 }).catch(() => {}); await page.selectOption('#c_kl', '2А').catch(() => {}); await page.click('#c_go'); await page.waitForSelector('#pvdiag', { timeout: 15000 });
   await page.evaluate(() => { state.started = true; LEVEL_ORDER.slice(0, 3).forEach(e => { state.completed[e.levelId] = true; }); state.unlockedUpTo = 3; saveProgress(); }); await page.waitForTimeout(2500);
   let st = (await pg.query(`select state->'PV' s from students where name='Айару М.'`)).rows[0].s;
   const fourth = await page.evaluate(() => 'PV-' + String(stageNo(LEVEL_ORDER[3].levelId)).padStart(2, '0'));
@@ -69,7 +69,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   await teacherMove(tp, 'Бекзат Қ.', 'PV-06');
   const ctx2 = await browser.newContext({ viewport: { width: 420, height: 900 } }); await ctx2.route(/supabase\.co/, backend); await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   const p2 = await ctx2.newPage(); p2.on('pageerror', e => errs.push('pv2: ' + e.message));
-  await p2.goto(B + 'pv/'); await p2.waitForSelector('#c_nm'); await p2.fill('#c_nm', 'Бекзат Қ.'); await p2.fill('#c_pin', '2222'); await p2.click('#c_go'); await p2.waitForTimeout(3000);
+  await p2.goto(B + 'pv/'); await p2.waitForSelector('#c_nm'); await p2.fill('#c_nm', 'Бекзат Қ.'); await p2.fill('#c_pin', '2222'); await p2.waitForFunction(() => document.getElementById('c_kl').options.length > 1, null, { timeout: 5000 }).catch(() => {}); await p2.selectOption('#c_kl', '2А').catch(() => {}); await p2.click('#c_go'); await p2.waitForTimeout(3000);
   s = await pvState(p2); const i6 = await idxOf(p2, 6);
   T('a pupil placed by the teacher before ever opening PV starts at PV-06, without the placement test', s.curNo === 6 && s.done === i6 && s.started === true && /Қайта/.test(await p2.locator('#pvdiag').innerText()), Object.assign(s, { i6, diag: await p2.locator('#pvdiag').innerText() }));   // the button offers a RE-test, not the first one
   T('no page errors', errs.length === 0, errs);
