@@ -221,7 +221,9 @@ function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,st
    MIDDLE of the route — on WP a grade 3–5 stage — because a binary search starts in the middle. Now the first
    probe is the first station written for the pupil's grade (the grade is the front of the class name, «2 SAMURYQ»);
    the search then goes up or down from there as before, so a strong pupil is still placed high. A class with
-   no grade, or a grade the route does not reach, starts in the middle as before. */
+   no grade, or a grade the route does not reach, starts in the middle as before. A CLIMB (AR, TE) does not use it:
+   it starts on the easiest station for every grade — the whole point of the climb (owner, 2026-10-01: a grade-3 class
+   met the ×3 table as question one). */
 function diagFirst(ids){ const s=Core._session&&Core._session(); const m=/^\s*(\d)/.exec((s&&s.klass)||''); if(!m) return null; const g=+m[1];
   const gr=id=>{ const row=STAGES.find(r=>r[0]===id); const mm=/(\d)\s*[–-]?\s*(\d)?/.exec(String(row&&row[5]||'')); return mm?[+mm[1],+(mm[2]||mm[1])]:null; };
   let i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]===g; }); if(i<0) i=ids.findIndex(id=>{ const r=gr(id); return r&&r[0]<=g&&g<=r[1]; });
@@ -229,7 +231,7 @@ function diagFirst(ids){ const s=Core._session&&Core._session(); const m=/^\s*(\
   return i<0?null:i; }
 function startDiag(again){ const ids=STAGES.map(s=>s[0]).filter(stageHasContent);
   DG={ids,lo:0,hi:ids.length-1,n:0,results:{},per:{},start:Date.now(),again:!!again,cur:null,
-      climb:CFG.placement==='climb',step:0,bracketed:false,first:diagFirst(ids)}; nextDiag(); }
+      climb:CFG.placement==='climb',step:0,bracketed:false,first:CFG.placement==='climb'?null:diagFirst(ids)}; nextDiag(); }   // a climb (AR, TE) starts on the easiest station, whatever the grade (owner, 2026-10-01)
 /* A pupil who rushed the first diagnostic lands far below what they can do and then grinds
    through stages they already own. The re-diagnostic exists for that, and it can only move them
    FORWARD (see finishDiag): a second bad run must not cost a child stages they really passed,
@@ -259,8 +261,12 @@ function nextDiag(){
      raises `lo` or lowers `hi`, so it cannot run forever — the worst case is about 2·log2(stations) + the
      climb, which is roughly 20 questions on AR. The wall clock stays as a valve for an abandoned tab. */
   if(DG.lo>DG.hi||Date.now()-DG.start>30*60000) return finishDiag();
-  let mid=(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
-  if(DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once
+  /* A probe is two items of ONE station: while it is open, the second item comes from the same station. The search
+     used to be recomputed for every item, which is the same station — except for the grade's first probe: its
+     second item came from wherever the search would have started instead, so the grade's station was asked once and
+     never decided, and a grade-3 pupil on AR got one ×3 question and then the climb from station 1 (2026-10-01). */
+  let mid=DG.cur!=null?DG.cur:(DG.climb&&!DG.bracketed)?Math.min(DG.lo+DG.step,DG.hi):Math.floor((DG.lo+DG.hi)/2);
+  if(DG.cur==null&&DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once
   DG.cur=mid;
   const st=DG.ids[mid]; if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=makeItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }

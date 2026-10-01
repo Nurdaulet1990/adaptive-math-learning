@@ -35,7 +35,8 @@ function nextDiag(){
       if(p.ok===2){ DG.results[st]='pass'; DG.lo=mid+1; } else { DG.results[st]='fail'; DG.hi=mid-1; } } }
   /* No question cap — the search is what ends it. Same rule and same reason as core/runner.js. */
   if(DG.lo>DG.hi || Date.now()-DG.start>30*60000){ return finishDiag(); }
-  let mid=Math.floor((DG.lo+DG.hi)/2); if(DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once (same as core/runner.js)
+  /* while a probe is open its second item comes from the same station — see core/runner.js (2026-10-01) */
+  let mid=DG.cur!=null?DG.cur:Math.floor((DG.lo+DG.hi)/2); if(DG.cur==null&&DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once (same as core/runner.js)
   const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
