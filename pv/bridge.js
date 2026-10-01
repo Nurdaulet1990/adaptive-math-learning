@@ -37,6 +37,16 @@ function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.
      any future insertion. */
   /* …and it is the FIRST GAP, not «the last done + 1»: a module test (pv/modtest.js) reopens a level the pupil
      missed by clearing its `completed`, and that level — not the test — is where she continues. (2026-10-01) */
+  /* The fluency ladder (2026-10-01) replaced the six within-20 add/sub levels, and their passes were NOT carried
+     over — so with «the first gap» above, every pupil who had passed them was sent back to its first rung, f1 «+1»:
+     a whole grade-2 class on the same station the morning after (owner: «二年级的全班都被设定到了同一个等级»). Owner's
+     decision: back to where they were. Once per pupil, a retired level that was passed counts its ladder rungs as
+     passed (no stars — they were not earned there); the daily review then asks those facts timed, which is where
+     a pupil who still counts on her fingers shows. Once only: a module test may reopen a rung later, and that must
+     stick. */
+  if(!R.fluCarry){ const CARRY={a1:['f1','f2','f3','f4'],s1:['fs1','fs2','fs3'],a20n:['f20n'],a2:['fd','f9','f87'],s20n:['fs20n'],s20b:['fsd','fs98','fsr']};
+    let n=0; Object.keys(CARRY).forEach(old=>{ if(state.completed[old]||state.completed[old+'_n']) CARRY[old].forEach(lv=>{ if(!state.completed[lv]){ state.completed[lv]=true; n++; } }); });
+    R.fluCarry=Date.now(); if(n){ R.completed=state.completed; } }
   let u=LEVEL_ORDER.findIndex(e=>!state.completed[e.levelId]); if(u<0) u=LEVEL_ORDER.length-1;
   /* The teacher moved the pupil («Кезеңді қолмен қою» on the teacher page). That rewrites the MIRROR — the
      `stages` rows the map and the portal read — and leaves a `moved` note; `completed`, which is what this app
