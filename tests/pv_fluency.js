@@ -83,7 +83,7 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
   // ── 4 · the placement ladder asks the fluency levels their own facts ──
   { const { page, ctx, errs } = await open({ PV: { completed: {}, started: false, unlockedUpTo: 0, stages: {} } });
     const qs = await page.evaluate(() => ['f1', 'fs2', 'f20n', 'fsr', 'f87'].map(lv => genPlacementQ(lv)));
-    T('placement questions for f1/fs2/f20n/fsr/f87 are their facts, not the fallback', qs.every(q => /^\d+ [+−] \d+ = \?$/.test(q.q) && Number.isInteger(q.answer)) && !qs.some(q => q.q === '1 + 1 = ?'), qs);
+    T('placement questions for f1/fs2/f20n/fsr/f87 are their facts, not the fallback', qs.every(q => /^\d+ [+−] \d+ = \?$/.test(q.q) && Number.isInteger(q.answer)) && qs.every(q => q.sub === 'Fluency'), qs);
     T('no page errors', errs.length === 0, errs); await ctx.close(); }
 
   await browser.close(); srv.close();

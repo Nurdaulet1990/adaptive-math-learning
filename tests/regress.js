@@ -11,7 +11,9 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
   const srv = http.createServer((q, s) => { let f = path.join(ROOT, decodeURIComponent(q.url.split('?')[0])); if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
     fs.readFile(f, (e, b) => e ? (s.writeHead(404), s.end()) : (s.writeHead(200, { 'content-type': MIME[path.extname(f)] || 'application/octet-stream' }), s.end(b))); }).listen(8767);
   const browser = await chromium.launch();
+  const today = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   async function open(url, state, klass = '3А') { const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } }); const page = await ctx.newPage(); const posted = [];
+    if (state && !state._review) state._review = { day: today(new Date()), items: [], per: 2, done: true, ok: 0, n: 0, t: null };   // today's review already done — otherwise the daily review (core.js) stands where the map should be
     await ctx.route(/supabase\.co/, r => { const q = r.request(); if (q.method() === 'GET' || /rpc\/esep_resume/.test(q.url())) { const row = { id: 's1', name: 'Сынақ О.', klass, state, time_ms: 0 }; return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(/rpc\//.test(q.url()) ? row : [row]) }); }
       try { posted.push(JSON.parse(q.postData() || 'null')); } catch (e) {} return r.fulfill({ status: 200, contentType: 'application/json', body: /esep_save/.test(q.url()) ? 'true' : /esep_events/.test(q.url()) ? '1' : 'null' }); });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
@@ -131,14 +133,22 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
   // ── the diagnostic starts at the pupil's grade (owner 2026-09-29: a grade-2 child's first question came from the middle of the route) ──
   const firstProbe = async (url, klass, click) => { const { page, ctx } = await open(url, {}, klass); await page.waitForSelector(click); await page.click(click);
     await page.waitForFunction(() => window._Q && window._Q.q); const st = await page.evaluate(() => window._Q.o.sub); await ctx.close(); return st; };
-  T('AR, class «3 QYRAN»: the first diagnostic probe is the first grade-3 station (AR-09), not the middle', await firstProbe('ar/', '3 QYRAN', '#b_diag') === 'AR-09', await firstProbe('ar/', '3 QYRAN', '#b_diag'));
+  /* 2026-10-01: a climb (AR, TE) starts on the easiest station for every grade — a grade-3 class met the ×3 table as question one */
+  T('AR, class «3 QYRAN»: the climb starts at AR-01 whatever the grade', await firstProbe('ar/', '3 QYRAN', '#b_diag') === 'AR-01', await firstProbe('ar/', '3 QYRAN', '#b_diag'));
+  T('AR, class «4 QYRAN»: AR-01 too (it used to be AR-27, three-digit column multiplication)', await firstProbe('ar/', '4 QYRAN', '#b_diag') === 'AR-01');
   T('AR, class «2 SAMURYQ»: first probe AR-01 (the first grade-2 station)', await firstProbe('ar/', '2 SAMURYQ', '#b_diag') === 'AR-01');
   T('AR, class «БАРЫС» (no grade): the climb starts at AR-01, as before', await firstProbe('ar/', 'БАРЫС', '#b_diag') === 'AR-01');
   T('FR, class «БАРЫС» (no grade): the middle of the route, as before', await firstProbe('fr/', 'БАРЫС', '#b_diag') === 'FR-25');
   T('FR, class «4 QYRAN»: the first grade-4 station', /^FR-/.test(await firstProbe('fr/', '4 QYRAN', '#b_diag')) && (await firstProbe('fr/', '4 QYRAN', '#b_diag')) !== 'FR-25');
   T('WP, class «2 SAMURYQ»: WP-03, the first grade-2 station', await firstProbe('wp/', '2 SAMURYQ', 'button[onclick="startDiag()"]') === 'WP-03');
   T('WP, class «5 QYRAN» (no station starts at grade 5): the first station whose range reaches grade 5 (WP-06)', await firstProbe('wp/', '5 QYRAN', 'button[onclick="startDiag()"]') === 'WP-06');
-  T('TE, class «3А» (a grade with no space): TE-… the first grade-3 station', /^TE-/.test(await firstProbe('te/', '3А', '#b_diag')) && (await firstProbe('te/', '3А', '#b_diag')) !== 'TE-10');
+  T('TE, class «3А»: a climb, so TE-01', await firstProbe('te/', '3А', '#b_diag') === 'TE-01');
+  /* the grade's probe is two items of the same station: the second one used to come from wherever the search would
+     otherwise have started, so the grade's station was asked once and never decided (2026-10-01) */
+  const twoProbes = async (url, klass, click) => { const { page, ctx } = await open(url, {}, klass); await page.waitForSelector(click); await page.click(click);
+    await page.waitForFunction(() => window._Q && window._Q.q); const a = await page.evaluate(() => window._Q.o.sub); await right(page);
+    await page.waitForFunction(n => window._Q && window._Q.q && window._Q.o.meta !== n, await page.evaluate(() => window._Q.o.meta)); const b = await page.evaluate(() => window._Q.o.sub); await ctx.close(); return [a, b]; };
+  { const [a, b] = await twoProbes('fr/', '4 QYRAN', '#b_diag'); T('FR, class «4 QYRAN»: the second question is from the same grade-4 station as the first', a === b && a !== 'FR-25', [a, b]); }
 
   await browser.close(); srv.close(); const bad = out.filter(x => !x).length; console.log(bad ? `${bad} FAILED of ${out.length}` : `ALL ${out.length} PASS`); process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack || e.message); process.exit(2); });

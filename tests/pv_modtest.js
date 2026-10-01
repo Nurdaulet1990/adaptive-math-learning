@@ -66,6 +66,19 @@ const D1 = ['c1', 'f1', 'f2', 'f3', 'f4', 'fs1', 'fs2', 'fs3'];
     T('«Келесі деңгей» opens the module test, not f1', s.lv === 'u1' && s.mt.n === 16, s);
     T('no page errors', errs.length === 0, errs); await ctx.close(); }
 
+  // ── 4 · the pupils who had passed the retired within-20 levels go back to where they were (owner, 2026-10-01) ──
+  { const OLD = ['c1', 'a1', 'a1_n', 's1', 's1_n', 'u1', 'c20', 'pv20', 'a20n', 'a20n_n', 'a2', 'a2_n', 's20n', 's20n_n', 's20b', 's20b_n', 'u2', 'ct10', 'c2', 'p1', 'm1', 'a3', 'a3_n'];
+    const { page, ctx, errs } = await open({ PV: { completed: done(Object.fromEntries(OLD.map(k => [k, 1]))), started: true, unlockedUpTo: 0, stars: 40, stages: {} } });
+    const r = await page.evaluate(() => ({ cur: LEVEL_ORDER[state.unlockedUpTo].levelId, flu: [...FLU_LVL].every(l => state.completed[l]), stars: state.stars }));
+    T('a pupil who had passed everything up to «100 ішінде · қосу, ауыссыз» is back on a4 (PV-17), not on f1 «+1»', r.cur === 'a4', r);
+    T('…the 15 ladder rungs count as passed, and no stars are given for them', r.flu && r.stars === 40, r);
+    T('no page errors', errs.length === 0, errs); await ctx.close(); }
+  { const { page, ctx } = await open({ PV: { completed: done({ c1: 1 }), started: true, unlockedUpTo: 1, stages: {} } });
+    T('a pupil who had not reached the old within-10 levels still starts the ladder on f1', (await page.evaluate(() => LEVEL_ORDER[state.unlockedUpTo].levelId)) === 'f1'); await ctx.close(); }
+  { const C = done(Object.fromEntries(['c1', 'a1', 's1', 'f1', 'f3', 'f4', 'fs1', 'fs2', 'fs3'].map(k => [k, 1])));   // f2 reopened by a module test AFTER the carry
+    const { page, ctx } = await open({ PV: { completed: C, started: true, unlockedUpTo: 2, fluCarry: 1, stages: {} } });
+    T('the carry happens once: a rung reopened later (f2) stays open', (await page.evaluate(() => LEVEL_ORDER[state.unlockedUpTo].levelId)) === 'f2'); await ctx.close(); }
+
   await browser.close(); srv.close();
   const bad = out.filter(x => !x).length; console.log(bad ? `${bad} FAILED of ${out.length}` : `ALL ${out.length} PASS`); process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack || e.message); process.exit(2); });
