@@ -38,7 +38,8 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
     // 8 right, one wrong, one timed out
     for (let i = 0; i < 10; i++) await roundAnswer(page, i === 3 ? 'wrong' : i === 6 ? 'timeout' : 'ok');
     await page.waitForSelector('.flu-card'); s = await flu(page);
-    T('8/10 with two misses → the fix phase: 4 picture questions per missed fact = 8', s.phase === 'fix' && s.fix.n === 8 && s.fix.i === 0 && /түзету 1\/8/.test(s.head) && await page.locator('.block-display svg').count() === 1, s);
+    const q = await page.evaluate(() => state.flu.fix.queue.map(f => `${f.a}${f.op}${f.b}`));
+    T('8/10 with two misses → the fix phase: 4 picture questions per missed fact = 8, each miss once then three DIFFERENT facts of the level', s.phase === 'fix' && s.fix.n === 8 && s.fix.i === 0 && /түзету 1\/8/.test(s.head) && await page.locator('.block-display svg').count() === 1 && new Set(q.slice(0, 4)).size === 4 && new Set(q.slice(4)).size === 4, { s, q });
     for (let i = 0; i < 8; i++) await learnAnswer(page, true);
     await page.waitForSelector('.next-btn, button.check-btn'); s = await flu(page);
     const txt = (await page.locator('#workspace').innerText()).replace(/\s+/g, ' ');
@@ -58,13 +59,13 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
     T('f2 round: 6 facts of f2 and 4 from the passed f1 (cumulative review)', s.round.from.filter(x => x === 'f2').length === 6 && s.round.from.filter(x => x === 'f1').length === 4, s.round);
     for (let i = 0; i < 10; i++) await roundAnswer(page, i < 3 ? 'wrong' : 'ok');
     await page.waitForSelector('.flu-card'); s = await flu(page);
-    T('three misses: 12 corrections and «back to the pictures» afterwards', s.phase === 'fix' && s.fix.n === 12 && s.back === true, s);
+    T('three misses: 12 corrections (mixed), no replay of the level', s.phase === 'fix' && s.fix.n === 12 && !s.back, s);
     for (let i = 0; i < 12; i++) await learnAnswer(page, true);
     await page.waitForSelector('button.check-btn'); s = await flu(page);
     const txt = (await page.locator('#workspace').innerText()).replace(/\s+/g, ' ');
-    T('7/10 with the gate on: not passed, the button says «Суретпен жаттығу»', s.phase === 'done' && !s.done.includes('f2') && /⚡ 7\/10/.test(txt) && /Суретпен жаттығу/.test(txt) && !/Келесі деңгей/.test(txt), txt.slice(0, 300));
-    await page.click('button.check-btn'); await page.waitForSelector('.equation-row'); s = await flu(page);
-    T('…and it does: the learn phase again, run 0/6, picture back', s.phase === 'learn' && s.streak === 0 && /0\/6/.test(s.head) && await page.locator('.block-display svg').count() === 1, s);
+    T('7/10 with the gate on: not passed, «⚡ Тағы бір рет» offered', s.phase === 'done' && !s.done.includes('f2') && /⚡ 7\/10/.test(txt) && /Тағы бір рет/.test(txt) && !/Келесі деңгей/.test(txt), txt.slice(0, 300));
+    await page.click('button.check-btn'); await page.waitForSelector('#fluBar'); s = await flu(page);
+    T('…and it goes straight back into a new round (no pictures, no learn run)', s.phase === 'round' && s.round.i === 0 && await page.locator('.block-display').count() === 0, s);
     T('no page errors', errs.length === 0, errs); await ctx.close(); }
 
   // ── 3 · gate on: 9/10 passes, the one miss is still corrected (4 questions), then «Келесі деңгей» ──

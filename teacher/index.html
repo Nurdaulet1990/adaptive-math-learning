@@ -130,9 +130,9 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <body>
 <div id="app" class="app wide"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=23"></script>
+<script src="../core/core.js?v=25"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="../room/routes.js?v=6"></script>
+<script src="../room/routes.js?v=7"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -508,7 +508,7 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
     ${Object.keys(days).length>1?`<table class="t3" style="margin-top:10px"><tr><th>Күн</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${esc(d)}</td><td>${v.n}</td><td>${Math.round(100*v.ok/v.n)}%</td><td>${(v.h/v.n).toFixed(1)}</td></tr>`).join('')}</table>`:''}
   </div>`;
   if(ans.length){ html+=`<div class="card"><h2>Есептер ретімен</h2><div style="overflow-x:auto"><table class="t3" style="font-size:.85rem"><tr><th>Уақыт</th><th>Кезең</th><th>Реж.</th><th></th><th>Кеңес</th><th>с</th><th style="text-align:left">Есеп</th></tr>
-    ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${esc(a.stage)}${a.lvl?' L'+esc(a.lvl):''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${num(a.hints)||''}</td><td>${Math.round(num(a.ms)/1000)||''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
+    ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${esc(a.stage)}${a.lvl?' L'+esc(a.lvl):''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':a.mode==='review'?'қайталау':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${num(a.hints)||''}</td><td>${Math.round(num(a.ms)/1000)||''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
   html+=`<div class="card"><h2>Басқару · ${route}</h2>
     <p class="note">Кезеңді қолмен қою: ${Object.keys(RNM[route]||{}).length
       ?`<select id="setst" class="big" style="max-width:100%;display:inline-block;font-size:1rem;padding:8px"><option value="">— кезеңді таңда —</option>${liveIds(RNM[route]).map(k=>`<option value="${esc(k)}" ${k===(cur||'')?'selected':''}>${esc(k+' · '+RNM[route][k].name)}${RNM[route][k].grade?' ('+esc(RNM[route][k].grade)+'-сын.)':''}</option>`).join('')}</select>`

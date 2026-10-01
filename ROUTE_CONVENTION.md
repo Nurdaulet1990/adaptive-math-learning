@@ -1,6 +1,6 @@
 # ROUTE_CONVENTION.md — how to build a route for Есеп жолы
 
-**v1.5 · 2026-09-22.** Every checkable statement below was verified against the code that is live in
+**v1.6 · 2026-10-01.** Every checkable statement below was verified against the code that is live in
 this repository (`core/core.js`, `core/runner.js`, `core/map.js`, `core/map.css`, `core/ui.css`,
 `core/figs.js`) and against the five routes running on it: `wp/`, `fr/`, `pv/`, `ar/`, `te/`.
 
@@ -26,6 +26,9 @@ eighteen more, several of them copied out of code comments that were themselves 
 **v1.3 加了什么：** 星星成了学生的分数 —— 班级榜按总星星排（关卡测 + 挑战 + 房间），旁边显示本周新增；
 主页顶上有总数；PV 的过关成绩终于写进 `tests`，以前它在自己首页之外一颗星都没有。
 诊断跳过的关卡**不给星** —— 星星只能靠考出来。
+
+**v1.6 加了什么：** 每日强制复习 —— 每个新的一天先从已过关的站抽 5 站 × 2 题，做完各路线才开地图
+（`Core.reviewGate`，§13）；路线自己什么都不实现，只在画地图前调一次它。
 
 **注意：段号变了。** v1.0 的「§9 交付自检」现在是 **§14**（中间插了新的 §10 诊断）。
 `ar/_selfcheck.js` 和 `ar/stages.js` 里引用的「§9」指的是旧编号。
@@ -555,6 +558,9 @@ be visibly 10×10. A picture that only *suggests* the quantity is decoration.
 | `Core.esc(s)` | escape `&` and `<` |
 | `Core.map / mapBind / mapScroll / mapStars` | the road map |
 | `Core.topbar(sub)` | the standard header |
+| `Core.reviewGate(el, topbarHTML)` | **the daily review (2026-10-01).** Call it once, right before drawing the map; if today's review is still waiting it renders the «Бүгінгі қайталау» card into `el` and returns `true` — then draw nothing else. Compulsory by the owner's decision: a pupil does not see her map until the review is done. The runner does this for you (`core/runner.js`); `wp/` and `pv/bridge.js` do it by hand. The tester and a teacher's task (`?task=`) pass straight through. |
+| `Core.playLock() / playLockText()` | **competitions wait (2026-10-01):** milliseconds until this pupil may open or join a classmate's room or a challenge — 25 minutes after her first entry of the day (`STATE._in`, stamped at login, any page); and the sentence that says so. The portal, `room/` and `challenge/` use it; a room the teacher opened, and the tester, are never held. Client-side only — the server does not enforce it. A route has no reason to call it. |
+| `Core.reviewPlan() / reviewPending() / reviewDone(r)` | the review itself — the portal and `review/` only. Once a day the plan picks five **passed** stations (longest unvisited, fewest stars, missed in an earlier review first; fewer than 3 passed stations → no review; a station passed or placed over today waits until tomorrow), two questions each, drawn from the route's own generator at level 3 through `room/routes.js` exactly as a challenge room draws them — a route implements nothing. PV contributes its fluency facts (`pv/facts.js`), timed per fact. Answers are logged `mode:'review'`; each station keeps `rv:{t,ok,n}`. |
 | `Core.avatar()`, `Core.sound('ok'\|'no'\|'up')`, `Core.lang()` | the pupil's animal, the sounds, the language |
 
 The four underscored members — `_sb`, `_session`, `_allState`, `_loadStateOnly` — are portal and
@@ -598,6 +604,16 @@ pupil first: `<route>/?preview=FR-05&lvl=2` **(illustrative id)**. `lvl` default
 ---
 
 ## Version history
+
+**v1.6 · 2026-10-01** — the daily review (§13 `Core.reviewGate`): every new day starts with ten questions
+from five stations the pupil has already passed, before any route shows its map; compulsory, by the owner's
+decision («要强制复习»). Questions come from the routes' own generators through `room/routes.js`, so a route
+implements nothing — which also surfaced that the FR file list there was missing `util.js`, `bank.js` and
+`generate2.js`, so FR questions in rooms and prints had been failing silently; fixed. Same day, inside PV: the
+within-20 fluency ladder's corrections are four different picture questions per missed fact (not one question four
+times, not the level again), and the module test is rebuilt as the module's exit — two text questions from every
+level, a miss reopens that level (`pv/modtest.js`). Also: rooms and challenges open 25 minutes after the pupil's first
+entry of the day (`Core.playLock`; a teacher's room is open at once). Nothing a route implements changed.
 
 **v1.5 · 2026-09-22** — the placement test has no question limit and no longer throws away its last
 probe (§10). The cap fired before the sixth probe was counted, so a perfect run on AR was placed on

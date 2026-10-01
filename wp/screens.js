@@ -15,6 +15,7 @@ function showHome(){
      pupil has not reached, the teacher chose it — then drop the parameter so a reload shows the map */
   { const qp=new URLSearchParams(location.search), tk=qp.get('task');
     if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk,true):startPractice(tk); } }
+  if(Core.reviewGate&&R.diag&&Core.reviewGate(app(),topbar())) return;   // today's review first (core.js), once the pupil is placed
   const cur=currentStage();
   let html=topbar();
   if(!R.diag){

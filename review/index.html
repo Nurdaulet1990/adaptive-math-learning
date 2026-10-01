@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#0E7C9B">
+<link rel="icon" type="image/svg+xml" href="../icons/icon.svg">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Есеп жолы">
+<title>Есеп жолы · Бүгінгі қайталау</title>
+<meta name="google" content="notranslate">
+<script>try{if((localStorage.getItem('esep_lang')||'').indexOf('ru')>-1)document.querySelector('meta[name=google]').remove();}catch(e){}</script>
+<link rel="stylesheet" href="../core/ui.css?v=20">
+<style>
+/* review/ — the daily review («Бүгінгі қайталау», owner 2026-10-01): once a day, before anything new, ten questions from
+   five stations the pupil has already passed — the longest unvisited, the weakest and the ones missed last time
+   first (the plan is Core.reviewPlan, core/core.js). AR/FR/TE/WP questions come from the routes' own generators
+   through room/routes.js, exactly as a challenge room draws them; PV's from the fluency ladder's fact tables
+   (pv/facts.js), timed per fact as in the ladder. Every answer is logged (mode 'review'), each station remembers
+   how it went, and the routes open their maps again once this is done. Owner: platform owner. */
+.marks{flex:1;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}.marks i{height:12px;border-radius:999px;background:var(--line)}
+.marks i.ok{background:var(--good)}.marks i.no{background:var(--bad)}.marks i.on{background:var(--gold)}
+.expr{font-family:var(--disp);font-size:1.5rem;text-align:center;margin:0 0 14px}
+.rvbar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:0 0 14px}.rvbar i{display:block;height:100%;width:100%;background:var(--accent);transition:width linear;transition-duration:0ms}
+.rvbar.out i{background:var(--bad)}
+.verdict{min-height:30px;text-align:center;font-family:var(--disp);font-size:1.15rem;margin:8px 0 0}.verdict.ok{color:var(--good)}.verdict.no{color:var(--bad)}
+.res{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}.res:last-child{border-bottom:0}
+.res span{flex:1;min-width:0;font-weight:800}.res small{display:block;font-weight:700;color:var(--muted)}.res b{font-family:var(--disp);font-variant-numeric:tabular-nums}
+.res b.bad{color:var(--bad)}
+.who{font-size:.8rem;color:var(--muted);text-align:center;margin:0 0 6px;font-weight:800;letter-spacing:.04em}
+@media (prefers-reduced-motion:reduce){.rvbar i{transition:none}}
+</style>
+</head>
+<body>
+<div id="app" class="app"><div class="card"><p>Жүктелуде…</p></div></div>
+<script src="../core/pets.js?v=1"></script>
+<script src="../core/core.js?v=25"></script>
+<script src="../core/figs.js?v=8"></script>
+<script src="../room/routes.js?v=7"></script>
+<script src="../pv/facts.js?v=1"></script>
+<script>
+(async function(){
+  'use strict';
+  const app=document.getElementById('app'), $=id=>document.getElementById(id), esc=Core.esc, RR=window.RoomRoutes;
+  const top=()=>Core.topbar('Бүгінгі қайталау');
+  const home=`<a class="btn wide" href="${Core.root||'../'}">Басты бетке</a>`;
+  const hash=k=>{ let h=5381; for(let i=0;i<k.length;i++) h=((h<<5)+h+k.charCodeAt(i))|0; return h>>>0; };
+  const RN=Object.fromEntries(Core.config.ROUTES.map(r=>[r[0],r[1]]));
+  await Core.start('RV');   // a pseudo-route: the review's own counters; every answer is logged under the station's real route
+  const plan=Core.reviewPlan();
+  if(!plan||!plan.items.length){ app.innerHTML=top()+`<div class="card" style="text-align:center"><div style="font-size:52px;margin:6px 0 4px">📅</div><h2>Бүгін қайталау жоқ</h2><p>Қайталайтын станция әзірге аз — алдымен бірнеше станция өт.</p>${home}</div>`; return; }
+  if(plan.done){ app.innerHTML=top()+`<div class="card" style="text-align:center"><div style="font-size:52px;margin:6px 0 4px">✅</div><h2>Бүгінгі қайталау орындалды</h2><p><b>${plan.ok} / ${plan.n}</b> дұрыс. Ертең жаңа қайталау болады.</p>${home}</div>`; return; }
+
+  /* the questions: the routes' own generators from a seed of the day, the pupil and the station — the same ten on
+     every device, and ten different ones tomorrow */
+  const sid=(Core._session()||{}).id||'', names={}; const qs=[];
+  for(const it of plan.items){ const seed=hash(plan.day+'|'+sid+'|'+it.stage);
+    try{ names[it.route]=names[it.route]||await RR.stageNames(it.route); }catch(e){ names[it.route]=names[it.route]||{}; }
+    if(it.route==='PV'){ const lv=window.PVFACTS&&PVFACTS.level[it.stage]; if(!lv) continue;
+      const facts=RR.withSeed(seed,()=>PVFACTS.distinct(lv,plan.per));
+      facts.forEach(f=>qs.push({route:'PV',stage:it.stage,kind:'input',stem:`${f.a} ${f.op} ${f.b} = ?`,ans:String(f.ans),type:'fact',limit:PVFACTS.limitMs(lv)})); continue; }
+    let mod=null; try{ mod=await RR.load(it.route); }catch(e){ mod=null; } if(!mod) continue;
+    RR.sheet(mod,it.route,it.stage,seed,plan.per,3).forEach(q=>{ q.route=it.route; q.mod=mod; qs.push(q); }); }
+  if(!qs.length){ Core.reviewDone({ok:0,n:0,stations:[]}); app.innerHTML=top()+`<div class="card"><h2>Бүгін қайталау жоқ</h2><p>Станциялардың есептері жүктелмеді — кейінірек қайта кір.</p>${home}</div>`; return; }
+  RR.withSeed(hash(plan.day+'|'+sid),()=>qs.sort(()=>Math.random()-.5));
+
+  const rec=[]; let timer=null; window.RV={qs,rec};   // for the tests
+  const stName=q=>{ const n=names[q.route]&&names[q.route][q.stage]; return `${RN[q.route]||q.route} · ${esc(q.stage)}${n?' · '+esc(n.name):''}`; };
+  function next(){ const i=rec.length; if(i>=qs.length) return finish(); const q=qs[i], fig=q.mod?RR.figHTML(q.mod,q):''; let done=false; const t0=Date.now();
+    let input; if(q.kind==='choice') input=`<div class="choices${q.choices.length===3?' three':''}">${q.choices.map((c,k)=>`<button class="choice" data-v="${esc(c)}">${q.choiceHTML?q.choiceHTML[k]:esc(c)}</button>`).join('')}</div>`;
+    else if(q.kind==='input') input=`<input class="big" id="ans" inputmode="decimal" placeholder="Жауап" autocomplete="off">`; else input=`<div id="custom"></div>`;
+    app.innerHTML=`<div class="quiz"><div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<div class="marks" style="grid-template-columns:repeat(${qs.length},1fr)">${qs.map((_,j)=>`<i class="${j<i?(rec[j].ok?'ok':'no'):j===i?'on':''}"></i>`).join('')}</div><span class="qmeta">${i+1} / ${qs.length}</span></div>
+      <p class="who">${stName(q)}</p>${q.limit?`<div class="rvbar" id="bar"><i></i></div>`:''}
+      <div class="stem">${esc(q.stem)}</div>${q.exprHTML?`<div class="expr">${q.exprHTML}</div>`:''}${fig?`<div class="fig">${fig}</div>`:''}${input}<div class="verdict" id="vd"></div></div>
+      ${q.kind==='custom'?'':`<div class="actbar"><button class="btn" id="ansBtn" disabled>Жауап беру</button></div>`}`;
+    const give=(v,timeout)=>{ if(done) return; done=true; clearTimeout(timer); v=String(v==null?'':v); let ok=false;
+      try{ ok=q.route==='PV'?v.trim()===q.ans:!!Core.isCorrect(q,v); }catch(e){}
+      const ms=Date.now()-t0; rec.push({q,ok,ms});
+      Core.answer({route:q.route,stage:q.stage,lvl:3,ok,mode:'review',hints:0,ms,type:q.type||'',stem:String(q.stem).slice(0,160),ans:ok?undefined:String(q.ans).slice(0,40),given:timeout?'(уақыт бітті)':v.slice(0,40)});
+      app.querySelectorAll('.choice').forEach(b=>{ b.disabled=true; if(Core.isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b.dataset.v===v) b.classList.add('no'); });
+      const ai=$('ans'); if(ai){ ai.disabled=true; ai.style.borderColor=ok?'var(--good)':'var(--bad)'; } if($('ansBtn')) $('ansBtn').disabled=true;
+      const vd=$('vd'); if(vd){ vd.className='verdict '+(ok?'ok':'no'); vd.textContent=ok?'Дұрыс ✓':(timeout?'Тағы жылдамырақ! ':'Қате. ')+'Дұрыс жауабы: '+String(q.ans); }
+      if(timeout&&$('bar')) $('bar').classList.add('out');
+      Core.sound(ok?'ok':'no'); setTimeout(next,ok?700:1600); };
+    let sel=null; app.querySelectorAll('.choice').forEach(b=>b.onclick=()=>{ if(done) return; app.querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); b.classList.add('pick'); sel=b.dataset.v; $('ansBtn').disabled=false; });
+    const ai=$('ans'); if(ai){ ai.oninput=()=>{ $('ansBtn').disabled=!ai.value.trim(); }; ai.onkeydown=e=>{ if(e.key==='Enter'&&ai.value.trim()){ e.preventDefault(); give(ai.value.trim()); } }; setTimeout(()=>{ try{ ai.focus(); }catch(e){} },30); }
+    if($('ansBtn')) $('ansBtn').onclick=()=>{ const v=ai?ai.value.trim():sel; if(v) give(v); };
+    if(q.kind==='custom'&&q.mount){ try{ q.mount($('custom'),v=>give(v)); }catch(e){ give(''); } }
+    if(q.limit){ const bar=document.querySelector('#bar i'); requestAnimationFrame(()=>{ bar.style.transitionDuration=q.limit+'ms'; void bar.offsetWidth; bar.style.width='0%'; }); timer=setTimeout(()=>give('',true),q.limit); } }
+
+  function finish(){ const ok=rec.filter(r=>r.ok).length, n=rec.length; const per={};
+    rec.forEach(r=>{ const k=r.q.route+'|'+r.q.stage; per[k]=per[k]||{route:r.q.route,stage:r.q.stage,ok:0,n:0,q:r.q}; per[k].n++; if(r.ok) per[k].ok++; });
+    const stations=Object.values(per); Core.reviewDone({ok,n,stations});
+    const weak=stations.filter(s=>s.ok<s.n);
+    app.innerHTML=top()+`<div class="card${ok===n?' wincard':''}" style="text-align:center"><div style="font-size:52px;margin:6px 0 4px">${ok===n?'🎉':ok>=n*0.8?'👍':'📚'}</div><h2>${ok===n?'Бәрі есте!':ok>=n*0.8?'Жақсы!':'Қайталау керек'}</h2><p><b>${ok} / ${n}</b> дұрыс</p></div>
+      <div class="card">${stations.map(s=>`<div class="res"><span>${stName(s.q)}<small>${s.ok===s.n?'есте':s.ok?'жартылай':'ұмытылған — ертең тағы сұралады'}</small></span><b class="${s.ok<s.n?'bad':''}">${s.ok} / ${s.n}</b></div>`).join('')}</div>
+      ${weak.length?`<p class="note" style="margin:0 0 10px">Ұмытылғандары ертеңгі қайталауда бірінші тұрады; қаласаң, сол станцияға кіріп, қазір жаттығып ал.</p>`:''}
+      <div class="row">${home}</div>`;
+    if(ok===n&&Core.petMood){ Core.petMood('happy',2600); if(Core.petSay) Core.petSay('Бәрі есте!',2600); } }
+  next();
+})();
+</script>
+</body>
+</html>

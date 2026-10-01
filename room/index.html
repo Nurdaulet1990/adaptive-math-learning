@@ -46,9 +46,9 @@
 <body>
 <div id="app" class="app"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=23"></script>
+<script src="../core/core.js?v=25"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="routes.js?v=6"></script>
+<script src="routes.js?v=7"></script>
 <script>
 (async function(){
   'use strict';
@@ -66,7 +66,10 @@
   const mmss=ms=>{ const s=Math.max(0,Math.round(ms/1000)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
   let poll=null, tick=null, watch=null, G=null, seq=0;
   /* every view change bumps `seq`: a reply that was already on its way when the view changed is dropped, not drawn */
-  const stop=()=>{ seq++; clearTimeout(poll); clearInterval(tick); clearInterval(watch); poll=tick=watch=null; };
+  const stop=()=>{ seq++; clearTimeout(poll); clearInterval(tick); clearInterval(watch); clearTimeout(relock); poll=tick=watch=relock=null; };
+  /* the first 25 minutes of the day are for practice (Core.playLock): a pupil cannot open a room or join a classmate's;
+     a room the teacher opened is open to her at any time. The hub redraws itself when the time comes. */
+  const lock=()=>typeof Core.playLock==='function'?Core.playLock():0; let relock=null;
   /* school wifi hangs more often than it fails: no call may wait longer than 8 s */
   const call=(fn,a)=>Promise.race([Core.call(fn,a),new Promise((_,no)=>setTimeout(()=>no(new Error('timeout')),8000))]);
   /* what the teacher (and «Қайталап ал») sees of a question: the stem, plus the expression when the stem alone says nothing */
@@ -89,8 +92,10 @@
       h+=`<div class="card"><h1 style="margin:0 0 4px">Кодпен кіру</h1><p class="note" style="margin:0 0 10px">Бөлмені ашқан адам айтқан 4 санды жаз.</p>
         <div class="joinrow"><input class="big" id="jcode" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" aria-label="Бөлме коды"><button class="btn gold" id="jgo">Кіру</button></div>
         <p class="note" id="jmsg" style="margin:8px 0 0;color:var(--bad)">${esc(msg||'')}</p></div>`;
-      if((l.open||[]).length) h+=`<div class="card" style="padding-top:6px;padding-bottom:6px"><h2 style="margin:10px 0 0">Сыныбыңдағы ашық бөлмелер</h2>${l.open.map(o=>`<div class="open"><span>${esc(o.by_teacher?'Мұғалім':first(o.host_name))}<small>${esc(title(o.route,o.stage))} · ${+o.n} ойыншы</small></span><button class="btn" data-code="${esc(o.code)}">Қосылу</button></div>`).join('')}</div>`;
-      if(!l.mine) h+=`<div class="card"><h2 style="margin:0 0 4px">Бөлме ашу</h2>${can.length?`<p class="note" style="margin:0 0 10px">Өзің өткен кез келген станцияны таңда. Саған код беріледі — оны сыныптастарыңа айт.</p>
+      if((l.open||[]).length) h+=`<div class="card" style="padding-top:6px;padding-bottom:6px"><h2 style="margin:10px 0 0">Сыныбыңдағы ашық бөлмелер</h2>${l.open.map(o=>`<div class="open"><span>${esc(o.by_teacher?'Мұғалім':first(o.host_name))}<small>${esc(title(o.route,o.stage))} · ${+o.n} ойыншы</small></span>${!o.by_teacher&&lock()?'<i class="note">⏳</i>':`<button class="btn" data-code="${esc(o.code)}">Қосылу</button>`}</div>`).join('')}</div>`;
+      if(!l.mine&&lock()) h+=`<div class="card"><h2 style="margin:0 0 4px">Бөлме ашу</h2><p class="note" id="lockNote" style="margin:0;font-weight:700">⏳ ${esc(Core.playLockText())}</p>
+        <p class="note" style="margin:6px 0 0">Мұғалім ашқан бөлмеге кодпен қазір де кіре аласың.</p></div>`;
+      else if(!l.mine) h+=`<div class="card"><h2 style="margin:0 0 4px">Бөлме ашу</h2>${can.length?`<p class="note" style="margin:0 0 10px">Өзің өткен кез келген станцияны таңда. Саған код беріледі — оны сыныптастарыңа айт.</p>
           ${routes.length>1?`<div class="seg">${routes.map(r=>`<button type="button" data-tab="${r}" aria-pressed="${r===tab}">${esc(RNAME[r]||r)}</button>`).join('')}</div>`:''}
           <div class="pick">${can.filter(c=>c.route===tab).reverse().map(c=>{ const n=NAMES[c.route][c.stage], ru=RR.rule(c.route,n.type); return `<button type="button" data-new="${esc(c.stage)}">${esc(n.name)}<small>${ru.n} есеп · ${Math.round(ru.secs/60)} минут</small></button>`; }).join('')}</div><p class="note" id="nmsg" style="margin:8px 0 0;color:var(--bad)"></p>`
           :`<p class="note" style="margin:0">Бөлме ашу үшін алдымен кез келген бағытта бір станциядан өт. Оған дейін кодпен басқаның бөлмесіне кіре аласың.</p>`}</div>`;
@@ -112,13 +117,16 @@
         let r; try{ r=await call('esep_room_create',{p_route:tab,p_stage:stage,p_n:ru.n,p_secs:ru.secs}); }catch(e){ r=null; }
         if(!r||r.error) return back(WHY[r&&r.error]||'Байланыс жоқ. Қайтала.');
         location.href='./?id='+(+r.id); }); };
-    draw(); }
+    draw(); if(lock()&&!l.mine) relock=setTimeout(()=>hub(),lock()+500); }
 
   /* ── inside a room: lobby → countdown → the sheet → waiting → podium. The server says which. ── */
   async function room(id){ if(G&&!G.over) return;   // a sheet is on the screen: the reply to «Бастау» may arrive after the poll that already saw 'running'
     clearTimeout(poll); const my=++seq; let s; try{ s=await call('esep_room_state',{p_id:id}); }catch(e){ if(my===seq) poll=setTimeout(()=>room(id),3000); return; }
     if(my!==seq) return;   // the view moved on while this reply was in the air
     if(!s||s.error) return fail(s&&s.error);
+    if(s.status==='lobby'&&!s.by_teacher&&!s.is_host&&lock()){   // a classmate's room, too early today: out again, and say why
+      try{ await call('esep_room_leave',{p_id:id}); }catch(e){} if(my!==seq) return;
+      SS.del('esep_room_np'); history.replaceState(null,'','./'); return hub(Core.playLockText()); }
     await namesOf(s.route); if(my!==seq) return;
     if(s.status==='lobby'){ lobby(id,s); RR.load(s.route).catch(()=>{}); }   // fetch the generators while everybody is still arriving
     else if(s.status==='running'){ if(s.my_done) waiting(id,s); else if(!G){ stop(); return countdown(id,s); } else return; }

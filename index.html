@@ -177,8 +177,8 @@
 <body>
 <div id="app" class="app"></div>
 <script src="core/pets.js?v=1"></script>
-<script src="core/core.js?v=23"></script>
-<script src="room/routes.js?v=6"></script>
+<script src="core/core.js?v=25"></script>
+<script src="room/routes.js?v=7"></script>
 <script>
 /* Portal: one login, then a landscape strip per route showing how far the pupil has walked. */
 (async function(){
@@ -266,6 +266,13 @@
      Сынып: the class board. The tab lives in location.hash, so the phone's back button walks back through
      tabs and a link can open one (#synyp). Everything is still one page and one request set, as before. */
   let T1='', T2='', T3='', T4='';
+  /* today's review (core.js reviewPlan): compulsory, so it comes first — the routes themselves show it instead of
+     their map until it is done */
+  if(Core.reviewPending&&Core.reviewPending()){ const rv=Core.reviewPlan();
+    T1+=`<div class="card tk" style="--rc:var(--gold);--rc-d:var(--gold-d)"><div class="tk-top"><span class="tk-tag">Бүгінгі қайталау</span></div>
+      <div class="tk-what">${rv.items.length*rv.per} есеп — өткен станциялардан</div><div class="tk-st">Жаңа станцияға дейін · 3–4 минут</div>
+      <a class="btn wide tk-go" href="review/">Бастау</a></div>`; }
+  else if(state._review&&state._review.done&&state._review.n){ const rv=state._review; T1+=`<p class="note" style="margin:0 0 8px">✓ Бүгінгі қайталау: ${rv.ok}/${rv.n}</p>`; }
   T1+=`<div id="tasks"></div>`;   // the teacher's tasks, filled from esep_my_tasks below (16_tasks.sql)
   if(r){ const rc=r.code.toLowerCase();
     T1+=`<h1 style="margin:4px 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>${hello}</span>${purse}</h1>
@@ -278,6 +285,11 @@
   T1+=goalCard();
   T1+=`<div id="inbox"></div>`;     // filled from the rooms and challenges answers below
   T1+=`<div id="rankmini"></div>`;  // filled from the board
+  /* the first 25 minutes of the day are for practice (Core.playLock): the Жарыс tab says so, a classmate's room or
+     challenge waits (a room the teacher opened does not), and the page redraws itself when the time comes */
+  const plock=()=>typeof Core.playLock==='function'?Core.playLock():0;
+  if(plock()){ T3+=`<div class="card" id="plock" style="text-align:center"><b>⏳ ${esc(Core.playLockText())}</b><p class="note" style="margin:6px 0 0">Бүгін кіргеннен кейін алғашқы 25 минут — жаттығуға. Мұғалім ашқан бөлмеге қазір де кіре аласың.</p></div>`;
+    setTimeout(()=>location.reload(),plock()+1000); }
   T3+=`<h1 class="tab-h">Жарыс</h1><div id="rooms"></div>`;   // challenge rooms (esep_room_list) — empty until supabase/05_rooms.sql is installed
   T3+=`<div id="duel"></div>`;      // challenges from classmates (esep_ch_list) — empty until supabase/04_challenges.sql is installed
   T4+=`<h1 class="tab-h">Сынып${student.klass?' · '+esc(student.klass):''}</h1><div id="board"><div class="card"><p class="note" style="margin:0">Тақта жүктелуде…</p></div></div>`;
@@ -375,12 +387,12 @@
   if(typeof Core.call==='function') Core.call('esep_ch_list',{p_mark_seen:true}).then(l=>{ const box=document.getElementById('duel'); if(!box||!l) return; let h='';
     (l.incoming||[]).slice(0,3).forEach(c=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${esc(String(c.from_name).split(' ')[0])} сені жарысқа шақырды</h2>
       <p style="margin:0 0 4px;font-weight:700">${esc(tbl(c.table))} · 10 есеп · екеуіңе бірдей</p><p class="note" style="margin:0 0 12px">Оның нәтижесі сен ойнап болғанша жасырын тұрады.</p>
-      <a class="btn gold wide" href="challenge/?id=${+c.id}">Қабылдау</a></div>`; });
+      ${plock()?`<p class="note" style="margin:0;font-weight:700">⏳ ${esc(Core.playLockText())}</p>`:`<a class="btn gold wide" href="challenge/?id=${+c.id}">Қабылдау</a>`}</div>`; });
     (l.results||[]).filter(r=>r.new).forEach(r=>{ const nm=esc(String(r.opp_name).split(' ')[0]);
       h+=`<div class="card"><h2 style="margin:0 0 2px">${r.outcome==='win'?`${nm} жауап берді — сен жеңдің!`:r.outcome==='tie'?`${nm} жауап берді — тең!`:`${nm} жауап берді — бұл жолы ол озды`}</h2>
       <p style="margin:0;font-weight:700">${esc(tbl(r.table))}: сен ${+r.my_ok}/10, ${nm} ${+r.opp_ok}/10 · ★ +${+r.stars}</p></div>`; });
     /* the way in is a card of its own, always there — as a one-line link under the goal nobody found it */
-    WAIT.duel=[...(l.incoming||[]).slice(0,3).map(c=>({t:`${esc(String(c.from_name).split(' ')[0])} сені шақырды`,s:`${esc(tbl(c.table))} · 10 есеп`,href:`challenge/?id=${+c.id}`,go:'Қабылдау'})),
+    WAIT.duel=[...(l.incoming||[]).slice(0,3).map(c=>({t:`${esc(String(c.from_name).split(' ')[0])} сені шақырды`,s:`${esc(tbl(c.table))} · 10 есеп`,href:plock()?'':`challenge/?id=${+c.id}`,go:plock()?'⏳':'Қабылдау'})),
       ...(l.results||[]).filter(r=>r.new).map(r=>{ const nm=esc(String(r.opp_name).split(' ')[0]); return {t:r.outcome==='win'?`${nm} жауап берді — сен жеңдің!`:r.outcome==='tie'?`${nm} жауап берді — тең!`:`${nm} жауап берді`,s:`${esc(tbl(r.table))}: ${+r.my_ok}/10 және ${+r.opp_ok}/10`,good:r.outcome==='win',go:`★ +${+r.stars}`}; })];
     drawInbox();
     h+=`<div class="card" id="duelGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Сыныптаспен жарыс</h2>
@@ -396,9 +408,9 @@
     if(l.mine) h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен жарыс бөлмесіндесің'}</h2>
       <p style="margin:0 0 12px;font-weight:700">${esc(title(l.mine))} · код ${esc(l.mine.code)}</p><a class="btn gold wide" href="room/?id=${+l.mine.id}">Бөлмеге кіру</a></div>`;
     else shown.forEach(o=>{ h+=`<div class="card" style="background:var(--gold-soft);border-color:var(--gold)"><h2 style="margin:0 0 2px">${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} жарыс бөлмесін ашты</h2>
-      <p style="margin:0 0 12px;font-weight:700">${esc(title(o))} · ${+o.n} ойыншы күтіп тұр</p><a class="btn gold wide" href="room/?code=${encodeURIComponent(o.code)}">Қосылу</a></div>`; });
+      <p style="margin:0 0 12px;font-weight:700">${esc(title(o))} · ${+o.n} ойыншы күтіп тұр</p>${!o.by_teacher&&plock()?`<p class="note" style="margin:0;font-weight:700">⏳ ${esc(Core.playLockText())}</p>`:`<a class="btn gold wide" href="room/?code=${encodeURIComponent(o.code)}">Қосылу</a>`}</div>`; });
     WAIT.rooms=l.mine?[{t:l.mine.status==='running'?'Жарыс жүріп жатыр!':l.mine.is_host?'Сенің бөлмең ашық':'Сен бөлмедесің',s:`${esc(title(l.mine))} · код ${esc(l.mine.code)}`,href:`room/?id=${+l.mine.id}`,go:'Кіру'}]
-      :shown.map(o=>({t:`${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} бөлме ашты`,s:`${esc(title(o))} · ${+o.n} ойыншы`,href:`room/?code=${encodeURIComponent(o.code)}`,go:'Қосылу'}));
+      :shown.map(o=>({t:`${o.by_teacher?'Мұғалім':esc(String(o.host_name).split(' ')[0])} бөлме ашты`,s:`${esc(title(o))} · ${+o.n} ойыншы`,href:!o.by_teacher&&plock()?'':`room/?code=${encodeURIComponent(o.code)}`,go:!o.by_teacher&&plock()?'⏳':'Қосылу'}));
     drawInbox();
     const rec=l.record||{};
     h+=`<div class="card" id="roomGo" style="display:flex;align-items:center;gap:12px"><div style="flex:1;min-width:0"><h2 style="margin:0 0 2px">Жарыс бөлмесі</h2>

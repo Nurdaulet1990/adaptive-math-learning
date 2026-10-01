@@ -1,6 +1,6 @@
 /* pv/fluency.js — the fluency ladder for +/− within 10 and 20 (owner's design, claude/pv-fluency-proposal.md, 2026-10-01).
-   Loaded by pv/index.html after its own script and before bridge.js; it adds levels f1…fsr (table in index.html) and
-   runs them. Why: a level passed by a run of eight with the blocks there to count could not tell a child who counts
+   Loaded by pv/index.html after its own script (and after pv/facts.js, which holds the fact tables) and before
+   bridge.js; it adds levels f1…fsr (table in index.html) and runs them. Why: a level passed by a run of eight with the blocks there to count could not tell a child who counts
    from one who knows the facts. Rocket Math's answer, carried over: small groups of facts, each learned with a
    strategy and then proven in a ONE-MINUTE ROUND, timed per fact, with the earlier groups mixed in (cumulative
    review); a missed fact is corrected with the picture — four picture questions per miss — before another try.
@@ -11,61 +11,33 @@
      round — FLU.round facts without the picture, FLU.newInRound from this level + the rest from passed levels,
              each with a shrinking bar (no seconds shown); a timeout is a miss («Тағы жылдамырақ!»); the full fact
              is shown after every miss; pass = FLU.pass right;
-     fix   — FLU.fixPer picture questions for every fact missed in the round (the fact and its reverse, or for a
-             subtraction the fact and its addition partner); more than FLU.fixBackAfter misses → the learn run again.
+     fix   — FLU.fixPer picture questions for every fact missed in the round: the missed fact once, then other
+             facts of the same level (different questions, never the same one over and over — owner); at most
+             FLU.fixMax, mixed. The level is never replayed whole.
    Then the legacy showLevelComplete (which bridge.js wraps to record the stage test) shows the result; its
-   «Қайталау» leads back into the round, or into the learn phase when the round went badly.
+   «Қайталау» leads straight back into the round.
 
    FLU.gate=false is the first week: the round is run, logged and corrected, but the level passes regardless, so the
    seconds can be read off the teacher page before the line is drawn. Flip it to true to make the round the pass. */
 'use strict';
 (function(){
 const FLU = {
-  ms: { within10: 5000, within20: 6000, place: 8000 },   // per fact
-  round: 10, newInRound: 6, pass: 9, learnRun: 6, fixPer: 4, fixMax: 12, fixBackAfter: 3,
+  ms: null,   // per fact, from pv/facts.js (PVFACTS.MS): within10 5000, within20 6000, place 8000
+  round: 10, newInRound: 6, pass: 9, learnRun: 6, fixPer: 4, fixMax: 12,
   gate: false,
   order: ['f1','f2','f3','f4','fs1','fs2','fs3','f20n','fd','f9','f87','fs20n','fsd','fs98','fsr'],
   facts: {}, cards: {}, pic: {}, limit: {},
 };
-const rnd = (a,b) => a + Math.floor(Math.random() * (b - a + 1));
 const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const add = pairs => pairs.flatMap(([a, b]) => a === b ? [{ a, b, op: '+' }] : [{ a, b, op: '+' }, { a: b, b: a, op: '+' }]);
-const sub = pairs => pairs.map(([m, s]) => ({ a: m, b: s, op: '−' }));
-const range = (lo, hi) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i);
-const key = f => `${f.a}${f.op}${f.b}`;
-const ans = f => f.op === '+' ? f.a + f.b : f.a - f.b;
-
-/* ── the fact tables (claude/pv-fluency-proposal.md) ── */
-FLU.facts.f1  = add(range(1, 9).map(n => [1, n]));
-FLU.facts.f2  = add(range(2, 8).map(n => [2, n]));
-FLU.facts.f3  = add([[3,3],[4,4],[5,5],[3,7],[4,6]]);
-FLU.facts.f4  = add([[3,4],[3,5],[3,6],[4,5]]);
-FLU.facts.fs1 = sub([...range(2, 10).map(m => [m, 1]), ...range(3, 10).map(m => [m, 2])]);
-FLU.facts.fs2 = sub([[6,3],[8,4],[10,5],[10,3],[10,7],[10,4],[10,6]]);
-FLU.facts.fs3 = sub(range(4, 9).flatMap(m => range(3, m - 1).map(s => [m, s])).filter(([m, s]) => !(m === 6 && s === 3) && !(m === 8 && s === 4)));
-FLU.facts.f20n = () => { if (Math.random() < 0.4) { const n = rnd(1, 9); return Math.random() < 0.5 ? { a: 10, b: n, op: '+' } : { a: n, b: 10, op: '+' }; }
-  let a, b; do { a = rnd(11, 18); b = rnd(1, 8); } while (a % 10 + b > 9); return Math.random() < 0.5 ? { a, b, op: '+' } : { a: b, b: a, op: '+' }; };
-FLU.facts.fd  = add([[6,6],[7,7],[8,8],[9,9],[5,6],[6,7],[7,8],[8,9]]);
-FLU.facts.f9  = add([[2,9],[3,9],[4,9],[5,9],[6,9],[7,9]]);
-FLU.facts.f87 = add([[3,8],[4,8],[5,8],[6,8],[4,7],[5,7]]);
-FLU.facts.fs20n = () => { let a; do { a = rnd(11, 19); } while (a % 10 === 0); const b = rnd(1, a % 10); return { a, b, op: '−' }; };
-FLU.facts.fsd  = sub([[12,6],[14,7],[16,8],[18,9],[11,5],[11,6],[13,6],[13,7],[15,7],[15,8],[17,8],[17,9]]);
-FLU.facts.fs98 = sub([[11,9],[12,9],[13,9],[14,9],[15,9],[16,9],[11,8],[12,8],[13,8],[14,8]]);
-FLU.facts.fsr  = sub([[11,2],[11,3],[11,4],[11,7],[12,3],[12,4],[12,5],[12,7],[13,4],[13,5],[14,5],[14,6],[15,6],[16,7]]);
-Object.keys(FLU.facts).forEach(lv => { const f = FLU.facts[lv]; if (Array.isArray(f)) f.forEach(x => { x.ans = ans(x); }); });
-/* a fact of a level: one of the list, or one made by the level's generator */
-FLU.pick = lv => { const f = FLU.facts[lv]; const x = Array.isArray(f) ? f[Math.floor(Math.random() * f.length)] : f(); return Object.assign({}, x, { ans: ans(x), lv }); };
-FLU.distinct = (lv, n, avoid) => { const f = FLU.facts[lv]; avoid = avoid || new Set(); const out = [];
-  if (Array.isArray(f)) { const pool = shuffle(f.filter(x => !avoid.has(key(x)))); while (out.length < n && pool.length) { const x = pool.pop(); out.push(Object.assign({}, x, { lv })); }
-    while (out.length < n && f.length) out.push(Object.assign({}, f[Math.floor(Math.random() * f.length)], { lv })); }
-  else { let guard = 0; while (out.length < n && guard++ < 200) { const x = FLU.pick(lv); if (!avoid.has(key(x)) && !out.some(y => key(y) === key(x))) out.push(x); } }
-  return out; };
+const key = PVFACTS.key, ans = PVFACTS.ans;
+/* the fact tables live in pv/facts.js (window.PVFACTS), shared with the daily review */
+FLU.facts = PVFACTS.facts; FLU.pick = PVFACTS.pick; FLU.distinct = PVFACTS.distinct; FLU.ms = PVFACTS.MS;
 
 /* ── per level: picture, time limit, strategy card ── */
 const W10 = ['f1','f2','f3','f4','fs1','fs2','fs3'], W20 = ['fd','f9','f87','fsd','fs98','fsr'], PL = ['f20n','fs20n'];
-W10.forEach(lv => { FLU.limit[lv] = () => FLU.ms.within10; FLU.pic[lv] = f => renderDualCubes(f.a, f.b, f.op); });
-W20.forEach(lv => { FLU.limit[lv] = () => FLU.ms.within20; FLU.pic[lv] = f => renderTenFrame(f.a, f.b, f.op); });
-PL.forEach(lv => { FLU.limit[lv] = () => FLU.ms.place; FLU.pic[lv] = f => renderDualWithTens(f.a, f.b, f.op); });
+W10.forEach(lv => { FLU.limit[lv] = () => PVFACTS.limitMs(lv); FLU.pic[lv] = f => renderDualCubes(f.a, f.b, f.op); });
+W20.forEach(lv => { FLU.limit[lv] = () => PVFACTS.limitMs(lv); FLU.pic[lv] = f => renderTenFrame(f.a, f.b, f.op); });
+PL.forEach(lv => { FLU.limit[lv] = () => PVFACTS.limitMs(lv); FLU.pic[lv] = f => renderDualWithTens(f.a, f.b, f.op); });
 /* the picture for ANY fact (a correction may ask a fact of an earlier level, or an addition partner) */
 FLU.picture = f => { const sum = f.op === '+' ? f.a + f.b : f.a; if (f.a >= 10 && f.op === '+' || f.b >= 10) return renderDualWithTens(f.a, f.b, f.op);
   if (sum <= 10) return renderDualCubes(f.a, f.b, f.op); if (f.op === '−' && f.a - f.b >= 10) return renderDualWithTens(f.a, f.b, f.op); return renderTenFrame(f.a, f.b, f.op); };
@@ -165,14 +137,15 @@ function roundQ() {
 function endRound() {
   const F = state.flu, R = F.round; F.last = { hits: R.hits, n: R.qs.length, ms: R.ms.slice(), misses: R.misses.length, pass: R.hits >= FLU.pass };
   const qc = document.getElementById('qCount'); if (qc) qc.textContent = `⚡ ${R.hits}/${FLU.round}`;
-  /* corrections first: every missed fact comes back with the picture, FLU.fixPer times (fact / reverse, or for
-     a subtraction fact / its addition partner); over FLU.fixMax questions they are mixed */
+  /* corrections first (owner, 2026-10-01: DIFFERENT questions, never the same one over and over, and no replay of
+     the whole level): every missed fact comes back with the picture, then FLU.fixPer − 1 other facts of its own
+     level, so a miss costs four picture questions of that kind; over FLU.fixMax questions they are mixed */
   const facts = []; R.misses.forEach(m => { if (!facts.some(x => key(x) === key(m))) facts.push(m); });
   if (facts.length) {
-    const partner = f => f.op === '+' ? (f.a === f.b ? f : { a: f.b, b: f.a, op: '+' }) : (Math.random() < 0.5 ? { a: f.b, b: f.a - f.b, op: '+' } : { a: f.a - f.b, b: f.b, op: '+' });
-    let queue = facts.flatMap(f => [f, partner(f), f, partner(f)].map(x => Object.assign({}, x, { ans: ans(x), lv: f.lv || state.level })));
+    let queue = facts.flatMap(f => { const lv = f.lv || state.level; const others = FLU.distinct(lv, FLU.fixPer - 1, new Set([key(f)]));
+      return [f].concat(shuffle(others)).map(x => Object.assign({}, x, { ans: ans(x), lv })); });
     if (queue.length > FLU.fixMax) queue = shuffle(queue).slice(0, FLU.fixMax);
-    F.phase = 'fix'; F.fix = { queue, i: 0 }; F.backToLearn = facts.length >= FLU.fixBackAfter;
+    F.phase = 'fix'; F.fix = { queue, i: 0 };
     const ws = document.getElementById('workspace'); genFluency(ws); return;
   }
   finishLevel();
@@ -188,8 +161,8 @@ function finishLevel() {
   const med = L.ms.length ? (L.ms.slice().sort((a, b) => a - b)[Math.floor(L.ms.length / 2)] / 1000).toFixed(1) : '–';
   const line = ws.querySelector('p[style*="font-size:13px"]');
   if (line) line.innerHTML = `⚡ ${L.hits}/${L.n} · ${sec} с · бір есепке ${med} с · өту: ${FLU.pass}/${L.n}${FLU.gate ? '' : ' <span style="opacity:.7">(әзірге есепке алынбайды)</span>'}`;
-  const bad = ws.querySelectorAll('p[style*="font-size:13px"]')[1]; if (bad) bad.textContent = F.backToLearn ? 'Алдымен суретпен тағы жаттығайық, сосын ⚡ қайта.' : 'Тағы бір рет көр — дәл осы жерден.';
-  const again = ws.querySelector('button.check-btn'); if (again) again.textContent = F.backToLearn ? 'Суретпен жаттығу' : '⚡ Тағы бір рет';
+  const bad = ws.querySelectorAll('p[style*="font-size:13px"]')[1]; if (bad) bad.textContent = 'Тағы бір рет көр — дәл осы жерден.';
+  const again = ws.querySelector('button.check-btn'); if (again) again.textContent = '⚡ Тағы бір рет';
 }
 
 /* ── wiring into the legacy flow ── */
@@ -204,9 +177,7 @@ const _gen = window.generateQuestion; window.generateQuestion = function() {
   if (F && F.lv === state.level) {
     if (F.phase === 'round') return;                                       // the round draws its own questions
     if (F.phase === 'fix') { state.fbShown = false; F.fix.i++; if (F.fix.i < F.fix.queue.length) return genFluency(document.getElementById('workspace')); return finishLevel(); }
-    if (F.phase === 'done') { state.fbShown = false; state.score = 0; state.total = 0; state.questionNum = 0; state.streak = 0;
-      if (F.backToLearn) { F.phase = 'learn'; F.seen = 0; F.backToLearn = false; return genFluency(document.getElementById('workspace')); }
-      return startRound(); }
+    if (F.phase === 'done') { state.fbShown = false; state.score = 0; state.total = 0; state.questionNum = 0; state.streak = 0; return startRound(); }
     if (F.phase === 'learn' && state.streak >= state.streakNeed) { state.fbShown = false; return startRound(); }
   }
   return _gen.apply(this, arguments);   // learn: the legacy path renders through genFluency (QUESTION_DISPATCH)

@@ -47,7 +47,7 @@
 <body>
 <div id="app" class="app"></div>
 <script src="../core/pets.js?v=1"></script>
-<script src="../core/core.js?v=23"></script>
+<script src="../core/core.js?v=25"></script>
 <script>
 (async function(){
   'use strict';
@@ -61,19 +61,26 @@
     already_open:'Бұл сыныптасың алдыңғы шақыруыңа әлі жауап берген жоқ.',expired:'Бұл шақырудың уақыты өтіп кетті.',done:'Бұл жарысты ойнап қойғансың.',not_found:'Мұндай шақыру жоқ.',session:'Қайта кіру керек.'};
   const fail=(code)=>{ app.innerHTML=top()+`<div class="card"><h2>${esc(WHY[code]||'Жарыс қазір қолжетімсіз.')}</h2><a class="btn wide" href="./">Жарыстар</a></div>`; };
   let G=null, tick=null;
+  /* the first 25 minutes of the day are for practice (Core.playLock): no new challenge, none accepted. When the time
+     comes, the page redraws itself. */
+  const lock=()=>typeof Core.playLock==='function'?Core.playLock():0;
+  const lockNote=()=>`<p class="note center" id="lockNote" style="margin:8px 0 0;font-weight:700">⏳ ${esc(Core.playLockText())}</p>`;
+  let relock=null; const whenOpen=fn=>{ clearTimeout(relock); const ms=lock(); if(ms) relock=setTimeout(fn,ms+500); };
+  const locked=()=>{ app.innerHTML=top()+home+`<div class="card center"><div style="font-size:48px;margin:4px 0">⏳</div><h2>Жарыс әлі жабық</h2><p>${esc(Core.playLockText())}</p>
+    <p class="note">Бүгін кіргеннен кейін алғашқы 25 минут — жаттығуға.</p><a class="btn wide" href="../">Жаттығуға</a></div>`; };
 
   /* ── hub: what is waiting for me · what I am waiting for · last results ── */
   async function hub(){ let l; try{ l=await Core.call('esep_ch_list',{p_mark_seen:true}); }catch(e){ return fail(); } if(!l) return fail('session');
     let h=top()+home+`<div class="card"><div class="rt-head" style="display:flex;justify-content:space-between;align-items:baseline"><h1 style="margin:0">Жарыс</h1><span class="chip gold">★ ${+l.stars||0}</span></div>
       <p class="note" style="margin:6px 0 12px">Сыныптасыңды өзің өткен көбейту кестесі бойынша шақыр. Екеуіңе бірдей 10 есеп беріледі; ол қолы тигенде ойнайды.</p>
-      <button class="btn gold wide" id="newBtn" ${l.today>=l.limit?'disabled':''}>Жаңа жарыс</button><p class="note center" style="margin:8px 0 0">Бүгін: ${+l.today} / ${+l.limit}</p></div>`;
-    if(l.incoming.length) h+=`<div class="card"><h2>Сені шақырды</h2>${l.incoming.map(c=>`<div class="res"><span>${esc(c.from_name)}<small>${esc(tbl(c.table))}</small></span><a class="btn gold sm" href="?id=${+c.id}">Қабылдау</a></div>`).join('')}</div>`;
+      <button class="btn gold wide" id="newBtn" ${l.today>=l.limit||lock()?'disabled':''}>Жаңа жарыс</button>${lock()?lockNote():''}<p class="note center" style="margin:8px 0 0">Бүгін: ${+l.today} / ${+l.limit}</p></div>`;
+    if(l.incoming.length) h+=`<div class="card"><h2>Сені шақырды</h2>${l.incoming.map(c=>`<div class="res"><span>${esc(c.from_name)}<small>${esc(tbl(c.table))}</small></span>${lock()?'<i class="note">⏳</i>':`<a class="btn gold sm" href="?id=${+c.id}">Қабылдау</a>`}</div>`).join('')}</div>`;
     if(l.waiting.length) h+=`<div class="card"><h2>Жауап күтіп тұр</h2>${l.waiting.map(c=>`<div class="res"><span>${esc(c.to_name)}<small>${esc(tbl(c.table))} · әлі ойнаған жоқ</small></span></div>`).join('')}</div>`;
     if(l.results.length) h+=`<div class="card"><h2>Соңғы жарыстар</h2>${l.results.map(r=>`<div class="res"><span>${esc(r.opp_name)}<small>${esc(tbl(r.table))} · ${r.outcome==='win'?'жеңдің':r.outcome==='tie'?'тең':'ол озды'} · ★ +${+r.stars}</small></span><b>${+r.my_ok} : ${+r.opp_ok}</b></div>`).join('')}</div>`;
-    app.innerHTML=h; document.getElementById('newBtn').onclick=pick; }
+    app.innerHTML=h; document.getElementById('newBtn').onclick=pick; whenOpen(hub); }
 
   /* ── new challenge: by classmate or by table — either way only a table both have passed ── */
-  async function pick(){ let o; try{ o=await Core.call('esep_ch_options'); }catch(e){ return fail(); } if(!o) return fail('session');
+  async function pick(){ if(lock()) return hub(); let o; try{ o=await Core.call('esep_ch_options'); }catch(e){ return fail(); } if(!o) return fail('session');
     if(!o.klass||!o.mine.length||!o.classmates.length){ app.innerHTML=top()+home+`<div class="card"><h2>${!o.klass?'Алдымен сыныбыңды көрсет':!o.mine.length?'Алдымен бір көбейту кестесін өт':'Әзірге шақыратын сыныптас жоқ'}</h2>
       <p>${!o.klass?'Шығып, қайта кіргенде «Сынып» өрісін толтыр (мысалы 3А).':!o.mine.length?'«Көбейту мен бөлу» бағытында кез келген кесте станциясының тестінен өт — сонда сол кесте бойынша жарыса аласың.':'Сыныптастарың сен өткен кестелердің бірін өткенде осында шығады.'}</p><a class="btn wide" href="../">Басты бет</a></div>`; return; }
     /* two ways in: pick a classmate, then a table you have both passed — or pick a table, then see who can be challenged on it */
@@ -99,7 +106,7 @@
     draw(); }
 
   /* ── accept: ?id= ── */
-  async function accept(id){ let c; try{ c=await Core.call('esep_ch_open',{p_id:id}); }catch(e){ return fail(); } if(!c||c.error) return fail(c&&c.error);
+  async function accept(id){ if(lock()){ locked(); return whenOpen(()=>accept(id)); } let c; try{ c=await Core.call('esep_ch_open',{p_id:id}); }catch(e){ return fail(); } if(!c||c.error) return fail(c&&c.error);
     G={id:c.id,table:c.table,opp:c.opp_name,items:c.items,incoming:true}; ready(); }
 
   function ready(){ app.innerHTML=top()+`<div class="card"><div class="duo"><div><i class="me">${Core.pet?Core.pet(null,{head:true,size:40}):Core.avatar()}</i>Сен</div><span>пен</span><div><i>${esc(first(G.opp).charAt(0))}</i>${esc(first(G.opp))}</div></div>

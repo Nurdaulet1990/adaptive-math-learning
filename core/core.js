@@ -254,6 +254,8 @@
   /* ── answers per calendar day (device-local date) — feeds the portal's daily goal and day streak.
      Lives in STATE._days = {'2026-09-21': 14, …}, so it follows the pupil across devices like the rest
      of the state. Only the last 60 days are kept. Skipped items ("Білмеймін" in the placement test) don't count. */
+  const PLAY_AFTER=25*60000;   // owner, 2026-10-01: «一个学生进去后二十五分钟以后才能开比赛和参加比赛» — see Core.playLock
+  const REVIEW={stations:5,per:2,min:3};   // the daily review: 5 passed stations × 2 questions; none with fewer than 3 passed stations
   const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   function bumpDay(){ if(!STATE) return; const D=STATE._days||(STATE._days={}); const k=ymd(new Date()); D[k]=(D[k]||0)+1;
     const ks=Object.keys(D).sort(); while(ks.length>60) delete D[ks.shift()]; }
@@ -356,6 +358,7 @@
       // migration: legacy WP state stored at top level (first trial version)
       if(!STATE.WP&&STATE.stages){ STATE.WP={diag:STATE.diag,stages:STATE.stages,nAns:STATE.nAns,nOk:STATE.nOk,nHint:STATE.nHint}; }
       if(pickAva||!STATE._ava){ STATE._ava=pickAva||avatar(); pickAva=null; dirty=true; schedule(); }
+      { const day=ymd(new Date()); if(!STATE._in||STATE._in.day!==day){ STATE._in={day,t:Date.now()}; dirty=true; schedule(); } }   // the first time in today: starts the clock of Core.playLock
       cache.state=STATE; cache.sid=session.id; cache.dirty=dirty; ls.set(CACHE_KEY,cache);
       if(mineQ().length) schedule(800);   // events left over from an offline spell or a closed tab
       pal.mount();
@@ -407,6 +410,52 @@
     /** the tasks the teacher gave this pupil (supabase/16_tasks.sql): [{id,route,stages,kind,goal,due,note,p:{n,of,done}}], or null
         when the server has no such function yet / offline — the page then simply shows no task card */
     async myTasks(){ if(!session) return null; try{ const r=await rpc('esep_my_tasks',{p_token:session.token}); return Array.isArray(r)?r:null; }catch(e){ return null; } },
+    /** ── the daily review (owner, 2026-10-01: «每一个新的一天开始的时候要学生一个指定的任务自动生成，之前学过内容的复习», and it is
+        compulsory) ──────────────────────────────────────────────────────────────────────────────────────────
+        Once a day the pupil gets a review task built from what she has already PASSED: five stations, two questions
+        each, chosen the way spaced review chooses — the longest unvisited first, the weakest (fewest stars) and the ones
+        missed in an earlier review ahead of the rest. The plan is made here, once per day, from the state this device
+        holds, and kept in STATE._review so every page agrees; review/ asks the routes' own generators for the questions
+        (room/routes.js) and the fluency facts for PV (pv/facts.js). Until it is done, the routes show the review instead
+        of their map (Core.reviewGate). The tester and a teacher's task are exempt. Fewer than REVIEW_MIN passed stations
+        → no review that day; a station passed (or placed over) today is tomorrow's, not today's. */
+    reviewPlan(){ if(!STATE) return null; const day=ymd(new Date()); const rv=STATE._review;
+      if(rv&&rv.day===day) return rv;
+      const cands=[]; const now=Date.now(), DAY=86400000;
+      Core.config.ROUTES.forEach(([code])=>{ const s=STATE[code]; if(!s||!s.stages) return;
+        Object.keys(s.stages).forEach(id=>{ const st=s.stages[id]; if(!st||st.status!=='passed') return;
+          if(code==='PV'){ const n=+id.slice(3); if(!(n>=77&&n<=91)) return; }           // PV: only the fluency ladder has facts a page outside pv/ can draw
+          const tests=Array.isArray(st.tests)?st.tests:[]; const lastPass=tests.filter(t=>t.pass).reduce((m,t)=>Math.max(m,+t.t||0),0);
+          const seen=(st.rv&&+st.rv.t)||lastPass||(s.diag&&+s.diag.t)||now-7*DAY; if(ymd(new Date(seen))===day) return;   // not on the day it was passed or placed over
+          const best=tests.reduce((m,t)=>Math.max(m,t.n?t.ok/t.n:0),0);
+          const stars=best>=1?3:best>=0.9?2:best>=0.8?1:0; const failed=st.rv&&st.rv.n&&st.rv.ok<st.rv.n;
+          let h=5381; const k=day+code+id; for(let i=0;i<k.length;i++) h=((h<<5)+h+k.charCodeAt(i))|0;   // a stable tie-breaker for the day
+          cands.push({route:code,stage:id,score:(now-seen)/DAY+(3-stars)*2+(failed?4:0)+((h>>>0)%1000)/1000}); }); });
+      cands.sort((a,b)=>b.score-a.score);
+      const items=cands.length>=REVIEW.min?cands.slice(0,REVIEW.stations).map(c=>({route:c.route,stage:c.stage})):[];
+      STATE._review={day,items,per:REVIEW.per,done:items.length===0,ok:0,n:0,t:null}; dirty=true; schedule(); return STATE._review; },
+    reviewPending(){ const rv=Core.reviewPlan(); return !!(rv&&!rv.done&&rv.items.length); },
+    /** the review done: the plan is closed, the stations remember how they went (for the next plan), the day's goal counts it */
+    reviewDone(result){ if(!STATE||!STATE._review) return; const rv=STATE._review; rv.done=true; rv.ok=result.ok|0; rv.n=result.n|0; rv.t=Date.now();
+      (result.stations||[]).forEach(x=>{ const s=STATE[x.route]; const st=s&&s.stages&&s.stages[x.stage]; if(st) st.rv={t:Date.now(),ok:x.ok|0,n:x.n|0}; });
+      dirty=true; schedule(10); },
+    /** ── competitions wait (owner, 2026-10-01: «一个学生进去后二十五分钟以后才能开比赛和参加比赛»; the clock is the
+        first time in today, any page — «当天第一次进来后 25 分钟»; a room the TEACHER opened is not held back) ──
+        Milliseconds until this pupil may open or join a classmate's room or a challenge today; 0 = now. The first entry of
+        the day is stamped in STATE._in at login, so it follows the pupil to another device. The tester is never held.
+        Client-side only: the server does not enforce it (a pupil with the browser's developer tools could get round it). */
+    playLock(){ if(!STATE||Core.tester) return 0; const day=ymd(new Date()); const t=STATE._in&&STATE._in.day===day?+STATE._in.t||Date.now():Date.now();
+      return Math.max(0,t+PLAY_AFTER-Date.now()); },
+    /** the line that says so: «Алдымен жаттық: жарыс 12 минуттан кейін ашылады (14:35).» — '' when open */
+    playLockText(){ const ms=Core.playLock(); if(!ms) return ''; const d=new Date(Date.now()+ms), m=Math.max(1,Math.ceil(ms/60000));
+      return `Алдымен жаттық: жарыс ${m} минуттан кейін ашылады (${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}).`; },
+    /** the card a route shows instead of its map while today's review is waiting. Returns true when it rendered it. */
+    reviewGate(el,topbarHTML){ if(!el||Core.tester||!Core.reviewPending()) return false;
+      if(/[?&]task=/.test(location.search)) return false;   // the teacher's task comes first
+      const rv=STATE._review, n=rv.items.length*rv.per;
+      el.innerHTML=(topbarHTML||'')+`<div class="card" style="text-align:center"><div style="font-size:52px;margin:6px 0 4px">📅</div><h2>Бүгінгі қайталау</h2>
+        <p>Жаңа станцияға дейін — өткендерді бір еске түсіріп аламыз: <b>${n} есеп</b>, ${rv.items.length} станциядан. 3–4 минут.</p>
+        <a class="btn wide gold" href="${ROOT||'../'}review/">Бастау</a></div>`; return true; },
     /** the site's home page (…/core/core.js → …/): for «home» buttons in screens that do not use Core.topbar */
     root:ROOT, homeSVG:HOME_SVG,
     pet:petSVG, petName, pickPet, petSay:(t,ms)=>pal.say(t,ms), petMood:(m,ms)=>pal.mood(m,ms), petOff:v=>pal.off(v),

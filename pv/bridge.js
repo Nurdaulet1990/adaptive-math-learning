@@ -35,7 +35,9 @@ function pull(){ state.completed=R.completed||{}; state.stars=R.stars||0; state.
      every stored one now points somewhere else. `completed` is keyed by level id and is therefore safe,
      so the position is recomputed from it rather than trusted. This also self-heals a saved value from
      any future insertion. */
-  let u=0; LEVEL_ORDER.forEach((e,i)=>{ if(state.completed[e.levelId]) u=Math.max(u,i+1); });
+  /* …and it is the FIRST GAP, not «the last done + 1»: a module test (pv/modtest.js) reopens a level the pupil
+     missed by clearing its `completed`, and that level — not the test — is where she continues. (2026-10-01) */
+  let u=LEVEL_ORDER.findIndex(e=>!state.completed[e.levelId]); if(u<0) u=LEVEL_ORDER.length-1;
   /* The teacher moved the pupil («Кезеңді қолмен қою» on the teacher page). That rewrites the MIRROR — the
      `stages` rows the map and the portal read — and leaves a `moved` note; `completed`, which is what this app
      actually runs on, it cannot know about. So the home page showed the new station and the app opened the old
@@ -64,6 +66,9 @@ const _fb=showFeedback; showFeedback=function(correct,hint){
    each is logged here like a stage-test answer (mode 'test'), with the time it took — the teacher page reads these
    to see who answers in two seconds and who in ten. */
 window.pvFluLog=function(r){ if(!R||!r) return; Core.answer({stage:stageId(r.lv),lvl:3,ok:!!r.ok,mode:'test',hints:0,ms:r.ms,type:r.lv,stem:'⚡ '+levelName(r.lv)+' — '+r.fact+' = ?',ans:r.ok?undefined:String(r.ans),given:r.timeout?'(уақыт бітті)':(r.given===''||r.given===undefined?undefined:String(r.given))}); };
+/* The module test (pv/modtest.js) likewise asks its own questions: logged under the «Түсіну» station, the level each
+   question came from in `type`. */
+window.pvModLog=function(r){ if(!R||!r) return; Core.answer({stage:stageId(r.test),lvl:3,ok:!!r.ok,mode:'test',hints:0,ms:r.ms,type:r.lv,stem:levelName(r.test)+' — '+r.q,ans:r.ok?undefined:String(r.ans),given:r.given}); };
 /* Finishing a PV level is a stage test, and is recorded as one. Until 2026-09-21 the result went out as an
    event only, so `stages[].tests` stayed empty for all 48 stations — and stars are counted from that array
    everywhere outside PV (the portal, the map, the class board). A child who worked only in PV was therefore
@@ -200,6 +205,8 @@ loadScript('../core/map.js?v=14').then(()=>Core.start('PV')).then(rs=>{ R=rs; if
   /* the home page, always one tap away — a teacher's task opens straight inside a level, where there is no top bar */
   if(Core.root){ const home=document.createElement('a'); home.id='pvhome'; home.href=Core.root; home.setAttribute('aria-label','Басты бет'); home.title='Басты бет'; home.innerHTML=Core.homeSVG; document.body.appendChild(home); }
   state.module=null; state.level=null; renderSidebar(); showMap();
+  /* today's review first (core.js reviewGate), once the pupil has started: the map waits behind it */
+  if(Core.reviewGate&&state.started&&!/[?&]task=/.test(location.search)){ const main=document.getElementById('main'); if(main&&Core.reviewGate(main,Core.topbar('Орын мәні · 1–4 сынып'))) return; }
   /* a teacher's task (portal → ?task=PV-07): open that level at once, even one the pupil has not unlocked and
      even before the placement test — the teacher chose it (as core/runner.js does); then drop the parameter so a
      reload shows the map. Only this one level is let through the lock. (2026-09-28) */
