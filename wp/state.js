@@ -8,7 +8,7 @@ const $=id=>document.getElementById(id);
 const app=()=>$('app');
 let R=null;
 
-function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false}; }); return st; }
+function freshStages(st){ st=st||{}; STAGES.forEach(([id])=>{ if(!st[id]) st[id]={status:'locked',level:1,streak:0,wrong:0,l3streak:0,testUnlocked:false,tests:[],seenCard:false,l3win:[],cool:0}; if(Core.gateMigrate) Core.gateMigrate(st[id]); }); return st; }
 function initState(state){ R=state; R.stages=freshStages(R.stages); R.diag=R.diag||null;
   if(Core.tester) testerUnlock(); return R; }
 /* the tester account — see Core.tester in core/core.js. WP keeps its own copy of the runner,

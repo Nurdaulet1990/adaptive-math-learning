@@ -14,7 +14,7 @@ function showHome(){
   /* a teacher's task (portal → ?task=TE-08 or ?task=TE-08&test=1): open that station at once — even one the
      pupil has not reached, the teacher chose it — then drop the parameter so a reload shows the map */
   { const qp=new URLSearchParams(location.search), tk=qp.get('task');
-    if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk):startPractice(tk); } }
+    if(tk&&STAGES.some(s=>s[0]===tk)){   /* even before the placement test: the teacher's task comes first (owner, 2026-09-28) */ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk,true):startPractice(tk); } }
   const cur=currentStage();
   let html=topbar();
   if(!R.diag){
@@ -24,7 +24,7 @@ function showHome(){
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
     html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${R.nAns?acc()+'%':'–'}</b><span>дұрыс</span></div></div>`;
     html+=Core.map({color:'var(--wp)', colorDark:'var(--wp-d)', avatar:Core.avatar(), label:'Мәтінді есептер жолы', go:'Жаттығу',
-      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked}):undefined,
+      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked,gate:Core.testGate?Core.testGate(st):undefined}):undefined,
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:(typeof ICONS!=='undefined'?ICONS[id]:''),
           sub:s.status==='current'?`Деңгей ${s.level}/3 · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
@@ -88,5 +88,5 @@ function finishAnswer(v,btn){
   $('fb').innerHTML=`<div class="fb ${ok?'ok':'no'}">${ok?'Дұрыс! ✓':'Қате. Дұрыс жауабы: '+esc(q.ans)}${showExpl&&q.expl?`<span class="expl">${esc(q.expl)}</span>`:''}</div>`;
   o.onAnswer(ok);
   if(o.mode==='practice'){ const st=R.stages[PR.stId];
-    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn ${ok?'good':''}" onclick="afterAnswerNav()">${PR.twinOf&&!ok?'Ұқсас есеп':'Жалғастыру'}</button>${st.testUnlocked?`<button class="btn gold" onclick="startTest('${PR.stId}')">Тест</button>`:''}</div>`); }
+    $('fb').insertAdjacentHTML('beforeend',`<div class="row"><button class="btn ${ok?'good':''}" onclick="afterAnswerNav()">${PR.twinOf&&!ok?'Ұқсас есеп':'Жалғастыру'}</button>${(st.status==='passed'||(Core.testGate?Core.testGate(st).open:st.testUnlocked))?`<button class="btn gold" onclick="startTest('${PR.stId}')">Тест</button>`:''}</div>`); }
 }
