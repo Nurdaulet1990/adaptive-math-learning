@@ -22,7 +22,9 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
    the DOM is built is what the browser actually does. */
 const html = fs.readFileSync(path.join(ROOT, 'pv/index.html'), 'utf8')
   .replace(/<script src="discs\.js[^"]*"><\/script>/,
-           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/discs.js'), 'utf8') + '</script>');
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/discs.js'), 'utf8') + '</script>')
+  .replace(/<script src="fluency\.js[^"]*"><\/script>/,
+           '<script>' + fs.readFileSync(path.join(ROOT, 'pv/fluency.js'), 'utf8') + '</script>');
 const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://example.org/pv/', pretendToBeVisual: true });
 const w = dom.window;
 w.addEventListener('error', () => {});
@@ -136,7 +138,8 @@ setTimeout(() => {
   T('every add/sub level has a twin right behind it', ev(`
       (() => { const ids=[]; MODULES.forEach(m=>m.levels.forEach(l=>ids.push(l.id)));
         return ids.every((id,i) => !ADDSUB.has(id) || ids[i+1] === id + '_n'); })()`));
-  T('76 levels, 28 of them without a picture', ev('LEVEL_ORDER.length') === 76 && ev('NOFIG.size') === 28,
+  // 2026-10-01: 48 + 28 twins − 12 retired (the six within-20 add/sub levels and their twins) + 15 fluency levels
+  T('79 levels on the ladder, 28 twins in the table, the 12 retired ones off the ladder but still numbered', ev('LEVEL_ORDER.length') === 79 && ev('NOFIG.size') === 28 && ev('Object.keys(STAGE_NO).length') === 91 && ev('getLevelGlobalIndex("a1")') === -1 && ev('isLevelUnlocked("a1")') === false,
     { levels: ev('LEVEL_ORDER.length'), twins: ev('NOFIG.size') });
 
   /* The station number is the identity of a station, so the original 48 must still be exactly the numbers

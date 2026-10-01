@@ -159,6 +159,7 @@ node supabase/test/e2e_tester.js  # 25 项：tester 账号 —— 五条路线�
 node supabase/test/e2e_diag.js    # 19 项：诊断定位 —— 真 DOM（jsdom）里把整套诊断打完；核心是「只会 1..K 站的孩子必须落在第 K+1 站」，不需要数据库
 node tests/cachebust.js           # 3 项：所有页面对同一个 core/ 文件的 ?v 必须一致（不需要数据库，秒级）
 node tests/pv.js                  # 4 项：PV 老应用端到端 —— jsdom 里跑它自己的脚本，开关卡、答题、按「Келесі」
+node tests/pv_fluency.js          # 20 项：PV 流利度阶梯 —— 带图学 6 道 → ⚡ 限时 10 道（超时算错、记秒数）→ 错题 4 道图题 → 过/不过；复习池；gate 开关
 node tests/gate.js                # 22 项：关卡测试的门槛 —— 1、2 级没有测试按钮；3 级最近 10 道对 8 道（不用提示）才开；没过要再练 5 道；老师任务和已过关的站不受限；WP 同规则
 ```
 

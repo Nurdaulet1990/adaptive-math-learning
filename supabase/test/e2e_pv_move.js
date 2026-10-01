@@ -28,8 +28,8 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const browser = await chromium.launch(); const ctx = await browser.newContext({ viewport: { width: 420, height: 900 } });
   await ctx.route(/supabase\.co/, backend); await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
   const errs = []; const B = 'http://localhost:8772/';
-  /* a station's number (PV-10) is its identity, not its position: the 28 no-picture twins (PV-49…) sit between the
-     originals, so «the stations before PV-10» is LEVEL_ORDER's index of it, not 9 */
+  /* a station's number (PV-13) is its identity, not its position: the 28 no-picture twins (PV-49…) sit between the
+     originals, so «the stations before PV-13» is LEVEL_ORDER's index of it, not 9 */
   const pvState = async p => p.evaluate(() => ({ up: state.unlockedUpTo, curNo: stageNo(LEVEL_ORDER[Math.min(state.unlockedUpTo, LEVEL_ORDER.length - 1)].levelId), done: Object.keys(state.completed).filter(k => state.completed[k]).length, started: state.started }));
   const idxOf = async (p, no) => p.evaluate(no => LEVEL_ORDER.findIndex(e => stageNo(e.levelId) === no), no);
   const teacherMove = async (tp, name, to) => { await tp.goto(B + 'teacher/#oqu'); await tp.waitForSelector('#tpin, [data-route]'); if (await tp.locator('#tpin').count()) { await tp.fill('#tpin', 'мұғалім-құпиясы-2026'); await tp.click('#tgo'); await tp.waitForSelector('[data-route]'); }
@@ -44,25 +44,26 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   const fourth = await page.evaluate(() => 'PV-' + String(stageNo(LEVEL_ORDER[3].levelId)).padStart(2, '0'));
   T('setup: three levels done, the mirror says the fourth station is current', st.stages[fourth].status === 'current' && Object.values(st.stages).filter(v => v.status === 'passed').length === 3, Object.entries(st.stages).filter(([k, v]) => v.status !== 'locked'));
 
-  // 2 ─ the teacher moves her to PV-10
+  // 2 ─ the teacher moves her to PV-13
   const tp = await ctx.newPage(); tp.on('pageerror', e => errs.push('teacher: ' + e.message));
-  await teacherMove(tp, 'Айару М.', 'PV-10');
+  await teacherMove(tp, 'Айару М.', 'PV-13');
   st = (await pg.query(`select state->'PV' s from students where name='Айару М.'`)).rows[0].s;
-  T('teacher: PV-10 is current in the stage rows and the move is noted', st.stages['PV-10'].status === 'current' && st.moved && st.moved.to === 'PV-10', { moved: st.moved });
+  T('teacher: PV-13 is current in the stage rows and the move is noted', st.stages['PV-13'].status === 'current' && st.moved && st.moved.to === 'PV-13', { moved: st.moved });
 
-  // 3 ─ the pupil opens PV again: the app must be at PV-10, not PV-04
+  // 3 ─ the pupil opens PV again: the app must be at PV-13, not PV-04
   await page.reload(); await page.waitForSelector('#workspace, .level-btn, #pvhome', { timeout: 15000 }); await page.waitForTimeout(2500);
-  let s = await pvState(page); const i10 = await idxOf(page, 10);
-  T('PV app opens at the station the teacher chose (PV-10), every station before it done', s.curNo === 10 && s.up === i10 && s.done === i10 && s.started === true, s);
+  let s = await pvState(page); const i10 = await idxOf(page, 13);
+  T('PV app opens at the station the teacher chose (PV-13), every station before it done', s.curNo === 13 && s.up === i10 && s.done === i10 && s.started === true, s);
   st = (await pg.query(`select state->'PV' s from students where name='Айару М.'`)).rows[0].s;
-  T('…and the saved state agrees at once (the home page shows PV-10 too): completed rebuilt, PV-10 current, the note marked as applied', st.stages['PV-10'].status === 'current' && st.stages['PV-09'].status === 'passed' && st.movedApplied === st.moved.t && Object.keys(st.completed).length === i10, { applied: st.movedApplied, t: st.moved.t, n: Object.keys(st.completed || {}).length, s10: st.stages['PV-10'].status, s9: st.stages['PV-09'].status });
+  T('…and the saved state agrees at once (the home page shows PV-13 too): completed rebuilt, PV-13 current, the note marked as applied', st.stages['PV-13'].status === 'current' && st.stages['PV-12'].status === 'passed' && st.movedApplied === st.moved.t && Object.keys(st.completed).length === i10, { applied: st.movedApplied, t: st.moved.t, n: Object.keys(st.completed || {}).length, s10: st.stages['PV-13'].status, s9: st.stages['PV-12'].status });
   await page.reload(); await page.waitForTimeout(2500); s = await pvState(page);
-  T('a second load does not re-apply anything', s.curNo === 10 && s.done === i10, s);
+  T('a second load does not re-apply anything', s.curNo === 13 && s.done === i10, s);
 
   // 4 ─ moved BACK to PV-02: the later levels are open again, not done
-  await teacherMove(tp, 'Айару М.', 'PV-02');
+  await teacherMove(tp, 'Айару М.', 'PV-05');
   await page.reload(); await page.waitForTimeout(2500); s = await pvState(page);
-  T('moved back to PV-02: the app opens PV-02 with only PV-01 done', s.curNo === 2 && s.done === 1 && s.up === 1, s);
+  const i5 = await idxOf(page, 5);
+  T('moved back to PV-05 (c20): the app opens there, the stations before it (c1 and the within-10 ladder) done, nothing after', s.curNo === 5 && s.done === i5 && s.up === i5, Object.assign(s, { i5 }));
 
   // 5 ─ a pupil who never opened PV, placed by the teacher at PV-06: no placement test, straight to PV-06
   await teacherMove(tp, 'Бекзат Қ.', 'PV-06');

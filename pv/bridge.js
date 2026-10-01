@@ -60,6 +60,10 @@ const _fb=showFeedback; showFeedback=function(correct,hint){
     const ansM=hint?String(hint).replace(/^Дұрыс( жауап)?:\s*/,''):'';
     Core.answer({stage:stageId(state.level),lvl:3,ok:!!correct,mode:'practice',hints:qHints,ms:Date.now()-qT0,type:state.level,stem:levelName(state.level)+(stem?' — '+stem:''),ans:correct?undefined:ansM,given:undefined}); }
   return _fb.apply(this,arguments); };
+/* The fluency ladder's ⚡ round (pv/fluency.js) asks its own questions, timed, without going through showFeedback;
+   each is logged here like a stage-test answer (mode 'test'), with the time it took — the teacher page reads these
+   to see who answers in two seconds and who in ten. */
+window.pvFluLog=function(r){ if(!R||!r) return; Core.answer({stage:stageId(r.lv),lvl:3,ok:!!r.ok,mode:'test',hints:0,ms:r.ms,type:r.lv,stem:'⚡ '+levelName(r.lv)+' — '+r.fact+' = ?',ans:r.ok?undefined:String(r.ans),given:r.timeout?'(уақыт бітті)':(r.given===''||r.given===undefined?undefined:String(r.given))}); };
 /* Finishing a PV level is a stage test, and is recorded as one. Until 2026-09-21 the result went out as an
    event only, so `stages[].tests` stayed empty for all 48 stations — and stars are counted from that array
    everywhere outside PV (the portal, the map, the class board). A child who worked only in PV was therefore
