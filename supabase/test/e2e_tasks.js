@@ -51,7 +51,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   T('teacher: the task is published — TE-03, 3 right answers, 0 / 1 done', /TE · TE-03/.test(t1) && /3 есеп дұрыс/.test(t1) && /0 \/ 1/.test(t1) && /жұмаға дейін/.test(t1), t1);
   // ── the pupil in 3А sees it, starts it, answers three right ──
   const { p: ap } = await mk();
-  await ap.goto(B); await ap.waitForSelector('#c_nm'); await ap.fill('#c_nm', 'Айгүл С.'); await ap.fill('#c_pin', '1111'); await ap.click('#c_go');
+  await ap.goto(B); await ap.waitForSelector('#c_nm'); await ap.fill('#c_nm', 'Айгүл С.'); await ap.fill('#c_pin', '1111'); await ap.waitForFunction(() => document.getElementById('c_kl').options.length > 1, null, { timeout: 5000 }).catch(() => {}); await ap.selectOption('#c_kl', '3А').catch(() => {}); await ap.click('#c_go');   // the class on every login (18_login_klass.sql)
   await ap.waitForSelector('#tasks .tk', { timeout: 10000 });
   const c1 = (await ap.locator('#tasks .tk').innerText()).replace(/\s+/g, ' ');
   T('pupil: the task card on Бүгін — what, which station, the note, 0 / 3', /3 есепті дұрыс шығар/.test(c1) && /TE-03/.test(c1) && /жұмаға дейін/.test(c1) && /0 \/ 3/.test(c1), c1);
@@ -78,7 +78,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
   T('pupil: back on Бүгін the card is done ✓ and the badge is gone', /Орындалды/.test(await ap.locator('#tasks .tk').innerText()) && await ap.locator('#bbadge').isHidden());
   // ── a pupil of 3Ә does not see it ──
   const { p: dp } = await mk();
-  await dp.goto(B); await dp.waitForSelector('#c_nm'); await dp.fill('#c_nm', 'Дана К.'); await dp.fill('#c_pin', '2222'); await dp.click('#c_go'); await dp.waitForSelector('.tabbar'); await dp.waitForTimeout(1500);
+  await dp.goto(B); await dp.waitForSelector('#c_nm'); await dp.fill('#c_nm', 'Дана К.'); await dp.fill('#c_pin', '2222'); await dp.waitForFunction(() => document.getElementById('c_kl').options.length > 1, null, { timeout: 5000 }).catch(() => {}); await dp.selectOption('#c_kl', '3Ә').catch(() => {}); await dp.click('#c_go'); await dp.waitForSelector('.tabbar'); await dp.waitForTimeout(1500);
   T('another class does not see it', (await dp.locator('#tasks .tk').count()) === 0);
   // ── the teacher sees it done ──
   await tp.reload(); await tp.waitForSelector('.tkc');
