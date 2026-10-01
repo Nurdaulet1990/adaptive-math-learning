@@ -708,8 +708,21 @@ const MODULES = [
     id:'d1', name:'10 ішінде', nameRu:'В пределах 10', icon:'1️⃣',
     levels:[
       {id:'c1', name:'Санау (1–9)', desc:'Count ones blocks'},
-      {id:'a1', name:'Қосу', desc:'Add within 10'},
-      {id:'s1', name:'Азайту', desc:'Subtract within 10'},
+      /* 2026-10-01 · the fluency ladder (pv/fluency.js): the single «Қосу» / «Азайту» levels, passed by a run of
+         eight with the blocks there to count, are retired — a child who counted her way through them looked
+         exactly like one who knew the facts. Each small group of facts is now its own level: learn it with a
+         strategy card and the picture, then a one-minute ⚡ round without the picture, timed per fact.
+         Retired levels stay in this table (their station numbers are history the teacher page still names)
+         but leave the map and the ladder. */
+      {id:'a1', name:'Қосу', desc:'Add within 10', retired:true},
+      {id:'s1', name:'Азайту', desc:'Subtract within 10', retired:true},
+      {id:'f1',  name:'Қосу · +1', desc:'Facts +1', flu:true},
+      {id:'f2',  name:'Қосу · +2', desc:'Facts +2', flu:true},
+      {id:'f3',  name:'Қосу · қос сандар, 10-ға толықтыру', desc:'Doubles and bonds to 10', flu:true},
+      {id:'f4',  name:'Қосу · қалғаны', desc:'The rest within 10', flu:true},
+      {id:'fs1', name:'Азайту · −1, −2', desc:'Facts −1, −2', flu:true},
+      {id:'fs2', name:'Азайту · қос сандардан, 10-нан', desc:'Halves and from ten', flu:true},
+      {id:'fs3', name:'Азайту · қалғаны', desc:'The rest within 10', flu:true},
       {id:'u1', name:'Түсіну', desc:'Comprehension check'}
     ]
   },
@@ -718,10 +731,18 @@ const MODULES = [
     levels:[
       {id:'c20', name:'Санау (11–20)', desc:'Count blocks 11-20'},
       {id:'pv20', name:'Орын мәні', desc:'Place value within 20'},
-      {id:'a20n', name:'Қосу, ауыссыз', desc:'Add within 20 no carry'},
-      {id:'a2', name:'Қосу, ауысумен', desc:'Add within 20 with carry'},
-      {id:'s20n', name:'Азайту, алусыз', desc:'Sub within 20 no borrow'},
-      {id:'s20b', name:'Азайту, алумен', desc:'Sub within 20 with borrow'},
+      {id:'a20n', name:'Қосу, ауыссыз', desc:'Add within 20 no carry', retired:true},
+      {id:'a2', name:'Қосу, ауысумен', desc:'Add within 20 with carry', retired:true},
+      {id:'s20n', name:'Азайту, алусыз', desc:'Sub within 20 no borrow', retired:true},
+      {id:'s20b', name:'Азайту, алумен', desc:'Sub within 20 with borrow', retired:true},
+      {id:'f20n',  name:'Қосу · 10 + n, ондық аттамай', desc:'10+n and no-carry within 20', flu:true},
+      {id:'fd',    name:'Қосу · қос сандар', desc:'Doubles and near doubles', flu:true},
+      {id:'f9',    name:'Қосу · 9-ға қосу', desc:'9 + n, make ten', flu:true},
+      {id:'f87',   name:'Қосу · 8, 7-ге қосу', desc:'8 + n, 7 + n, make ten', flu:true},
+      {id:'fs20n', name:'Азайту · ондық аттамай', desc:'1n − m, no borrow', flu:true},
+      {id:'fsd',   name:'Азайту · қос сандардан', desc:'Think doubles', flu:true},
+      {id:'fs98',  name:'Азайту · 9 бен 8-ді азайту', desc:'−9, −8, take from ten', flu:true},
+      {id:'fsr',   name:'Азайту · қалғаны', desc:'The rest, crossing ten', flu:true},
       {id:'u2', name:'Түсіну', desc:'Comprehension check'}
     ]
   },
@@ -801,7 +822,7 @@ for (const m of MODULES) {
     withTwins.push(l);
     if (ADDSUB.has(l.id)) {
       const nid = l.id + '_n'; NOFIG.add(nid);
-      withTwins.push({ id: nid, name: l.name + ' · суретсіз', desc: (l.desc || '') + ' — without the picture' });
+      withTwins.push({ id: nid, name: l.name + ' · суретсіз', desc: (l.desc || '') + ' — without the picture', retired: l.retired || undefined });
     }
   }
   m.levels = withTwins;
@@ -828,15 +849,20 @@ const STAGE_NO = {
   a5_n:57, a6_n:58, s2_n:59, s3_n:60, a7_n:61, a8_n:62, a9_n:63, a10_n:64,
   s4_n:65, s5_n:66, s6_n:67, s7_n:68, a4d1_n:69, a4d2_n:70, a4d3_n:71, a4d4_n:72,
   s4d1_n:73, s4d2_n:74, s4d3_n:75, s4d4_n:76,
+  // the fluency ladder (pv/fluency.js), added 2026-10-01
+  f1:77, f2:78, f3:79, f4:80, fs1:81, fs2:82, fs3:83,
+  f20n:84, fd:85, f9:86, f87:87, fs20n:88, fsd:89, fs98:90, fsr:91,
 };
 const stageNo = lv => STAGE_NO[lv];
 
 const LEVEL_ORDER = [];
 for(const m of MODULES) {
   for(const l of m.levels) {
+    if(l.retired) continue;   // keeps its number and its name; no longer on the map or the ladder
     LEVEL_ORDER.push({ moduleId: m.id, levelId: l.id });
   }
 }
+const FLU_LVL = new Set(MODULES.flatMap(m => m.levels.filter(l => l.flu).map(l => l.id)));
 
 function getLevelGlobalIndex(levelId) {
   return LEVEL_ORDER.findIndex(x => x.levelId === levelId);
@@ -849,6 +875,7 @@ const PLACE_ORDER = LEVEL_ORDER.filter(e => !NOFIG.has(e.levelId));
 
 function isLevelUnlocked(levelId) {
   const idx = getLevelGlobalIndex(levelId);
+  if(idx < 0) return false;   // retired (not in LEVEL_ORDER)
   return idx <= state.unlockedUpTo;
 }
 
@@ -867,6 +894,7 @@ const QUESTION_DISPATCH = [
   { name: 'placeValue',    levels: PLACE_LVL, generate: (ws) => genPlace(ws) },
   { name: 'compare',       levels: CMP_LVL,   generate: (ws) => genCompare(ws) },
   { name: 'horizOps',      levels: HORIZ_OPS, generate: (ws) => genHorizOps(ws) },
+  { name: 'fluency',       levels: FLU_LVL,   generate: (ws) => genFluency(ws) },     // pv/fluency.js
   { name: 'comprehension', levels: COMP_LVL,  generate: (ws) => genComprehension(ws) },
   // default fallback: genOps (vertical operations with hints)
 ];
@@ -911,8 +939,8 @@ function saveProgress() {
   } catch(e){}
 }
 
-function totalLevels() { return MODULES.reduce((s,m)=>s+m.levels.length,0); }
-function completedCount() { return Object.keys(state.completed).length; }
+function totalLevels() { return LEVEL_ORDER.length; }
+function completedCount() { return LEVEL_ORDER.filter(e=>state.completed[e.levelId]).length; }
 
 // ── SVG block generators ──
 // Block geometry — proportional: One=cube, Ten=10 cubes stacked, Hundred=10 tens side-by-side
@@ -1016,22 +1044,23 @@ function renderSidebar() {
       <h1>Орын мәні<small>Adaptive · G1–G4</small></h1>
     </div>`;
   // Check if any level in a module is unlocked
+  const live = m => m.levels.filter(l => !l.retired);
   function isModuleAccessible(m) {
-    return m.levels.some(l => isLevelUnlocked(l.id));
+    return live(m).some(l => isLevelUnlocked(l.id));
   }
   for(const m of MODULES) {
-    const modCompleted = m.levels.filter(l=>state.completed[l.id]).length;
-    const modUnlocked = m.levels.filter(l=>isLevelUnlocked(l.id)).length;
+    const modCompleted = live(m).filter(l=>state.completed[l.id]).length;
+    const modUnlocked = live(m).filter(l=>isLevelUnlocked(l.id)).length;
     const isActive = state.module===m.id;
     const modLocked = !isModuleAccessible(m);
     html+=`<div class="nav-section">
       <button class="nav-item ${isActive?'active':''} ${modLocked?'locked':''}" onclick="${modLocked?'':'selectModule(\''+m.id+'\')'}">
         <span class="icon">${modLocked?'🔒':m.icon}</span>${m.name}
-        <span class="badge">${modCompleted}/${m.levels.length}</span>
+        <span class="badge">${modCompleted}/${live(m).length}</span>
       </button>`;
     if(isActive && !modLocked) {
       html+=`<div class="nav-levels">`;
-      for(const l of m.levels) {
+      for(const l of live(m)) {
         const lActive = state.level===l.id;
         const lDone = state.completed[l.id];
         const lLocked = !isLevelUnlocked(l.id);
@@ -2714,6 +2743,8 @@ function genPlacementQ(levelId) {
   if(lv==='m1') { let a,b; do{a=rand(10,99);b=rand(10,99);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare (answer the bigger one)', answer:Math.max(a,b)}; }
   if(lv==='m2') { let a,b; do{a=rand(100,999);b=rand(100,999);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare', answer:Math.max(a,b)}; }
   if(lv==='m3') { let a,b; do{a=rand(1000,9999);b=rand(1000,9999);}while(a===b); return {q:`${a} және ${b} — қайсысы үлкен?`, sub:'Compare', answer:Math.max(a,b)}; }
+  // the fluency ladder: one of the level's own facts (pv/fluency.js)
+  if(typeof FLU!=='undefined' && FLU.facts[lv]) { const f=FLU.pick(lv); return {q:`${f.a} ${f.op} ${f.b} = ?`, sub:'Fluency', answer:f.ans}; }
   // Operations — just math, no visuals
   if(lv==='a1') { let a,b; do{a=rand(1,8);b=rand(1,8);}while(a+b>9); return {q:`${a} + ${b} = ?`, sub:'Add within 10', answer:a+b}; }
   if(lv==='s1') { const a=rand(2,9),b=rand(1,a); return {q:`${a} − ${b} = ?`, sub:'Sub within 10', answer:a-b}; }
@@ -2959,6 +2990,7 @@ renderSidebar();
 renderMain();
 </script>
 <div id="app"></div>
-<script src="bridge.js?v=23"></script>
+<script src="fluency.js?v=1"></script>
+<script src="bridge.js?v=24"></script>
 </body>
 </html>

@@ -132,7 +132,7 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <script src="../core/pets.js?v=1"></script>
 <script src="../core/core.js?v=23"></script>
 <script src="../core/figs.js?v=8"></script>
-<script src="../room/routes.js?v=5"></script>
+<script src="../room/routes.js?v=6"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -182,6 +182,7 @@ const mainRoute=r=>routesOf(r).sort((x,y)=>(RS(r,y).nAns||0)-(RS(r,x).nAns||0))[
    The id comes from the pupil's own state, so it is looked up with hasOwnProperty — never as a plain property. */
 const RNM={}; const roomNames=async r=>{ if(RNM[r]) return RNM[r]; if(!window.RoomRoutes) return {}; try{ RNM[r]=await RoomRoutes.stageNames(r); }catch(e){ return {}; } return RNM[r]; };   // a failed download is not remembered
 const loadNames=()=>Promise.all(ROUTES.map(roomNames));
+const liveIds=names=>Object.keys(names||{}).filter(k=>!names[k]||names[k].type!=='pv-old');   // a retired PV station keeps its name for history, not a place in the lists
 const stInfo=(route,id)=>{ const t=RNM[route]; return t&&Object.prototype.hasOwnProperty.call(t,String(id))?t[id]:null; };
 const nmOf=(route,id)=>{ const i=stInfo(route,id); return i?String(i.name||''):''; };
 const stHTML=(route,id)=>{ const n=nmOf(route,id); return esc(id)+(n?` <small class="muted" style="font-weight:600">${esc(n)}</small>`:''); };
@@ -284,7 +285,7 @@ async function renderToday(rows){ const gen=T.view; const k=$('kpis'), hb=$('hou
   const from=Math.min(8,...hrs.map((v,h)=>v?h:99)), to=Math.max(18,...hrs.map((v,h)=>v?h:0)), mx=Math.max(1,...hrs);
   hb.innerHTML=hrs.slice(from,to+1).map((v,i)=>`<div title="${from+i}:00 · ${v} есеп"><i style="height:${Math.round(100*v/mx)}%"></i><span>${from+i}</span></div>`).join(''); }
 /* the class × station map of one route */
-function heatHTML(rows,route){ const names=RNM[route]||{}; const ids=Object.keys(names).length?Object.keys(names):[...new Set(rows.flatMap(r=>Object.keys(RS(r,route).stages||{})))].sort();
+function heatHTML(rows,route){ const names=RNM[route]||{}; const ids=liveIds(names).length?liveIds(names):[...new Set(rows.flatMap(r=>Object.keys(RS(r,route).stages||{})))].sort();
   const col=`var(--${route.toLowerCase()},var(--accent))`, cnt=new Array(ids.length).fill(0);
   const body=rows.map(r=>{ const st=RS(r,route).stages||{}; let at=-1;
     const cells=ids.map((id,i)=>{ const x=st[id]; if(!x) return `<td class="c" title="${esc(id)}"></td>`;
@@ -312,7 +313,7 @@ async function showTasks(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; cons
   if(gen!==T.view) return;
   const F=T.tk=T.tk||{route:'TE',stages:new Set(),kind:'answers',goal:20,due:ymd(new Date(Date.now()+3*864e5)),note:'',klasses:new Set(T.klass?[T.klass]:[]),students:new Set()};
   const routes=TK_ROUTES.filter(c=>ROUTES.includes(c));
-  const names=RNM[F.route]||{}; const ids=Object.keys(names);
+  const names=RNM[F.route]||{}; const ids=liveIds(names);
   const klasses=[...new Set([...(T.classes||[]).filter(c=>c.listed!==false).map(c=>c.name),...T.rows.map(r=>r.klass).filter(Boolean)])].sort();
   const MON=['қаң','ақп','нау','сәу','мам','мау','шіл','там','қыр','қаз','қар','жел'], dd=d=>{ const x=new Date(d+'T00:00:00'); return `${x.getDate()} ${MON[x.getMonth()]}`; };
   const who=t=>[...(t.klasses||[]).map(k=>esc(k)+' сыныбы'),...(t.students||[]).map(id=>{ const r=T.rows.find(x=>x.id===id); return esc(r?r.name:'?'); })].join(', ');
@@ -487,7 +488,9 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const s=RS(r,route); const stages=s.stages||{}; const cur=stOf(r,route);
   const evs=ev.map(e=>Object.assign({T:new Date(e.t)},e.ev)).filter(e=>evRoute(e)===route);
   const ans=evs.filter(e=>e.ev==='answer'); const per={};
-  ans.forEach(a=>{ per[a.stage]=per[a.stage]||{n:0,ok:0,h:0,ms:0}; per[a.stage].n++; if(a.ok) per[a.stage].ok++; per[a.stage].h+=num(a.hints); per[a.stage].ms+=num(a.ms); });
+  ans.forEach(a=>{ per[a.stage]=per[a.stage]||{n:0,ok:0,h:0,ms:0,tms:[]}; per[a.stage].n++; if(a.ok) per[a.stage].ok++; per[a.stage].h+=num(a.hints); per[a.stage].ms+=num(a.ms);
+    if(a.mode==='test'&&num(a.ms)>0) per[a.stage].tms.push(num(a.ms)); });   // the timed answers (stage tests, PV's ⚡ rounds): their median is what tells a counter from a knower
+  const medS=v=>{ if(!v.length) return ''; const x=v.slice().sort((a,b)=>a-b); return (x[Math.floor(x.length/2)]/1000).toFixed(1); };
   let act=0; for(let i=1;i<evs.length;i++){ const g=evs[i].T-evs[i-1].T; if(g>0&&g<=5*60000) act+=g; }
   const okN=ans.filter(a=>a.ok).length; const hintSum=ans.reduce((x,a)=>x+num(a.hints),0);
   const days={}; ans.forEach(a=>{ const k=ymd(a.T); days[k]=days[k]||{n:0,ok:0,h:0}; days[k].n++; if(a.ok) days[k].ok++; days[k].h+=num(a.hints); });
@@ -501,14 +504,14 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
     <div class="row" style="margin-bottom:12px">${[['today','Бүгін'],['yest','Кеше'],['7','7 күн'],['30','30 күн'],['all','Барлығы']].map(([k,l])=>`<button class="btn plain" style="min-height:36px;padding:6px 10px" onclick="setRange('${id}','${k}')">${l}</button>`).join('')}</div>
     <div class="stat"><div><b>${Math.round(act/60000)}</b><span>белсенді мин</span></div><div><b>${ans.length}</b><span>есеп</span></div><div><b>${ans.length?Math.round(100*okN/ans.length):0}%</b><span>дұрыс</span></div></div>
     <p class="note">Кеңес ⌀ ${ans.length?(hintSum/ans.length).toFixed(1):'—'} · «Білмеймін» ${evs.filter(e=>e.ev==='dontknow').length} рет · тест: ${esc(evs.filter(e=>e.ev==='test').map(e=>(e.pass?'✓':'✗')+e.ok+'/'+e.n+' '+e.stage).join(', ')||'—')}</p>
-    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td style="text-align:left">${stHTML(route,k)}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
+    ${Object.keys(per).length?`<table class="t3" style="margin-top:10px"><tr><th>Кезең</th><th>Есеп</th><th>Дұрыс</th><th>Орташа с</th><th title="тест / ⚡ жауаптарының медианасы, секунд">⚡ с</th><th>Кеңес ⌀</th><th>Қорытынды</th></tr>${Object.keys(per).sort().map(k=>{ const p=per[k]; return `<tr><td style="text-align:left">${stHTML(route,k)}</td><td>${p.n}</td><td>${Math.round(100*p.ok/p.n)}%</td><td>${Math.round(p.ms/p.n/1000)}</td><td>${medS(p.tms)}</td><td>${(p.h/p.n).toFixed(1)}</td>${vcell(p.n,p.ok/p.n,p.h/p.n)}</tr>`; }).join('')}</table><p class="note" style="margin-top:6px">${VLEGEND}</p>`:'<p class="note">Бұл аралықта есеп шығарылмаған.</p>'}
     ${Object.keys(days).length>1?`<table class="t3" style="margin-top:10px"><tr><th>Күн</th><th>Есеп</th><th>Дұрыс</th><th>Кеңес ⌀</th></tr>${Object.entries(days).map(([d,v])=>`<tr><td>${esc(d)}</td><td>${v.n}</td><td>${Math.round(100*v.ok/v.n)}%</td><td>${(v.h/v.n).toFixed(1)}</td></tr>`).join('')}</table>`:''}
   </div>`;
   if(ans.length){ html+=`<div class="card"><h2>Есептер ретімен</h2><div style="overflow-x:auto"><table class="t3" style="font-size:.85rem"><tr><th>Уақыт</th><th>Кезең</th><th>Реж.</th><th></th><th>Кеңес</th><th>с</th><th style="text-align:left">Есеп</th></tr>
     ${ans.map(a=>`<tr><td>${ymd(a.T).slice(5)} ${fmtT(a.T)}</td><td>${esc(a.stage)}${a.lvl?' L'+esc(a.lvl):''}</td><td>${a.mode==='diag'?'диагн.':a.mode==='test'?'тест':(a.twin?'ұқсас':'жатт.')}</td><td style="color:${a.ok?'var(--good)':'var(--bad)'}">${a.skip?'—':a.ok?'✓':'✗'}</td><td>${num(a.hints)||''}</td><td>${Math.round(num(a.ms)/1000)||''}</td><td style="text-align:left;font-weight:600">${a.stem?esc(a.stem):'<span class="muted">'+esc(a.id||'')+'</span>'}${!a.ok&&a.given!==undefined?`<br><span class="muted">жауабы: ${esc(a.given)} · дұрысы: ${esc(a.ans)}</span>`:''}</td></tr>`).join('')}</table></div></div>`; }
   html+=`<div class="card"><h2>Басқару · ${route}</h2>
     <p class="note">Кезеңді қолмен қою: ${Object.keys(RNM[route]||{}).length
-      ?`<select id="setst" class="big" style="max-width:100%;display:inline-block;font-size:1rem;padding:8px"><option value="">— кезеңді таңда —</option>${Object.keys(RNM[route]).map(k=>`<option value="${esc(k)}" ${k===(cur||'')?'selected':''}>${esc(k+' · '+RNM[route][k].name)}${RNM[route][k].grade?' ('+esc(RNM[route][k].grade)+'-сын.)':''}</option>`).join('')}</select>`
+      ?`<select id="setst" class="big" style="max-width:100%;display:inline-block;font-size:1rem;padding:8px"><option value="">— кезеңді таңда —</option>${liveIds(RNM[route]).map(k=>`<option value="${esc(k)}" ${k===(cur||'')?'selected':''}>${esc(k+' · '+RNM[route][k].name)}${RNM[route][k].grade?' ('+esc(RNM[route][k].grade)+'-сын.)':''}</option>`).join('')}</select>`
       :`<input class="big" id="setst" placeholder="${route}-03" style="width:140px;display:inline-block;font-size:1rem;padding:8px">`} <button class="btn ghost" onclick="setStage('${id}',$('setst').value.trim().toUpperCase())">Қою</button></p>
     <p class="note" style="margin-top:8px">Сыныбы: <select id="setkl" style="font-size:1rem;padding:6px">${klassOpts(r.klass)}</select> <button class="btn ghost" onclick="setKlass('${id}')">Ауыстыру</button> <span class="muted">— оқушы сыныбын өзі ауыстыра алмайды</span></p>
     <p class="note" style="margin-top:8px">PIN-ді ұмытса — жаңасын қою: <input class="big" id="newpin" inputmode="numeric" maxlength="4" placeholder="4 сан" autocomplete="off" style="width:110px;display:inline-block;font-size:1rem;padding:8px"> <button class="btn ghost" onclick="resetPin('${id}')">Сақтау</button></p>
@@ -522,7 +525,7 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   let ev35=[]; try{ ev35=await trpc('esep_t_events',Object.assign({p_students:[id],p_limit:5000},rangeISO(rangePreset('30')))); }catch(e){}
   const E=ev35.map(e=>Object.assign({T:new Date(e.t)},e.ev));
   const actD={}; for(let i=1;i<E.length;i++){ const g=E[i].T-E[i-1].T; if(g>0&&g<=5*60000){ const k=ymd(E[i].T); actD[k]=(actD[k]||0)+g; } }
-  const names=RNM[route]||{}; const ids=Object.keys(names).length?Object.keys(names):Object.keys(stages).sort();
+  const names=RNM[route]||{}; const ids=liveIds(names).length?liveIds(names):Object.keys(stages).sort();
   const curD=daysAgo(progressT(r,route));
   const col=`var(--${route.toLowerCase()},var(--accent))`, colD=`var(--${route.toLowerCase()}-d,var(--accent-d))`;
   const path=ids.map((sid,i)=>{ const x=stages[sid]; const tests=(x&&Array.isArray(x.tests)?x.tests:[]).map(t=>(t.pass||num(t.n)&&num(t.ok)/num(t.n)>=0.8)?'✓':'✗').join('');
