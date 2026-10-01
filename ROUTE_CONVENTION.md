@@ -559,6 +559,7 @@ be visibly 10×10. A picture that only *suggests* the quantity is decoration.
 | `Core.map / mapBind / mapScroll / mapStars` | the road map |
 | `Core.topbar(sub)` | the standard header |
 | `Core.reviewGate(el, topbarHTML)` | **the daily review (2026-10-01).** Call it once, right before drawing the map; if today's review is still waiting it renders the «Бүгінгі қайталау» card into `el` and returns `true` — then draw nothing else. Compulsory by the owner's decision: a pupil does not see her map until the review is done. The runner does this for you (`core/runner.js`); `wp/` and `pv/bridge.js` do it by hand. The tester and a teacher's task (`?task=`) pass straight through. |
+| `Core.playLock() / playLockText()` | **competitions wait (2026-10-01):** milliseconds until this pupil may open or join a classmate's room or a challenge — 25 minutes after her first entry of the day (`STATE._in`, stamped at login, any page); and the sentence that says so. The portal, `room/` and `challenge/` use it; a room the teacher opened, and the tester, are never held. Client-side only — the server does not enforce it. A route has no reason to call it. |
 | `Core.reviewPlan() / reviewPending() / reviewDone(r)` | the review itself — the portal and `review/` only. Once a day the plan picks five **passed** stations (longest unvisited, fewest stars, missed in an earlier review first; fewer than 3 passed stations → no review; a station passed or placed over today waits until tomorrow), two questions each, drawn from the route's own generator at level 3 through `room/routes.js` exactly as a challenge room draws them — a route implements nothing. PV contributes its fluency facts (`pv/facts.js`), timed per fact. Answers are logged `mode:'review'`; each station keeps `rv:{t,ok,n}`. |
 | `Core.avatar()`, `Core.sound('ok'\|'no'\|'up')`, `Core.lang()` | the pupil's animal, the sounds, the language |
 
@@ -611,7 +612,8 @@ implements nothing — which also surfaced that the FR file list there was missi
 `generate2.js`, so FR questions in rooms and prints had been failing silently; fixed. Same day, inside PV: the
 within-20 fluency ladder's corrections are four different picture questions per missed fact (not one question four
 times, not the level again), and the module test is rebuilt as the module's exit — two text questions from every
-level, a miss reopens that level (`pv/modtest.js`). Nothing a route implements changed.
+level, a miss reopens that level (`pv/modtest.js`). Also: rooms and challenges open 25 minutes after the pupil's first
+entry of the day (`Core.playLock`; a teacher's room is open at once). Nothing a route implements changed.
 
 **v1.5 · 2026-09-22** — the placement test has no question limit and no longer throws away its last
 probe (§10). The cap fired before the sixth probe was counted, so a perfect run on AR was placed on

@@ -18,7 +18,8 @@ const st = (...ids) => Object.fromEntries(ids.map(i => [i, { status: 'passed', l
   await pg.query(`select esep_private.set_teacher_secret('мұғалім-құпиясы-2026')`);
   const anon = async (sql, args) => { const c = await pool.connect(); try { await c.query('set role anon'); return await c.query(sql, args); } finally { await c.query('reset role').catch(() => {}); c.release(); } };
   const STATES = { 'Айгүл С.': { AR: { diag: { placed: 'AR-01', t: 1 }, stages: st('AR-05', 'AR-07') }, FR: { diag: { placed: 'FR-01', t: 1 }, stages: st('FR-02', 'FR-03') } }, 'Ерасыл Т.': { AR: { stages: st('AR-05') } }, 'Дана К.': {} };
-  const who = {}; for (const [n, k] of [['Айгүл С.', '3А'], ['Ерасыл Т.', '3А'], ['Дана К.', '4Б']]) { const r = (await anon(`select public.esep_login($1,'1111',$2) v`, [n, k])).rows[0].v; who[n] = { id: r.student.id, name: n, klass: k, token: r.token }; await pg.query(`update students set state=$2 where id=$1`, [r.student.id, JSON.stringify(STATES[n])]); }
+  const IN = { day: new Date().toLocaleDateString('sv'), t: Date.now() - 30 * 60000 };   // in since half an hour: past the 25-minute wait for competitions (Core.playLock)
+  const who = {}; for (const [n, k] of [['Айгүл С.', '3А'], ['Ерасыл Т.', '3А'], ['Дана К.', '4Б']]) { const r = (await anon(`select public.esep_login($1,'1111',$2) v`, [n, k])).rows[0].v; who[n] = { id: r.student.id, name: n, klass: k, token: r.token }; await pg.query(`update students set state=$2 where id=$1`, [r.student.id, JSON.stringify(Object.assign({}, STATES[n], { _in: IN }))]); }
 
   let slowStart = 0;
   const backend = async route => { const rq = route.request(), m = new URL(rq.url()).pathname.match(/^\/rest\/v1\/rpc\/(esep_[a-z_]+)$/); if (!m) return route.fulfill({ status: 401, body: '{}' });

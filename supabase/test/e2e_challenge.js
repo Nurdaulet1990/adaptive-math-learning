@@ -15,7 +15,8 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   const pg = new Client(cfg(DB)); await pg.connect(); const pool = new Pool(Object.assign(cfg(DB), { max: 6 })); const file = f => pg.query(fs.readFileSync(path.join(DIR, f), 'utf8'));
   for (const f of ['test/00_baseline_guess.sql', '01_additive.sql', '02_lock.sql']) await file(f);
   const anon = async (sql, args) => { const c = await pool.connect(); try { await c.query('set role anon'); return await c.query(sql, args); } finally { await c.query('reset role').catch(() => {}); c.release(); } };
-  const who = {}; for (const [n, ts] of [['Айгүл С.', [2, 5, 10, 3]], ['Ерасыл Т.', [2, 5, 10]]]) { const r = (await anon(`select public.esep_login($1,'1111','3А') v`, [n])).rows[0].v; who[n] = { id: r.student.id, name: n, klass: '3А', token: r.token }; await pg.query(`update students set state=$2 where id=$1`, [r.student.id, JSON.stringify(passed(ts))]); }
+  const IN = { day: new Date().toLocaleDateString('sv'), t: Date.now() - 30 * 60000 };   // in since half an hour: past the 25-minute wait for competitions (Core.playLock)
+  const who = {}; for (const [n, ts] of [['Айгүл С.', [2, 5, 10, 3]], ['Ерасыл Т.', [2, 5, 10]]]) { const r = (await anon(`select public.esep_login($1,'1111','3А') v`, [n])).rows[0].v; who[n] = { id: r.student.id, name: n, klass: '3А', token: r.token }; await pg.query(`update students set state=$2 where id=$1`, [r.student.id, JSON.stringify(Object.assign(passed(ts), { _in: IN }))]); }
 
   const backend = async route => { const rq = route.request(), m = new URL(rq.url()).pathname.match(/^\/rest\/v1\/rpc\/(esep_[a-z_]+)$/); if (!m) return route.fulfill({ status: 401, body: '{}' });
     try { const args = JSON.parse(rq.postData() || '{}'), k = Object.keys(args);
@@ -48,7 +49,7 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   T('challenger: «sent», own 8/10 shown, opponent «?», the two misses listed for review', /8 \/ 10/.test(aText) && /\?/.test(aText) && /әлі ойнаған жоқ/.test(aText) && /Қайталап ал/.test(aText), aText);
 
   // B sees it on the portal, accepts, plays 10 of 10 with the keyboard
-  await E.goto(B); await E.waitForSelector('#duel .card'); const card = (await E.locator('#duel').innerText()).replace(/\n/g, ' ');
+  await E.goto(B + '#jarys'); await E.waitForSelector('#duel .card'); const card = (await E.locator('#duel').innerText()).replace(/\n/g, ' ');
   T('challenged: portal card «Айгүл сені жарысқа шақырды · 5-ке көбейту», no score on it', /Айгүл сені жарысқа шақырды/.test(card) && /5-ке көбейту/.test(card) && !/\d \/ 10|8\/10/.test(card), card);
   await E.locator('#duel .card:not(#duelGo) a.btn').first().click(); await E.waitForSelector('#goBtn'); await E.click('#goBtn');
   const seen = []; for (let i = 0; i < 10; i++) { const t = await E.locator('#qt').innerText(); seen.push(t); const [a, b] = t.split('×').map(Number); if (i === 3) { await E.keyboard.type('2'); await E.screenshot({ path: path.join(__dirname, 'challenge-play.png') }); await E.keyboard.press('Backspace'); } await E.keyboard.type(String(a * b)); await E.keyboard.press('Enter'); }
@@ -58,7 +59,7 @@ const passed = ts => ({ AR: { diag: { placed: 'AR-01', t: 1 }, stages: Object.fr
   T('database: marked by the server (8 and 10); B was served the very same ten facts', row.from_ok === 8 && row.to_ok === 10 && JSON.stringify(row.items.map(([a, b]) => `${a} × ${b}`)) === JSON.stringify(seen), row);
 
   // A learns the result on the portal, once
-  await A.goto(B); await A.waitForSelector('#duel .card'); const res = (await A.locator('#duel').innerText()).replace(/\n/g, ' ');
+  await A.goto(B + '#jarys'); await A.waitForSelector('#duel .card'); const res = (await A.locator('#duel').innerText()).replace(/\n/g, ' ');
   T('challenger: portal shows the result + challenge stars', /Ерасыл жауап берді — бұл жолы ол озды/.test(res) && /сен 8\/10, Ерасыл 10\/10/.test(res) && /★ 1/.test(res), res);
   await A.screenshot({ path: path.join(__dirname, 'challenge-portal.png'), fullPage: true });
   await A.reload(); await A.waitForSelector('#duel a'); T('…and only once', (await A.locator('#duel .card:not(#duelGo)').count()) === 0);

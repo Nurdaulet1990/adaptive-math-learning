@@ -254,6 +254,7 @@
   /* ── answers per calendar day (device-local date) — feeds the portal's daily goal and day streak.
      Lives in STATE._days = {'2026-09-21': 14, …}, so it follows the pupil across devices like the rest
      of the state. Only the last 60 days are kept. Skipped items ("Білмеймін" in the placement test) don't count. */
+  const PLAY_AFTER=25*60000;   // owner, 2026-10-01: «一个学生进去后二十五分钟以后才能开比赛和参加比赛» — see Core.playLock
   const REVIEW={stations:5,per:2,min:3};   // the daily review: 5 passed stations × 2 questions; none with fewer than 3 passed stations
   const ymd=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   function bumpDay(){ if(!STATE) return; const D=STATE._days||(STATE._days={}); const k=ymd(new Date()); D[k]=(D[k]||0)+1;
@@ -357,6 +358,7 @@
       // migration: legacy WP state stored at top level (first trial version)
       if(!STATE.WP&&STATE.stages){ STATE.WP={diag:STATE.diag,stages:STATE.stages,nAns:STATE.nAns,nOk:STATE.nOk,nHint:STATE.nHint}; }
       if(pickAva||!STATE._ava){ STATE._ava=pickAva||avatar(); pickAva=null; dirty=true; schedule(); }
+      { const day=ymd(new Date()); if(!STATE._in||STATE._in.day!==day){ STATE._in={day,t:Date.now()}; dirty=true; schedule(); } }   // the first time in today: starts the clock of Core.playLock
       cache.state=STATE; cache.sid=session.id; cache.dirty=dirty; ls.set(CACHE_KEY,cache);
       if(mineQ().length) schedule(800);   // events left over from an offline spell or a closed tab
       pal.mount();
@@ -437,6 +439,16 @@
     reviewDone(result){ if(!STATE||!STATE._review) return; const rv=STATE._review; rv.done=true; rv.ok=result.ok|0; rv.n=result.n|0; rv.t=Date.now();
       (result.stations||[]).forEach(x=>{ const s=STATE[x.route]; const st=s&&s.stages&&s.stages[x.stage]; if(st) st.rv={t:Date.now(),ok:x.ok|0,n:x.n|0}; });
       dirty=true; schedule(10); },
+    /** ── competitions wait (owner, 2026-10-01: «一个学生进去后二十五分钟以后才能开比赛和参加比赛»; the clock is the
+        first time in today, any page — «当天第一次进来后 25 分钟»; a room the TEACHER opened is not held back) ──
+        Milliseconds until this pupil may open or join a classmate's room or a challenge today; 0 = now. The first entry of
+        the day is stamped in STATE._in at login, so it follows the pupil to another device. The tester is never held.
+        Client-side only: the server does not enforce it (a pupil with the browser's developer tools could get round it). */
+    playLock(){ if(!STATE||Core.tester) return 0; const day=ymd(new Date()); const t=STATE._in&&STATE._in.day===day?+STATE._in.t||Date.now():Date.now();
+      return Math.max(0,t+PLAY_AFTER-Date.now()); },
+    /** the line that says so: «Алдымен жаттық: жарыс 12 минуттан кейін ашылады (14:35).» — '' when open */
+    playLockText(){ const ms=Core.playLock(); if(!ms) return ''; const d=new Date(Date.now()+ms), m=Math.max(1,Math.ceil(ms/60000));
+      return `Алдымен жаттық: жарыс ${m} минуттан кейін ашылады (${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}).`; },
     /** the card a route shows instead of its map while today's review is waiting. Returns true when it rendered it. */
     reviewGate(el,topbarHTML){ if(!el||Core.tester||!Core.reviewPending()) return false;
       if(/[?&]task=/.test(location.search)) return false;   // the teacher's task comes first
