@@ -159,9 +159,15 @@ function generate(tpl){
       while(ds.size<3){ const v=ans+rnd(1,6)*(Math.random()<.5?1:-1); if(v>0&&v!==ans) ds.add(v); }
       choices=[...ds].slice(0,3).concat([ans]).sort(()=>Math.random()-.5).map(fmtNum);
     }
+    /* structured data for level renderers (қысқаша жазу, bar model, equation) */
+    const given=tpl.given?(tpl.given).map(g=>({label:fill(g.label,env),val:fmtNum(evalExpr(g.val,env)),unit:fill(g.unit||'',env)})):undefined;
+    const qline=tpl.qline?{label:fill(tpl.qline.label,env),unit:fill(tpl.qline.unit||'',env)}:undefined;
+    const eqArr=tpl.eq?(tpl.eq).map(p=>typeof p==='string'?p:{v:fmtNum(evalExpr(p.v,env))}):undefined;
+    const unit=tpl.unit?fill(tpl.unit,env):undefined;
     return {id:tpl.id+'#'+Date.now().toString(36)+rnd(0,999),tpl:tpl.id,stage:tpl.stage,lvl:tpl.lvl,diff:tpl.diff,kind:'练习题',qtype:choices?'选择':'填数',
       stem,choices:choices||[],ans:fmtNum(ans),fig:tpl.fig,fp:fill(tpl.fp,env),h1:fill(tpl.h1,env),h2:fill(tpl.h2,env),expl:fill(tpl.expl,env),gen:true,
       hfig:tpl.hfig||'',hfp:fill(tpl.hfp||'',env),
+      given,qline,eq:eqArr,unit,
       steps:(tpl.steps||[]).map(st=>({label:fill(st.label,env),expr:fill(st.expr,env),val:fmtNum(env[st.val])}))};
   }
   return null;

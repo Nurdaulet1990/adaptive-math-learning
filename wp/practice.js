@@ -10,23 +10,23 @@ function startPractice(stId){
 function nextPractice(){
   const st=R.stages[PR.stId]; let q=null; const twin=PR.twinOf;
   if(twin){ const t=tplById(twin); if(t) for(let k=0;k<5&&!q;k++) q=generate(t); }
-  if(!q) q=drawItem(PR.stId,st.level,{mode:'practice'});
+  if(!q){ const g=wpGrade(); q=drawItem(PR.stId,st.level,{mode:'practice',tplLvl:tplLvl(g,st.level)}); }
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><p class="note">Есептер дайындалып жатыр.</p><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
   PR.q=q; PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
   renderQuestion(q,{mode:'practice',title:stageName(PR.stId),meta:`🔥 ${st.streak}/3`,prog:st.streak/3,
     sub:twin?'ұқсас есеп':stageName(PR.stId),onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
-  const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3; const atL3=st.level===3;
+  const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade(); const atL3=isMaxLevel(g,st.level);
   log({ev:'answer',mode:'practice',stage:PR.stId,lvl:st.level,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)});
   let msg='';
-  if(PR.hints>=5){ st.streak=0; if(st.level===3) st.l3streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
+  if(PR.hints>=5){ st.streak=0; if(atL3) st.l3streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
   else {
-    if(counted){ st.streak++; st.wrong=0; if(st.level===3) st.l3streak++; if(PR.isTwin) PR.twinOf=null; }
+    if(counted){ st.streak++; st.wrong=0; if(atL3) st.l3streak++; if(PR.isTwin) PR.twinOf=null; }
     else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; if(PR.isTwin&&PR.hints<4) PR.twinOf=null; }
-    else { st.streak=0; st.wrong++; if(st.level===3) st.l3streak=0; if(q.tpl) PR.twinOf=q.tpl; }
-    if(st.streak>=3 && st.level<3){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
-    if(st.wrong>=2 && st.level>1){ st.level--; st.wrong=0; st.streak=0; PR.twinOf=null; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
+    else { st.streak=0; st.wrong++; if(atL3) st.l3streak=0; if(q.tpl) PR.twinOf=q.tpl; }
+    if(st.streak>=3 && st.level<gradeMax(g)){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
+    if(st.wrong>=2 && st.level>gradeMin(g)){ st.level--; st.wrong=0; st.streak=0; PR.twinOf=null; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
   }
   /* the stage-test gate (Core.testGate, core/map.js): every level-3 answer counts, hints included — as a miss */
   if(atL3&&Core.noteL3){ const was=st.testUnlocked; const g=Core.noteL3(st,ok&&PR.hints===0); if(g.open&&!was) msg='Кезең тесті ашылды!'; }
