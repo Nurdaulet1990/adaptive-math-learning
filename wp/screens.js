@@ -206,13 +206,13 @@ function buildEqRowHTML(parts,prefix,fillOps){
   parts.forEach(p=>{
     if(typeof p==='string'){
       if(fillOps&&p!=='='){
-        html+=`<input class="box-input" type="text" style="width:36px;font-size:1.3rem" id="${prefix}_op${oIdx}" data-ans="${esc(p)}" placeholder="?">`;
+        html+=`<input class="box-input" autocomplete="off" type="text" style="width:36px;font-size:1.3rem" id="${prefix}_op${oIdx}" data-ans="${esc(p)}" placeholder="?">`;
         oIdx++;
       } else {
         html+=`<span class="eq-op">${esc(p)}</span>`;
       }
     } else {
-      html+=`<input class="box-input" type="text" inputmode="decimal" id="${prefix}_${bIdx}" data-ans="${esc(p.v)}">`;
+      html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}_${bIdx}" data-ans="${esc(p.v)}">`;
       bIdx++;
     }
   });
@@ -226,13 +226,13 @@ function buildQJHTML(q,prefix){
   let html='<div class="qj"><div class="qj-title">Қысқаша жазу</div>';
   q.given.forEach((ln,i)=>{
     html+=`<div class="qj-line"><span class="qj-label">${esc(ln.label)}</span><span class="qj-dash">—</span><div class="qj-val">`;
-    html+=`<input class="box-input" type="text" inputmode="decimal" id="${prefix}v${i}" data-ans="${esc(ln.val)}">`;
+    html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}v${i}" data-ans="${esc(ln.val)}">`;
     if(ln.unit) html+=`<span>${esc(ln.unit)}</span>`;
     html+=`</div></div>`;
   });
   if(q.qline){
     html+=`<div class="qj-line question"><span class="qj-label">${esc(q.qline.label)}</span><span class="qj-dash">—</span><div class="qj-val">`;
-    html+=`<input class="box-input" type="text" inputmode="decimal" id="${prefix}q" data-ans="${esc(String(q.ans))}" placeholder="?">`;
+    html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}q" data-ans="${esc(String(q.ans))}" placeholder="?">`;
     if(q.qline.unit) html+=`<span>${esc(q.qline.unit)}</span>`;
     html+=`</div></div>`;
   }
@@ -349,7 +349,7 @@ function renderL3(q,o){
     }
     eqHTML+='</div>';
   }
-  const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" type="text" inputmode="decimal" id="l3ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
+  const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l3ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
    <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
@@ -379,7 +379,7 @@ function renderL4(q,o){
     }
     eqHTML+='</div>';
   }
-  const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" type="text" inputmode="decimal" id="l4ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
+  const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l4ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
    <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
