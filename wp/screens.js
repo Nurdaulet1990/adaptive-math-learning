@@ -28,7 +28,7 @@ function showHome(){
       action:wpStationAction(cur,st),
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:(typeof ICONS!=='undefined'?ICONS[id]:''),
-          sub:s.status==='current'?wpStageSub(id,s,maxL):s.status==='passed'?'Өтілді':id}; })})
+          sub:s.status==='current'?wpStageSub(id,s,maxL):s.status==='passed'?'Өтілді':(gr?`${gr}-сынып`:id)}; })})
       ;
   }
   app().innerHTML=html; persist();
