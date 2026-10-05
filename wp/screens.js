@@ -645,13 +645,13 @@ function finishAnswer(v,btn,forceOk){
   if(o.mode==='practice' && !ok && !PR.retried && PR.step<5){ PR.retried=true; log({ev:'attempt',ok:false,id:q.id,stage:PR.stId});
     Core.sound('no');
     if(btn){ btn.disabled=true; btn.classList.add('no'); btn.classList.remove('pick'); }
-    window._Q.sel=null; window._Q.selBtn=null; const ab0=$('ansBtn'); if(ab0) ab0.disabled=true;
+    window._Q.sel=null; window._Q.selBtn=null; const ab0=$('ansBtn'); if(ab0&&($('ans')||document.querySelector('.choice'))) ab0.disabled=true;   /* legacy render only — a choice/typing re-enables it; level rows keep «Тексеру» live for the retry */
     const ai0=$('ans'); if(ai0){ ai0.value=''; ai0.style.borderColor='var(--bad)'; ai0.focus(); }
     /* For level inputs: highlight wrong ones, let pupil retry */
     document.querySelectorAll('.box-input.err, .op-slot.err').forEach(b=>{ slotClear(b); b.style.borderColor='var(--bad)'; });
     document.querySelectorAll('.box-line.err').forEach(b=>{ b.style.borderColor='var(--bad)'; });
     document.querySelectorAll('.eq-row.row-err .num-slot.err, .eq-row.row-err .op-slot.err').forEach(b=>{ b.classList.remove('err'); b.style.borderColor='var(--bad)'; });
-    const hbox=$('hints')||document.getElementById('hints'); if(hbox) hbox.insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
+    const hbox=$('hints')||document.getElementById('hints'); if(hbox) hbox.insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">${$('hintBtn')?'Қате. Тағы бір рет ойлан немесе «Кеңес» бас.':'Қате. Тағы бір рет ойлан.'}</div>`); return; }
   const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
   /* disable all inputs */
