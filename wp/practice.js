@@ -1,38 +1,72 @@
 /* wp/practice.js — practice loop, adaptive rules (§7 of ROUTE_CONVENTION), 5-step hint ladder, twin items. Owner: Nurdaulet.
-   Rules: 3 in a row → level+1 · 2 wrong → level−1 + card again · lvl3 ×3 → test unlocked · hints ≥3 don't count · step 5 → streak reset + twin. */
+   Since 2026-10 the scaffold level lives PER FAMILY (wp/families.js):
+   right in a row FAM_NEED[level] → level+1 · at the top level → family finished, next family starts at the bottom ·
+   2 wrong → level−1 · hints ≥3 don't count · step 5 → streak reset + twin ·
+   FAM_REVIEW of questions come from finished families at their own level · all families finished → stage test. */
 'use strict';
 let PR=null;
 function startPractice(stId){
   const st=R.stages[stId]; PR={stId,q:null,hints:0,step:0,twinOf:null};
+  syncFam(stId,st);
   if(!st.seenCard){ const cards=CARDS(stId).filter(c=>c.lvl<=st.level||c.lvl===1); if(cards.length){ return showCard(stId,cards,0,()=>{ st.seenCard=true; persist(); nextPractice(); }); } st.seenCard=true; }
   nextPractice();
 }
 function nextPractice(){
-  const st=R.stages[PR.stId]; let q=null; const twin=PR.twinOf;
-  if(twin){ const t=tplById(twin); if(t) for(let k=0;k<5&&!q;k++) q=generate(t); }
-  if(!q){ const g=wpGrade(); q=drawItem(PR.stId,st.level,{mode:'practice',tplLvl:tplLvl(g,st.level)}); }
+  const stId=PR.stId; const st=R.stages[stId]; const g=wpGrade(); let q=null; const twin=PR.twinOf;
+  const fid=curFam(stId,st); const done=doneFams(stId,st);
+  let fam=fid;
+  if(twin){ const t=tplById(twin); if(t){ for(let k=0;k<5&&!q;k++) q=generate(t); if(q){ fam=famOfTpl(twin)||fid; q.fam=fam; } } }
+  if(!q){
+    if(!fid){ fam=done.length?pick(done):null; }                                   /* everything finished: review at the top */
+    else if(done.length&&Math.random()<FAM_REVIEW){ fam=pick(done); }               /* a look back at a finished family */
+    else fam=fid;
+    if(fam) q=drawFam(stId,fam,st.fam[fam].level,{mode:'practice'});
+    if(!q&&fid&&fam!==fid){ fam=fid; q=drawFam(stId,fam,st.fam[fam].level,{mode:'practice'}); }
+  }
+  if(!q){ /* no family content for this stage: fall back to the old pool */ fam=null; q=drawItem(stId,st.level,{mode:'practice',tplLvl:tplLvl(g,st.level)}); }
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><p class="note">Есептер дайындалып жатыр.</p><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
-  PR.q=q; PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
-  renderQuestion(q,{mode:'practice',title:stageName(PR.stId),meta:`🔥 ${st.streak}/3`,prog:st.streak/3,
-    sub:twin?'ұқсас есеп':stageName(PR.stId),scaffoldLevel:st.level,onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
+  const f=fam?st.fam[fam]:null; const scaff=f?f.level:st.level; const need=FAM_NEED[scaff]||5;
+  PR.q=q; PR.fam=fam; PR.review=!!(fam&&(!fid||fam!==fid)); PR.scaff=scaff;
+  PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
+  const streak=f?f.streak:st.streak;
+  renderQuestion(q,{mode:'practice',title:stageName(stId),meta:`🔥 ${streak}/${need}`,prog:streak/need,
+    sub:twin?'ұқсас есеп':(fam?famName(stId,fam):stageName(stId)),scaffoldLevel:scaff,onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
-  const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade(); const atL3=isMaxLevel(g,st.level);
-  log({ev:'answer',mode:'practice',stage:PR.stId,lvl:st.level,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)});
+  const stId=PR.stId; const st=R.stages[stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade();
+  const f=PR.fam?st.fam[PR.fam]:null;
+  log({ev:'answer',mode:'practice',stage:stId,lvl:PR.scaff,fam:PR.fam||undefined,review:PR.review||undefined,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)});
   let msg='';
-  if(PR.hints>=5){ st.streak=0; if(atL3) st.l3streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
-  else {
-    if(counted){ st.streak++; st.wrong=0; if(atL3) st.l3streak++; if(PR.isTwin) PR.twinOf=null; }
-    else if(ok){ st.wrong=0; msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; if(PR.isTwin&&PR.hints<4) PR.twinOf=null; }
-    else { st.streak=0; st.wrong++; if(atL3) st.l3streak=0; if(q.tpl) PR.twinOf=q.tpl; }
-    if(st.streak>=3 && st.level<gradeMax(g)){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
-    if(st.wrong>=2 && st.level>gradeMin(g)){ st.level--; st.wrong=0; st.streak=0; PR.twinOf=null; msg=`Бір деңгей төмен түстік (${st.level}). Суретке қарап шығарайық.`; st.seenCard=false; }
+  if(!f){ /* legacy pool (no families for this stage) — old per-stage rule */
+    if(PR.hints>=5){ st.streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
+    else { if(counted){ st.streak++; st.wrong=0; } else if(ok){ st.wrong=0; } else { st.streak=0; st.wrong++; if(q.tpl) PR.twinOf=q.tpl; }
+      if(st.streak>=3&&st.level<gradeMax(g)){ st.level++; st.streak=0; msg=`Жарайсың! ${st.level}-деңгейге көштің.`; Core.sound('up'); }
+      if(st.wrong>=2&&st.level>gradeMin(g)){ st.level--; st.wrong=0; st.streak=0; } }
+    persist(); showPracticeMsg(msg); return;
   }
-  /* the stage-test gate (Core.testGate, core/map.js): every level-3 answer counts, hints included — as a miss */
-  if(atL3&&Core.noteL3){ const was=st.testUnlocked; const g=Core.noteL3(st,ok&&PR.hints===0); if(g.open&&!was) msg='Кезең тесті ашылды!'; }
-  persist();
-  const fbEl=document.querySelector('.fb'); if(fbEl&&msg){ const d=document.createElement('div'); d.className='hint'; d.innerHTML='<small>Жол</small>'+esc(msg); fbEl.after(d); }
+  const need=FAM_NEED[f.level]||5; const minL=gradeMin(g), maxL=gradeMax(g);
+  if(PR.hints>=5){ f.streak=0; PR.twinOf=q.tpl||null; msg='Енді ұқсас есепті өзің шығар.'; }
+  else {
+    if(counted){ if(!f.done) f.streak++; f.wrong=0; if(PR.isTwin) PR.twinOf=null; }
+    else if(ok){ f.wrong=0; if(!f.done) msg='Дұрыс, бірақ кеңеспен — қатарға саналмайды.'; if(PR.isTwin&&PR.hints<4) PR.twinOf=null; }
+    else { f.streak=0; f.wrong++; if(q.tpl) PR.twinOf=q.tpl; }
+    if(f.done){ /* a finished family, met again as review: two misses reopen it one level down */
+      if(f.wrong>=2){ f.done=false; f.level=Math.max(minL,f.level-1); f.wrong=0; f.streak=0; PR.twinOf=null; st.cur=PR.fam;
+        msg=`«${famName(stId,PR.fam)}» түрін тағы бір қайталайық (${f.level}-деңгей).`; }
+    } else {
+      if(f.streak>=need){
+        f.streak=0; f.wrong=0;
+        if(f.level<maxL){ f.level++; msg=`Жарайсың! ${f.level}-деңгейге көштің.`; Core.sound('up'); }
+        else { f.done=true; const nx=curFam(stId,st);
+          msg=nx?`«${famName(stId,PR.fam)}» меңгерілді! Енді жаңа түр: «${famName(stId,nx)}».`:'Барлық түрі меңгерілді — кезең тесті ашылды!'; Core.sound('up'); }
+      }
+      if(f.wrong>=2){ f.wrong=0; f.streak=0; PR.twinOf=null;
+        if(f.level>minL){ f.level--; msg=`Бір деңгей төмен түстік (${f.level}). Суретке қарап шығарайық.`; } }
+    }
+  }
+  syncFam(stId,st); persist(); showPracticeMsg(msg);
 }
+function showPracticeMsg(msg){ const fbEl=document.querySelector('.fb'); if(fbEl&&msg){ const d=document.createElement('div'); d.className='hint'; d.innerHTML='<small>Жол</small>'+esc(msg); fbEl.after(d); } }
 function afterAnswerNav(){ if(PR&&PR.mode!=='test'){ const st=R.stages[PR.stId]; if(!st.seenCard) return startPractice(PR.stId); nextPractice(); } }
 
 /* ── hint ladder ── */

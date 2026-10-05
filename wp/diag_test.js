@@ -60,30 +60,49 @@ function finishDiag(){
   <p class="note">${Object.keys(DG.results).map(k=>`${k}: ${DG.results[k]==='pass'?'✓':'✗'}`).join(' · ')}</p><button class="btn wide" onclick="showHome()">Жалғастыру</button></div>`;
 }
 
-/* ── stage test ── */
+/* ── stage test ──
+   Since 2026-10 a mixed test: FAM_TEST_PER questions from every family of the stage, shuffled, plain text.
+   It opens when every family is finished. A family missed in the test is sent back to practice:
+   test failed → that family restarts at the bottom level; test passed → it reopens at the top level for review. */
 let TS=null;
 function startTest(stId,force){
-  /* the gate (core/map.js): a pupil takes the test when the practice says she is ready; a teacher's task
-     (force), a passed station retaken for its stars, and the tester account go straight in */
-  if(!force&&!Core.tester&&Core.testGate){ const st=R.stages[stId]; if(st&&st.status!=='passed'&&!Core.testGate(st).open) return showHome(); }
-  const qs=[]; const used=new Set();
-  const _g=wpGrade(); const _tl=tplLvl(_g,gradeMax(_g));
-  for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=drawItem(stId,_tl); if(c&&!used.has(c.id)) q=c; } if(q){ used.add(q.id); qs.push(q); } }
-  if(qs.length<6){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңге тест есептері жеткіліксіз</h2><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
-  TS={stId,qs,i:0,ok:0}; PR={stId,mode:'test'}; nextTest();
+  const st=R.stages[stId];
+  /* a teacher's task (force), a passed station retaken for its stars, and the tester account go straight in */
+  if(!force&&!Core.tester&&st&&st.status!=='passed'&&!allFamsDone(stId,st)) return showHome();
+  const fams=famsOf(stId); const g=wpGrade(); let qs=[]; const used=new Set();
+  if(fams.length){
+    const per=Math.max(FAM_TEST_PER,Math.ceil(10/fams.length));
+    fams.forEach(f=>{ for(let i=0;i<per;i++){ let q=null; for(let k=0;k<6&&!q;k++){ const c=drawFam(stId,f.id,gradeMax(g)); if(c&&!used.has(c.tpl+'|'+c.stem)) q=c; } if(q){ used.add(q.tpl+'|'+q.stem); qs.push(q); } } });
+    for(let i=qs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [qs[i],qs[j]]=[qs[j],qs[i]]; }
+  } else {
+    const _tl=tplLvl(g,gradeMax(g));
+    for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=drawItem(stId,_tl); if(c&&!used.has(c.id)) q=c; } if(q){ used.add(q.id); qs.push(q); } }
+  }
+  if(qs.length<4){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңге тест есептері жеткіліксіз</h2><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
+  TS={stId,qs,i:0,ok:0,miss:{}}; PR={stId,mode:'test'}; nextTest();
 }
 function nextTest(){
   if(TS.i>=TS.qs.length) return finishTest();
   const q=TS.qs[TS.i]; TS.t0=Date.now();
-  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ if(ok) TS.ok++; log({ev:'answer',mode:'test',stage:TS.stId,lvl:3,ok,ms:Date.now()-TS.t0,id:q.id,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
+  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ if(ok) TS.ok++; else if(q.fam) TS.miss[q.fam]=(TS.miss[q.fam]||0)+1; log({ev:'answer',mode:'test',stage:TS.stId,lvl:gradeMax(wpGrade()),fam:q.fam||undefined,ok,ms:Date.now()-TS.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
 }
 function finishTest(){
-  const st=R.stages[TS.stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need;
-  st.tests.push({t:Date.now(),ok:TS.ok,n:TS.qs.length,pass}); log({ev:'test',stage:TS.stId,ok:TS.ok,n:TS.qs.length,pass});
+  const stId=TS.stId; const st=R.stages[stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need; const g=wpGrade();
+  st.tests.push({t:Date.now(),ok:TS.ok,n:TS.qs.length,pass,miss:TS.miss}); log({ev:'test',stage:stId,ok:TS.ok,n:TS.qs.length,pass,miss:TS.miss});
   const won=TS.ok>=TS.qs.length?3:TS.ok/TS.qs.length>=0.9?2:TS.ok/TS.qs.length>=0.8?1:0;   // the same rule as Core.mapStars
   let html=topbar()+`<div class="card${pass?' wincard':''}"><h2>${pass?'Кезең өтілді!':'Әзірге өтпеді'}</h2>${pass&&Core.winStars?Core.winStars(won):''}<p>Нәтиже: <b>${TS.ok}/${TS.qs.length}</b> (өту үшін ${need} керек).</p>`;
-  if(pass){ st.status='passed'; const i=stageIdx(TS.stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; if(R.stages[nx].status==='locked') R.stages[nx].status='current';   /* re-passing an old station (to earn its stars) must not drag a later, already passed one back to 'current' */ html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; } }
-  else { st.testUnlocked=false; st.l3streak=0; st.cool=(Core.GATE||{cool:5}).cool; html+=`<p class="note">3-деңгейде тағы ${st.cool} есеп жаттығып, қайта тапсыр.</p>`; }
+  const missed=Object.keys(TS.miss).filter(fid=>st.fam&&st.fam[fid]);
+  if(pass){ st.status='passed'; const i=stageIdx(stId); if(i+1<STAGES.length){ const nx=STAGES[i+1][0]; if(R.stages[nx].status==='locked') R.stages[nx].status='current';   /* re-passing an old station (to earn its stars) must not drag a later, already passed one back to 'current' */ html+=`<p>Келесі кезең: <b>${esc(stageName(nx))}</b></p>`; }
+    /* the types missed in the test reopen at the top level — they come back in practice as review */
+    missed.forEach(fid=>{ const f=st.fam[fid]; f.done=false; f.level=gradeMax(g); f.streak=0; f.wrong=0; });
+    if(missed.length) html+=`<p class="note">Қайталауға: ${missed.map(fid=>esc(famName(stId,fid))).join(', ')}.</p>`; }
+  else {
+    /* the types missed in the test go back to the bottom of the scaffold and are learnt again */
+    missed.forEach(fid=>{ const f=st.fam[fid]; f.done=false; f.level=gradeMin(g); f.streak=0; f.wrong=0; });
+    if(missed.length){ st.cur=missed[0]; html+=`<p class="note">Мына түрлерді басынан қайта өтеміз: <b>${missed.map(fid=>esc(famName(stId,fid))).join(', ')}</b>. Бәрі меңгерілгенде тест қайта ашылады.</p>`; }
+    else html+=`<p class="note">Тағы жаттығып, қайта тапсыр.</p>`;
+    st.l3streak=0; st.cool=0; }
+  syncFam(stId,st);
   html+=`<button class="btn wide" id="homeBtn" onclick="showHome()">${pass?'Картаға':'Жалғастыру'}</button></div>`;
   persist(); TS=null; PR=null; app().innerHTML=html;
   if(pass&&Core.autoGo) Core.autoGo(document.getElementById('homeBtn'),showHome);   // back to the map on its own, where the pass is played

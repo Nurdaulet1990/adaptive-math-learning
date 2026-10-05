@@ -19,7 +19,7 @@ const ROOT = path.join(__dirname, '..');
 const JS = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
 const ROUTES = {
-  WP: { files: ['wp/stages.js', 'wp/icons.js', 'wp/bank.js', 'wp/generate.js', 'wp/state.js'], title: 'WP · Мәтінді есептер' },
+  WP: { files: ['wp/stages.js', 'wp/icons.js', 'wp/bank.js', 'wp/generate.js', 'wp/families.js', 'wp/state.js'], title: 'WP · Мәтінді есептер' },
   FR: { files: ['fr/stages.js', 'fr/figs.js', 'fr/icons.js', 'fr/bank.js', 'fr/generate.js'], title: 'FR · Бөлшектер' },
   AR: { files: ['ar/stages.js', 'ar/figs.js', 'ar/figs2.js', 'ar/icons.js', 'ar/bank.js', 'ar/generate.js', 'ar/generate2.js'], title: 'AR · Көбейту мен бөлу' },
   TE: { files: ['te/stages.js', 'te/figs.js', 'te/icons.js', 'te/bank.js', 'te/generate.js'], title: 'TE · Теңдеулер' },

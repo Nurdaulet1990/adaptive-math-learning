@@ -25,10 +25,10 @@ function showHome(){
     const g=wpGrade(); const maxL=gradeMax(g);
     html+=`<div class="strip"><div class="pill"><b>${done}/${STAGES.length}</b><span>станция</span></div><div class="pill"><b>★ ${totStars}</b><span>жұлдыз</span></div><div class="pill"><b>${R.nAns?acc()+'%':'–'}</b><span>дұрыс</span></div></div>`;
     html+=Core.map({color:'var(--wp)', colorDark:'var(--wp-d)', avatar:Core.avatar(), label:'Мәтінді есептер жолы', go:'Жаттығу',
-      action:Core.stationAction?Core.stationAction({id:cur,n:STAGES.findIndex(x=>x[0]===cur)+1,name:stageName(cur),level:st.level,streak:st.streak,testUnlocked:st.testUnlocked,gate:Core.testGate?Core.testGate(st):undefined}):undefined,
+      action:wpStationAction(cur,st),
       stages:STAGES.map(([id,name,,,,gr])=>{ const s=R.stages[id];
         return {id,name,status:s.status,stars:Core.mapStars(s),icon:(typeof ICONS!=='undefined'?ICONS[id]:''),
-          sub:s.status==='current'?`Деңгей ${s.level}/${maxL} · қатарынан ${s.streak}/3`:s.status==='passed'?'Өтілді':id}; })})
+          sub:s.status==='current'?wpStageSub(id,s,maxL):s.status==='passed'?'Өтілді':id}; })})
       ;
   }
   app().innerHTML=html; persist();
@@ -37,6 +37,31 @@ function showHome(){
   app().querySelectorAll('[data-rediag]').forEach(b=>b.onclick=()=>askRediag());
   if(Core.mapScroll) Core.mapScroll();
   if(Core.mapBind) Core.mapBind(id=>{ if(Core.tester) testerUnlock(id); startPractice(id); });
+}
+
+
+/* ── map texts (per-family scaffold, 2026-10) ── */
+function wpStageSub(id,s,maxL){
+  const fams=famsOf(id); if(!fams.length) return `Деңгей ${s.level}/${maxL} · қатарынан ${s.streak}/3`;
+  const fid=curFam(id,s); const done=doneFams(id,s).length;
+  if(!fid) return `Барлық ${fams.length} түрі меңгерілді · тест`;
+  const f=s.fam[fid]; return `${famName(id,fid)} · деңгей ${f.level}/${maxL} · түр ${done+1}/${fams.length}`;
+}
+/* the station card under the map: WP draws its own (Core.stationAction assumes 3 levels and the old gate) */
+function wpStationAction(id,st){
+  const g=wpGrade(); const minL=gradeMin(g), maxL=gradeMax(g); const fams=famsOf(id); const n=STAGES.findIndex(x=>x[0]===id)+1;
+  const fid=fams.length?curFam(id,st):null; const f=fid?st.fam[fid]:null; const lv=f?f.level:st.level;
+  const need=(FAM_NEED[lv]||5); const streak=f?f.streak:st.streak; const open=fams.length?allFamsDone(id,st):!!st.testUnlocked;
+  const levels=[]; for(let l=minL;l<=maxL;l++) levels.push(l);
+  const dots=levels.map(l=>`<i class="${l<lv?'done':l===lv?'on':''}"></i>`).join('');
+  const famRow=fams.length?`<i>${fams.map(x=>{ const fs=st.fam[x.id]; const cls=fs&&fs.done?'done':x.id===fid?'on':''; return `<span class="dots"><i class="${cls}"></i></span>${esc(x.name)}`; }).join(' · ')}</i>`:'';
+  const pr=`<button type="button" class="btn${open?' ghost sm':''}" data-pr="${esc(id)}">Жаттығу</button>`;
+  const te=open?`<button type="button" class="btn gold" data-test="${esc(id)}">Кезең тесті</button>`:`<button type="button" class="btn ghost sm" disabled>Тест · ${fams.length?doneFams(id,st).length+'/'+fams.length+' түр':'жабық'}</button>`;
+  const sub=open?'Аралас тест: барлық түрден · 8/10 — келесі станция · 10/10 — ★★★':(f?`«${esc(famName(id,fid))}»: қатарынан ${need} дұрыс → келесі деңгей`:'Барлық түрді меңгер → тест ашылады');
+  return `<div class="mapgo mg2"><div class="mg-row"><div class="mg-info"><b>${n}-станция · ${esc(stageName(id))}</b>
+      <i><span class="dots">${dots}</span> Деңгей ${lv}/${maxL} · қатарынан ${streak}/${need}</i>${famRow}</div>${open?te:pr}</div>
+    <div class="mg-sub">${open?pr:te}<span>${sub}</span>
+      <button type="button" class="mg-link" data-rediag>Тым оңай ма?</button></div></div>`;
 }
 
 /* ── teaching card ── */
@@ -252,6 +277,8 @@ function renderQuestion(q,o){
   const scaff=o.scaffoldLevel||(R&&R.stages[o.sub]?R.stages[o.sub].level:gradeMax(g));
   /* For diagnostic and test modes, or when no level data: use legacy render */
   if(o.mode==='diag'||o.mode==='test'||o.noHints){ return renderLegacy(q,o); }
+  /* a fixed item without an equation has no boxes to fill at L2–L4 → legacy render */
+  if(!(q.eq&&q.eq.length)&&!q.h2&&!(q.given&&q.given.length)) return renderLegacy(q,o);
   /* Level-specific rendering */
   if(scaff===1) return renderL1(q,o);
   if(scaff===2) return renderL2(q,o);
@@ -301,7 +328,7 @@ function renderL1(q,o){
 
 /* ── Level 2: text + bar model + қысқаша жазу + equation (ops pre-filled) ── */
 function renderL2(q,o){
-  const barSvg=drawBarModelWP(q);
+  const barSvg=drawBarModelWP(q)||(q.fig&&q.fp?renderFig(q.fig,q.fp):'')||(q.hfig&&q.hfp?renderFig(q.hfig,q.hfp):'');
   const qjHTML=buildQJHTML(q,'l2_');
   const eqParts=parseEq(q);
   let eqHTML='';
