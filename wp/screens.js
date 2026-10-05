@@ -141,6 +141,15 @@ function showCard(stId,cards,i,done){
 .op-pad{display:flex;gap:8px;justify-content:center;padding:6px 0 10px}
 .op-key{width:56px;height:48px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-family:inherit;font-weight:900;font-size:1.4rem;cursor:pointer;box-shadow:0 3px 0 var(--line)}
 .op-key:active{transform:translateY(2px);box-shadow:none}
+.eq-num{min-width:36px;padding:0 6px;height:40px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;color:var(--ink);font-variant-numeric:tabular-nums}
+.free-lines{display:flex;flex-direction:column;gap:8px;margin:4px 0 8px}
+.box-line{width:100%;height:46px;padding:0 12px;border:2px solid var(--line);border-radius:12px;background:var(--fig);color:var(--ink);font-family:inherit;font-weight:800;font-size:1.15rem;letter-spacing:.03em;outline:none;box-sizing:border-box}
+.box-line:focus{border-color:var(--rc);background:var(--card)}
+.box-line.ok{border-color:var(--good);background:var(--good-soft)}
+.box-line.err{border-color:var(--bad)}
+.op-pad-static{flex-wrap:wrap;padding:0 0 6px}
+.op-pad-static .op-key{width:44px;height:42px;font-size:1.2rem}
+.op-pad-static .op-key-add{width:auto;padding:0 12px;font-size:.9rem;font-weight:900;color:var(--muted)}
 /* answer line */
 .ans-section{margin:0 0 10px}
 .ans-row{display:flex;align-items:center;gap:8px}
@@ -336,10 +345,14 @@ function simplifySteps(steps){
   });
   return out;
 }
-function buildEqRowHTML(parts,prefix,fillOps){
+/* L2/L3 rows (owner, 2026-10-05): the operands are printed — the child has already met them in the stem and the
+   қысқаша жазу — and only the result after «=» is a box, so the row tests the calculation (L2) or the choice of
+   operation (L3), not copying. */
+function buildEqRowHTML(parts,prefix,fillOps,prevResults){
   let html='<div class="eq-row">';
-  let bIdx=0, oIdx=0;
+  let bIdx=0, oIdx=0; const eqAt=parts.indexOf('='); let seenEq=false; const prev=prevResults||new Set();
   parts.forEach(p=>{
+    if(p==='=') seenEq=true;
     if(typeof p==='string'){
       if(fillOps&&p!=='='){
         html+=`<button type="button" class="op-slot" id="${prefix}_op${oIdx}" data-ans="${esc(p)}" data-v="" onclick="pickOp(this)" aria-label="Амал таңда">?</button>`;
@@ -349,6 +362,8 @@ function buildEqRowHTML(parts,prefix,fillOps){
       }
     } else if(p.p){
       html+=`<span class="eq-op eq-par">${esc(p.p)}</span>`;
+    } else if(eqAt>0&&!seenEq&&!prev.has(String(p.v))){   /* an operand that is an earlier step's result stays a box — printing it would give that step away */
+      html+=`<span class="eq-num">${esc(p.v)}</span>`;
     } else {
       html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}_${bIdx}" data-ans="${esc(p.v)}">`;
       bIdx++;
@@ -357,6 +372,24 @@ function buildEqRowHTML(parts,prefix,fillOps){
   html+='</div>';
   return html;
 }
+/* evaluate a token list (numbers, + − × ÷, parentheses) — tokens come from tokenizeExpr, so the string is safe */
+function evalToks(t){
+  if(!t.length) return NaN;
+  const js=t.map(p=>typeof p==='string'?({'+':'+','−':'-','×':'*','÷':'/'})[p]||'':(p.p||('('+String(p.v).replace(',','.').replace(/%$/,'/100')+')'))).join(' ');
+  try{ const v=Function('"use strict";return ('+js+')')(); return typeof v==='number'&&isFinite(v)?v:NaN; }catch(e){ return NaN; }
+}
+/* L4: a line the child wrote — «120:6·5=100», «120 : 6 = 20» or just «20 · 5». True when every «=» holds. */
+function checkFreeLine(str){
+  const t=tokenizeExpr(str); if(!t.length) return null;
+  const parts=[]; let cur=[]; t.forEach(p=>{ if(p==='='){ parts.push(cur); cur=[]; } else if(p!=='?') cur.push(p); }); parts.push(cur);
+  if(parts.some(x=>!x.length)) return false;
+  const vals=parts.map(evalToks); if(vals.some(v=>isNaN(v))) return false;
+  return vals.every(v=>Math.abs(v-vals[0])<1e-6);
+}
+function addFreeLine(){ const box=document.getElementById('l4lines'); if(!box) return; const n=box.querySelectorAll('.box-line').length; if(n>=5) return;
+  box.insertAdjacentHTML('beforeend',`<input class="box-line" autocomplete="off" type="text" id="l4line${n}" placeholder="…">`); box.lastElementChild.focus(); }
+function insertSym(sym){ const el=document.activeElement; const lines=[...document.querySelectorAll('.box-line')]; const t=(el&&el.classList&&el.classList.contains('box-line'))?el:lines.find(l=>!l.value)||lines[lines.length-1]; if(!t) return;
+  const a=t.selectionStart||t.value.length, b=t.selectionEnd||a; t.value=t.value.slice(0,a)+sym+t.value.slice(b); t.focus(); t.setSelectionRange(a+sym.length,a+sym.length); }
 /* the operator picker: a slot is tapped → four keys appear under that row; a key fills the slot and moves on */
 function pickOp(btn){
   if(window._Q&&window._Q.done) return;
@@ -466,8 +499,8 @@ function renderL2(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      simplifySteps(q.steps).forEach((s,i)=>{
-        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l2s'+i,false);
+      const prev=new Set(); simplifySteps(q.steps).forEach((s,i)=>{
+        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l2s'+i,false,prev); prev.add(String(s.val));
       });
     } else {
       eqHTML+=buildEqRowHTML(eqParts,'l2eq',false);
@@ -495,8 +528,8 @@ function renderL3(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      simplifySteps(q.steps).forEach((s,i)=>{
-        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l3s'+i,true);
+      const prev=new Set(); simplifySteps(q.steps).forEach((s,i)=>{
+        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l3s'+i,true,prev); prev.add(String(s.val));
       });
     } else {
       eqHTML+=buildEqRowHTML(eqParts,'l3eq',true);
@@ -517,20 +550,13 @@ function renderL3(q,o){
 }
 
 /* ── Level 4: pure text + equation (ops as inputs) + answer ── */
+/* L4 (owner, 2026-10-05): no boxes — the child writes the working in their own lines, any correct way, then the answer.
+   Each line must be arithmetically true; the answer must match. The bank's own steps are not the measure here. */
 function renderL4(q,o){
-  const eqParts=parseEq(q);
-  let eqHTML='';
-  if(eqParts.length){
-    eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
-    if(q.steps&&q.steps.length){
-      simplifySteps(q.steps).forEach((s,i)=>{
-        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l4s'+i,true);
-      });
-    } else {
-      eqHTML+=buildEqRowHTML(eqParts,'l4eq',true);
-    }
-    eqHTML+='</div>';
-  }
+  const eqHTML=`<div class="eq-section"><div class="eq-title">Шешуі</div>
+    <div class="free-lines" id="l4lines"><input class="box-line" autocomplete="off" type="text" id="l4line0" placeholder="мысалы: 12 + 8 = 20"></div>
+    <div class="op-pad op-pad-static">${['+','−','×','÷','=','(',')'].map(k=>`<button type="button" class="op-key" tabindex="-1" onmousedown="event.preventDefault()" onclick="insertSym('${k}')">${k}</button>`).join('')}<button type="button" class="op-key op-key-add" tabindex="-1" onmousedown="event.preventDefault()" onclick="addFreeLine()" aria-label="Тағы бір жол">+ жол</button></div>
+  </div>`;
   const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l4ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
@@ -554,19 +580,26 @@ function checkLevelInputs(){
     if(slotOk(inp)){ inp.classList.add('ok'); inp.classList.remove('err'); }
     else { inp.classList.add('err'); inp.classList.remove('ok'); allOk=false; }
   });
+  /* L4: every written line must hold, and at least one line must be written */
+  const lines=[...document.querySelectorAll('.box-line')]; let linesOk=true;
+  if(lines.length){ const filled=lines.filter(l=>l.value.trim());
+    const hasOp=filled.some(l=>tokenizeExpr(l.value).some(p=>typeof p==='string'&&p!=='='));
+    if(!filled.length||!hasOp){ (filled[0]||lines[0]).style.borderColor='var(--gold)'; anyEmpty=true; }   /* an answer alone is not a working */
+    filled.forEach(l=>{ const r=checkFreeLine(l.value); l.classList.toggle('ok',r===true); l.classList.toggle('err',r===false); if(r!==true) linesOk=false; });
+    if(!linesOk) allOk=false; }
   if(anyEmpty&&allOk){ /* some empty slots remain — highlight them */
     boxes.forEach(inp=>{ if(!slotVal(inp)) inp.style.borderColor='var(--gold)'; });
     return;
   }
   /* The final answer is what matters for the adaptive engine */
   const ansInp=document.getElementById('l2_q')||document.getElementById('l3ans')||document.getElementById('l4ans');
-  const finalOk=ansInp?isCorrect(window._Q.q,(ansInp.value||'').trim()):allOk;
+  const finalOk=(ansInp?isCorrect(window._Q.q,(ansInp.value||'').trim()):allOk)&&linesOk;
   finishAnswer(ansInp?(ansInp.value||'').trim():String(window._Q.q.ans),null,finalOk);
 }
 
 function focusFirstEmpty(){
   setTimeout(()=>{
-    const boxes=document.querySelectorAll('[data-ans]');
+    const boxes=document.querySelectorAll('[data-ans], .box-line');
     for(const b of boxes){ if(!slotVal(b)){ b.focus(); return; } }
   },50);
 }
@@ -593,7 +626,7 @@ function answerChoice(btn){ if(window._Q.done) return;
   document.querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); btn.classList.add('pick');
   window._Q.sel=btn.dataset.v; window._Q.selBtn=btn; $('ansBtn').disabled=false; }
 function answerInput(){ if(window._Q.done) return; const ai=$('ans'); const v=ai?ai.value.trim():window._Q.sel; if(!v) return; finishAnswer(v,window._Q.selBtn); }
-function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input, .op-slot').forEach(b=>b.disabled=true); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
+function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input, .op-slot, .box-line').forEach(b=>b.disabled=true); document.querySelectorAll('.op-pad-static').forEach(x=>x.remove()); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
 function finishAnswer(v,btn,forceOk){
   const {q,o}=window._Q; const ok=forceOk!==undefined?forceOk:isCorrect(q,v);
   if(o.mode==='practice' && !ok && !PR.retried && PR.step<5){ PR.retried=true; log({ev:'attempt',ok:false,id:q.id,stage:PR.stId});
@@ -603,6 +636,7 @@ function finishAnswer(v,btn,forceOk){
     const ai0=$('ans'); if(ai0){ ai0.value=''; ai0.style.borderColor='var(--bad)'; ai0.focus(); }
     /* For level inputs: highlight wrong ones, let pupil retry */
     document.querySelectorAll('.box-input.err, .op-slot.err').forEach(b=>{ slotClear(b); b.style.borderColor='var(--bad)'; });
+    document.querySelectorAll('.box-line.err').forEach(b=>{ b.style.borderColor='var(--bad)'; });
     const hbox=$('hints')||document.getElementById('hints'); if(hbox) hbox.insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
   const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
