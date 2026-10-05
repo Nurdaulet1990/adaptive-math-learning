@@ -47,21 +47,45 @@ function wpStageSub(id,s,maxL){
   if(!fid) return `Барлық ${fams.length} түрі меңгерілді · тест`;
   const f=s.fam[fid]; return `${famName(id,fid)} · деңгей ${f.level}/${maxL} · түр ${done+1}/${fams.length}`;
 }
+/* level glyphs: Сурет (picture) · Берілгені (bar) · Шешуі (equation) · Мәтін (text) */
+const LVL_NAME={1:'Сурет',2:'Берілгені',3:'Шешуі',4:'Мәтін'};
+const LVL_ICON={
+ 1:'<svg viewBox="0 0 16 12"><rect x="1" y="1" width="14" height="10" rx="2" fill="none" stroke-width="1.6"/><circle cx="5" cy="5" r="1.6" stroke="none"/><path d="M3 10l4-3 3 2 3-3 0 4z" stroke="none"/></svg>',
+ 2:'<svg viewBox="0 0 16 12"><rect x="1" y="2" width="8" height="8" rx="1.5" stroke="none"/><rect x="10" y="2" width="5" height="8" rx="1.5" opacity=".5" stroke="none"/></svg>',
+ 3:'<svg viewBox="0 0 16 12" fill="none" stroke-width="2"><path d="M2 4h12M2 8h12"/></svg>',
+ 4:'<svg viewBox="0 0 16 12" fill="none" stroke-width="2" stroke-linecap="round"><path d="M2 3h12M2 6h8M2 9h10"/></svg>'};
 /* the station card under the map: WP draws its own (Core.stationAction assumes 3 levels and the old gate) */
 function wpStationAction(id,st){
   const g=wpGrade(); const minL=gradeMin(g), maxL=gradeMax(g); const fams=famsOf(id); const n=STAGES.findIndex(x=>x[0]===id)+1;
   const fid=fams.length?curFam(id,st):null; const f=fid?st.fam[fid]:null; const lv=f?f.level:st.level;
   const need=(FAM_NEED[lv]||5); const streak=f?f.streak:st.streak; const open=fams.length?allFamsDone(id,st):!!st.testUnlocked;
-  const levels=[]; for(let l=minL;l<=maxL;l++) levels.push(l);
-  const dots=levels.map(l=>`<i class="${l<lv?'done':l===lv?'on':''}"></i>`).join('');
-  const famRow=fams.length?`<i>${fams.map(x=>{ const fs=st.fam[x.id]; const cls=fs&&fs.done?'done':x.id===fid?'on':''; return `<span class="dots"><i class="${cls}"></i></span>${esc(x.name)}`; }).join(' · ')}</i>`:'';
+  const nL=maxL-minL+1;
+  /* whole-station progress: cells = families × levels, the current cell counts by its streak */
+  let cells=0, got=0;
+  fams.forEach(x=>{ const s=st.fam[x.id]; cells+=nL; if(!s) return; if(s.done) got+=nL; else { got+=(s.level-minL)+Math.min(1,s.streak/(FAM_NEED[s.level]||5)); } });
+  const pct=cells?Math.round(100*got/cells):0; const off=(138.2*(1-(cells?got/cells:0))).toFixed(1);
+  const ring=`<div class="ring${open?' full':''}"><svg viewBox="0 0 54 54"><circle class="tr" cx="27" cy="27" r="22"/><circle class="pr" cx="27" cy="27" r="22" style="stroke-dashoffset:${open?0:off}"/></svg><span>${open?'✓':pct+'%'}</span></div>`;
+  const famRows=fams.map(x=>{ const s=st.fam[x.id]||{level:minL,streak:0,done:false}; const cls=s.done?'done':x.id===fid?'on':'wait';
+    let lad=''; for(let l=minL;l<=maxL;l++){ const c=s.done||l<s.level?'p':(l===s.level&&!s.done&&x.id===fid)?'c':''; const w=c==='c'?` style="--w:${Math.round(100*Math.min(1,s.streak/(FAM_NEED[l]||5)))}%"`:''; lad+=`<span class="lv ${c}"${w}>${LVL_ICON[l]}</span>`; }
+    const meta=s.done?`${nL}/${nL}`:x.id===fid?`${s.streak}/${FAM_NEED[s.level]||5}`:(s.level>minL||s.streak?`${s.level-minL}/${nL}`:'—');
+    return `<div class="fam-row ${cls}"><span class="fam-name">${esc(x.name)}</span><span class="lad">${lad}</span><span class="fam-meta">${meta}</span></div>`; }).join('');
+  const info=open?`${fams.length} түр меңгерілді · аралас тест`:(f?`${esc(famName(id,fid))} · ${LVL_NAME[lv]} · ${streak}/${need}`:`Деңгей ${lv}/${maxL} · қатарынан ${streak}/${need}`);
   const pr=`<button type="button" class="btn${open?' ghost sm':''}" data-pr="${esc(id)}">Жаттығу</button>`;
+  const nTest=fams.length?fams.length*Math.max(FAM_TEST_PER,Math.ceil(10/fams.length)):10; const needT=Math.ceil(nTest*0.8);
   const te=open?`<button type="button" class="btn gold" data-test="${esc(id)}">Кезең тесті</button>`:`<button type="button" class="btn ghost sm" disabled>Тест · ${fams.length?doneFams(id,st).length+'/'+fams.length+' түр':'жабық'}</button>`;
-  const sub=open?'Аралас тест: барлық түрден · 8/10 — келесі станция · 10/10 — ★★★':(f?`«${esc(famName(id,fid))}»: қатарынан ${need} дұрыс → келесі деңгей`:'Барлық түрді меңгер → тест ашылады');
-  return `<div class="mapgo mg2"><div class="mg-row"><div class="mg-info"><b>${n}-станция · ${esc(stageName(id))}</b>
-      <i><span class="dots">${dots}</span> Деңгей ${lv}/${maxL} · қатарынан ${streak}/${need}</i>${famRow}</div>${open?te:pr}</div>
+  const sub=open?`Аралас тест · ${nTest} есеп · ${needT}+ дұрыс → келесі станция`:(f?`Қатарынан ${need} дұрыс → келесі деңгей`:'Барлық түрді меңгер → аралас тест ашылады');
+  return `<div class="mapgo mg2"><div class="mg-row">${fams.length?ring:''}<div class="mg-info"><b>${n}-станция · ${esc(stageName(id))}</b><i>${info}</i></div>${open?te:pr}</div>
+    ${fams.length?`<div class="fam">${famRows}</div>`:''}
     <div class="mg-sub">${open?pr:te}<span>${sub}</span>
       <button type="button" class="mg-link" data-rediag>Тым оңай ма?</button></div></div>`;
+}
+/* the quiz top bar: in practice a family chip with a segmented streak bar; elsewhere the plain progress bar */
+function qtopHTML(o,prog){
+  const home=Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:'';
+  if(!o.famLabel) return `<div class="qtop">${home}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>`;
+  const need=o.need||5, streak=o.review?need:Math.min(need,o.streak||0);
+  let seg=''; for(let i=0;i<need;i++) seg+=`<i class="${i<streak?'f':''}"></i>`;
+  return `<div class="qtop">${home}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qchip"><b>${esc(o.famLabel)}${o.review?'<span class="rev">қайталау</span>':''}</b><div class="seg">${seg}</div></div><span class="qmeta">${esc(o.meta||'')}</span></div>`;
 }
 
 /* ── teaching card ── */
@@ -122,6 +146,37 @@ function showCard(stId,cards,i,done){
 /* bar model scene */
 .bar-scene{background:var(--fig);border-radius:16px;padding:14px;margin:0 0 14px;overflow-x:auto}
 .bar-scene svg{display:block;max-width:100%;height:auto;margin:0 auto}
+/* ── progress (per-family scaffold, 2026-10) ── */
+.mapgo .ring{flex:none;width:54px;height:54px;position:relative}
+.mapgo .ring svg{width:54px;height:54px;transform:rotate(-90deg)}
+.mapgo .ring circle{fill:none;stroke-width:6;stroke-linecap:round}
+.mapgo .ring .tr{stroke:var(--fig)}
+.mapgo .ring .pr{stroke:var(--rc);stroke-dasharray:138.2;transition:stroke-dashoffset .4s}
+.mapgo .ring.full .pr{stroke:var(--good)}
+.mapgo .ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.82rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.mapgo .fam{display:flex;flex-direction:column;gap:7px}
+.mapgo .fam-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:7px 10px;border-radius:12px;background:var(--fig)}
+.mapgo .fam-row.on{background:var(--accent-soft);outline:2px solid var(--rc)}
+.mapgo .fam-row.done{background:var(--good-soft)}
+.mapgo .fam-row.wait{opacity:.55}
+.mapgo .fam-name{font-size:.86rem;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.mapgo .fam-row.done .fam-name::after{content:' ✓';color:var(--good)}
+.mapgo .lad{display:flex;gap:4px}
+.mapgo .lv{width:28px;height:22px;border-radius:7px;background:var(--card);border:1.5px solid var(--line);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mapgo .lv svg{width:16px;height:12px;position:relative;z-index:1;stroke:var(--muted);fill:var(--muted)}
+.mapgo .lv.p{background:var(--rc);border-color:var(--rc)} .mapgo .lv.p svg{stroke:#fff;fill:#fff}
+.mapgo .fam-row.done .lv.p{background:var(--good);border-color:var(--good)}
+.mapgo .lv.c{border-color:var(--rc);border-width:2px}
+.mapgo .lv.c::before{content:'';position:absolute;left:0;top:0;bottom:0;width:var(--w,0%);background:var(--rc);opacity:.35}
+.mapgo .lv.c svg{stroke:var(--rc);fill:var(--rc)}
+.mapgo .fam-meta{font-size:.74rem;font-weight:900;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:34px;text-align:right}
+.mapgo .fam-row.on .fam-meta{color:var(--rc)}
+.qchip{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.qchip b{font-size:.78rem;font-weight:900;color:var(--rc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qchip .seg{display:flex;gap:3px}
+.qchip .seg i{flex:1;height:7px;border-radius:4px;background:var(--fig)}
+.qchip .seg i.f{background:var(--rc)}
+.qchip .rev{display:inline-block;font-size:.66rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;background:var(--gold-soft);color:var(--gold);padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:middle}
 `;
   document.head.appendChild(s);
 })();
@@ -298,7 +353,7 @@ function renderL1(q,o){
   }
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
+   ${qtopHTML(o,prog)}
    ${fig?`<div class="fig">${fig}</div>`:''}
    <div class="l1-choices" id="l1choices"></div>
    </div>
@@ -347,7 +402,7 @@ function renderL2(q,o){
   }
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
+   ${qtopHTML(o,prog)}
    <div class="stem">${stemHTML(q.stem,false)}</div>
    ${barSvg?`<div class="bar-scene">${barSvg}</div>`:''}
    ${qjHTML}${eqHTML}
@@ -379,7 +434,7 @@ function renderL3(q,o){
   const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l3ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
+   ${qtopHTML(o,prog)}
    <div class="stem">${stemHTML(q.stem,false)}</div>
    ${qjHTML}${eqHTML}${ansHTML}
    <div id="hints"></div></div>
@@ -409,7 +464,7 @@ function renderL4(q,o){
   const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l4ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
+   ${qtopHTML(o,prog)}
    <div class="stem">${stemHTML(q.stem,false)}</div>
    ${eqHTML}${ansHTML}
    <div id="hints"></div></div>
@@ -460,7 +515,7 @@ function renderLegacy(q,o){
   const ladder=o.ladder&&!o.noHints;
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
-   <div class="qtop">${Core.root?`<a class="qhome" href="${Core.root}" aria-label="Басты бет" title="Басты бет">${Core.homeSVG}</a>`:''}<button class="qx" onclick="showHome()" aria-label="Шығу">✕</button><div class="qprog"><i style="width:${(prog*100).toFixed(0)}%"></i></div><span class="qmeta">${esc(o.meta||'')}</span></div>
+   ${qtopHTML(o,prog)}
    <div class="stem">${stemHTML(q.stem,false)}</div>${fig?`<div class="fig">${fig}</div>`:''}${input}
    <div id="hints"></div></div>
    <div class="actbar" id="qbar">${ladder?`<button class="btn plain" id="dkBtn" onclick="dontKnow()">Білмеймін</button><button class="btn plain" id="hintBtn" onclick="nextHint()">Кеңес 1/5</button>`:''}${o.onSkip?`<button class="btn plain" onclick="skipQ()">Білмеймін</button>`:''}<button class="btn" id="ansBtn" onclick="answerInput()" disabled>Тексеру</button></div>

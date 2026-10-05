@@ -29,8 +29,10 @@ function nextPractice(){
   PR.q=q; PR.fam=fam; PR.review=!!(fam&&(!fid||fam!==fid)); PR.scaff=scaff;
   PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
   const streak=f?f.streak:st.streak;
-  renderQuestion(q,{mode:'practice',title:stageName(stId),meta:`🔥 ${streak}/${need}`,prog:streak/need,
-    sub:twin?'ұқсас есеп':(fam?famName(stId,fam):stageName(stId)),scaffoldLevel:scaff,onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
+  const famLabel=fam?`${famName(stId,fam)} · ${LVL_NAME[scaff]||''}${twin?' · ұқсас есеп':''}`:'';
+  renderQuestion(q,{mode:'practice',title:stageName(stId),meta:PR.review?`✓ ${need}/${need}`:`🔥 ${streak}/${need}`,prog:streak/need,
+    sub:twin?'ұқсас есеп':(fam?famName(stId,fam):stageName(stId)),scaffoldLevel:scaff,famLabel,need,streak,review:PR.review,
+    onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
   const stId=PR.stId; const st=R.stages[stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade();
