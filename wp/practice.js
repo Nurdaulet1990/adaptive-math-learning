@@ -119,3 +119,5 @@ function checkGuide(){
   else { log({ev:'step',n:PR.stepIdx+1,ok:false,id:PR.q.id}); $('gmsg').textContent=' Қате, қайта есепте.'; $('gin').select(); }
 }
 function dontKnow(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,stage:PR.stId}); nextHint(); }
+/* L4 has no hint ladder: «Білмеймін» goes straight to the full solution (step 5 → streak reset, twin follows) */
+function giveUp(){ if(window._Q.done) return; log({ev:'dontknow',id:PR.q.id,stage:PR.stId,l4:true}); PR.step=4; PR.hints=4; nextHint(); }

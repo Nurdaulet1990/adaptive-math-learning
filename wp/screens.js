@@ -150,6 +150,11 @@ function showCard(stId,cards,i,done){
 .op-pad-static{flex-wrap:wrap;padding:0 0 6px}
 .op-pad-static .op-key{width:44px;height:42px;font-size:1.2rem}
 .op-pad-static .op-key-add{width:auto;padding:0 12px;font-size:.9rem;font-weight:900;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:4px 0 8px}
+.chip{min-width:44px;height:36px;padding:0 10px;border:2px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font-family:inherit;font-weight:900;font-size:1rem;cursor:pointer}
+.chip:active{background:var(--accent-soft);border-color:var(--rc)}
+.eq-row.build .num-slot{width:56px}
+.eq-row.row-ok .eq-op{color:var(--good)}
 /* answer line */
 .ans-section{margin:0 0 10px}
 .ans-row{display:flex;align-items:center;gap:8px}
@@ -372,6 +377,32 @@ function buildEqRowHTML(parts,prefix,fillOps,prevResults){
   html+='</div>';
   return html;
 }
+/* L3 (owner, 2026-10-05): the child WRITES each step. We give the shape of the row (number · operation · number = result,
+   parentheses where the step has them) and the tools: a strip of the numbers known from the stem, and the operator keys.
+   Nothing is pre-filled. A row counts when it is arithmetically true and its result is the step's result. */
+function buildRowHTML(parts,prefix){
+  let html=`<div class="eq-row build" data-row="${prefix}">`; let n=0, o=0; let seenEq=false;
+  parts.forEach(p=>{
+    if(p==='='){ seenEq=true; html+='<span class="eq-op">=</span>'; }
+    else if(typeof p==='string') html+=`<button type="button" class="op-slot" id="${prefix}_op${o++}" data-v="" onclick="pickOp(this)" aria-label="Амал таңда">?</button>`;
+    else if(p.p) html+=`<span class="eq-op eq-par">${esc(p.p)}</span>`;
+    else if(!seenEq) html+=`<input class="box-input num-slot" autocomplete="off" type="text" inputmode="decimal" id="${prefix}_n${n++}">`;
+    else html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}_r" data-ans="${esc(p.v)}">`;
+  });
+  return html+'</div>';
+}
+function stemNumbers(q){ const seen=new Set(); const out=[]; (String(q.stem).match(/\d+(?:[.,]\d+)?%?/g)||[]).forEach(x=>{ if(!seen.has(x)){ seen.add(x); out.push(x); } }); return out; }
+function chipsHTML(q){ const nums=stemNumbers(q); if(!nums.length) return ''; return `<div class="chips">${nums.map(x=>`<button type="button" class="chip" tabindex="-1" onmousedown="event.preventDefault()" onclick="useChip('${esc(x)}')">${esc(x)}</button>`).join('')}</div>`; }
+function useChip(v){ const el=document.activeElement; const slots=[...document.querySelectorAll('.num-slot')];
+  const t=(el&&el.classList&&el.classList.contains('num-slot'))?el:slots.find(x=>!x.value); if(!t) return; t.value=v; t.classList.remove('err'); t.style.borderColor=''; focusFirstEmpty(); }
+/* read a build row back into tokens; null when a slot is still empty */
+function rowTokens(row){ const toks=[]; let empty=false;
+  row.childNodes.forEach(el=>{ if(el.nodeType!==1) return;
+    if(el.classList.contains('op-slot')){ const v=el.dataset.v; if(!v) empty=true; toks.push(v||'?'); }
+    else if(el.classList.contains('eq-par')) toks.push({p:el.textContent});
+    else if(el.classList.contains('eq-op')) toks.push('=');
+    else if(el.tagName==='INPUT'){ const v=(el.value||'').trim(); if(!v) empty=true; toks.push({v}); } });
+  return empty?null:toks; }
 /* evaluate a token list (numbers, + − × ÷, parentheses) — tokens come from tokenizeExpr, so the string is safe */
 function evalToks(t){
   if(!t.length) return NaN;
@@ -528,13 +559,11 @@ function renderL3(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      const prev=new Set(); simplifySteps(q.steps).forEach((s,i)=>{
-        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l3s'+i,true,prev); prev.add(String(s.val));
-      });
+      simplifySteps(q.steps).forEach((s,i)=>{ eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildRowHTML(stepEq(s),'l3s'+i); });
     } else {
-      eqHTML+=buildEqRowHTML(eqParts,'l3eq',true);
+      eqHTML+=buildRowHTML(eqParts,'l3eq');
     }
-    eqHTML+='</div>';
+    eqHTML+=chipsHTML(q)+'</div>';
   }
   const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l3ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
   const prog=Math.max(0,Math.min(1,o.prog||0));
@@ -554,7 +583,7 @@ function renderL3(q,o){
    Each line must be arithmetically true; the answer must match. The bank's own steps are not the measure here. */
 function renderL4(q,o){
   const eqHTML=`<div class="eq-section"><div class="eq-title">Шешуі</div>
-    <div class="free-lines" id="l4lines"><input class="box-line" autocomplete="off" type="text" id="l4line0" placeholder="мысалы: 12 + 8 = 20"></div>
+    <div class="free-lines" id="l4lines"><input class="box-line" autocomplete="off" type="text" id="l4line0"></div>
     <div class="op-pad op-pad-static">${['+','−','×','÷','=','(',')'].map(k=>`<button type="button" class="op-key" tabindex="-1" onmousedown="event.preventDefault()" onclick="insertSym('${k}')">${k}</button>`).join('')}<button type="button" class="op-key op-key-add" tabindex="-1" onmousedown="event.preventDefault()" onclick="addFreeLine()" aria-label="Тағы бір жол">+ жол</button></div>
   </div>`;
   const ansHTML=`<div class="ans-section"><div class="ans-row"><span class="ans-label">Жауабы:</span><input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="l4ans" data-ans="${esc(String(q.ans))}"><span style="font-size:.9rem;font-weight:700">${esc(q.unit||'')}</span></div></div>`;
@@ -564,7 +593,7 @@ function renderL4(q,o){
    <div class="stem">${stemHTML(q.stem,false)}</div>
    ${eqHTML}${ansHTML}
    <div id="hints"></div></div>
-   <div class="actbar" id="qbar"><button class="btn plain" id="dkBtn" onclick="dontKnow()">Білмеймін</button><button class="btn plain" id="hintBtn" onclick="nextHint()">Кеңес 1/5</button><button class="btn" id="ansBtn" onclick="checkLevelInputs()">Тексеру</button></div>
+   <div class="actbar" id="qbar"><button class="btn plain" id="dkBtn" onclick="giveUp()">Білмеймін</button><button class="btn" id="ansBtn" onclick="checkLevelInputs()">Тексеру</button></div>
    <div id="fb"></div>`;
   window._Q={q,o,done:false,sel:null,selBtn:null};
   focusFirstEmpty();
@@ -580,6 +609,16 @@ function checkLevelInputs(){
     if(slotOk(inp)){ inp.classList.add('ok'); inp.classList.remove('err'); }
     else { inp.classList.add('err'); inp.classList.remove('ok'); allOk=false; }
   });
+  /* L3: every built row must be complete and true, and its result must be the step's */
+  let rowsOk=true;
+  document.querySelectorAll('.eq-row.build').forEach(row=>{
+    const toks=rowTokens(row); if(!toks){ anyEmpty=true; row.querySelectorAll('.num-slot, .op-slot').forEach(x=>{ if(!slotVal(x)) x.style.borderColor='var(--gold)'; }); return; }
+    const i=toks.indexOf('='); const left=evalToks(toks.slice(0,i)), right=evalToks(toks.slice(i+1));
+    const ok=!isNaN(left)&&!isNaN(right)&&Math.abs(left-right)<1e-6;
+    row.classList.toggle('row-ok',ok); row.classList.toggle('row-err',!ok);
+    row.querySelectorAll('.num-slot, .op-slot').forEach(x=>{ x.classList.toggle('ok',ok); x.classList.toggle('err',!ok); });
+    if(!ok){ rowsOk=false; allOk=false; }
+  });
   /* L4: every written line must hold, and at least one line must be written */
   const lines=[...document.querySelectorAll('.box-line')]; let linesOk=true;
   if(lines.length){ const filled=lines.filter(l=>l.value.trim());
@@ -593,13 +632,13 @@ function checkLevelInputs(){
   }
   /* The final answer is what matters for the adaptive engine */
   const ansInp=document.getElementById('l2_q')||document.getElementById('l3ans')||document.getElementById('l4ans');
-  const finalOk=(ansInp?isCorrect(window._Q.q,(ansInp.value||'').trim()):allOk)&&linesOk;
+  const finalOk=(ansInp?isCorrect(window._Q.q,(ansInp.value||'').trim()):allOk)&&linesOk&&rowsOk;
   finishAnswer(ansInp?(ansInp.value||'').trim():String(window._Q.q.ans),null,finalOk);
 }
 
 function focusFirstEmpty(){
   setTimeout(()=>{
-    const boxes=document.querySelectorAll('[data-ans], .box-line');
+    const boxes=document.querySelectorAll('.num-slot, .op-slot, [data-ans], .box-line');
     for(const b of boxes){ if(!slotVal(b)){ b.focus(); return; } }
   },50);
 }
@@ -626,7 +665,7 @@ function answerChoice(btn){ if(window._Q.done) return;
   document.querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); btn.classList.add('pick');
   window._Q.sel=btn.dataset.v; window._Q.selBtn=btn; $('ansBtn').disabled=false; }
 function answerInput(){ if(window._Q.done) return; const ai=$('ans'); const v=ai?ai.value.trim():window._Q.sel; if(!v) return; finishAnswer(v,window._Q.selBtn); }
-function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input, .op-slot, .box-line').forEach(b=>b.disabled=true); document.querySelectorAll('.op-pad-static').forEach(x=>x.remove()); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
+function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input, .op-slot, .box-line, .chip').forEach(b=>b.disabled=true); document.querySelectorAll('.op-pad-static, .chips').forEach(x=>x.remove()); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
 function finishAnswer(v,btn,forceOk){
   const {q,o}=window._Q; const ok=forceOk!==undefined?forceOk:isCorrect(q,v);
   if(o.mode==='practice' && !ok && !PR.retried && PR.step<5){ PR.retried=true; log({ev:'attempt',ok:false,id:q.id,stage:PR.stId});
@@ -637,6 +676,7 @@ function finishAnswer(v,btn,forceOk){
     /* For level inputs: highlight wrong ones, let pupil retry */
     document.querySelectorAll('.box-input.err, .op-slot.err').forEach(b=>{ slotClear(b); b.style.borderColor='var(--bad)'; });
     document.querySelectorAll('.box-line.err').forEach(b=>{ b.style.borderColor='var(--bad)'; });
+    document.querySelectorAll('.eq-row.row-err .num-slot.err, .eq-row.row-err .op-slot.err').forEach(b=>{ b.classList.remove('err'); b.style.borderColor='var(--bad)'; });
     const hbox=$('hints')||document.getElementById('hints'); if(hbox) hbox.insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
   const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
