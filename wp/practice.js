@@ -14,7 +14,7 @@ function nextPractice(){
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><p class="note">Есептер дайындалып жатыр.</p><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
   PR.q=q; PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
   renderQuestion(q,{mode:'practice',title:stageName(PR.stId),meta:`🔥 ${st.streak}/3`,prog:st.streak/3,
-    sub:twin?'ұқсас есеп':stageName(PR.stId),onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
+    sub:twin?'ұқсас есеп':stageName(PR.stId),scaffoldLevel:st.level,onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
   const st=R.stages[PR.stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade(); const atL3=isMaxLevel(g,st.level);
