@@ -39,7 +39,7 @@ function nextDiag(){
   let mid=DG.cur!=null?DG.cur:Math.floor((DG.lo+DG.hi)/2); if(DG.cur==null&&DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once (same as core/runner.js)
   const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  const q=drawItem(st,3); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
+  const _g=wpGrade(); const q=drawItem(st,tplLvl(_g,gradeMax(_g))); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length), sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
@@ -67,7 +67,8 @@ function startTest(stId,force){
      (force), a passed station retaken for its stars, and the tester account go straight in */
   if(!force&&!Core.tester&&Core.testGate){ const st=R.stages[stId]; if(st&&st.status!=='passed'&&!Core.testGate(st).open) return showHome(); }
   const qs=[]; const used=new Set();
-  for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=drawItem(stId,3); if(c&&!used.has(c.id)) q=c; } if(q){ used.add(q.id); qs.push(q); } }
+  const _g=wpGrade(); const _tl=tplLvl(_g,gradeMax(_g));
+  for(let i=0;i<10;i++){ let q=null; for(let k=0;k<8&&!q;k++){ const c=drawItem(stId,_tl); if(c&&!used.has(c.id)) q=c; } if(q){ used.add(q.id); qs.push(q); } }
   if(qs.length<6){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңге тест есептері жеткіліксіз</h2><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
   TS={stId,qs,i:0,ok:0}; PR={stId,mode:'test'}; nextTest();
 }
