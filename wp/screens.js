@@ -468,6 +468,7 @@ function renderL1(q,o){
   const prog=Math.max(0,Math.min(1,o.prog||0));
   app().innerHTML=`<div class="quiz">
    ${qtopHTML(o,prog)}
+   <div class="stem">${stemHTML(q.stem,false)}</div>
    ${fig?`<div class="fig">${fig}</div>`:''}
    <div class="l1-choices" id="l1choices"></div>
    </div>
