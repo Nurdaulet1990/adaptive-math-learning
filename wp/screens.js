@@ -131,6 +131,16 @@ function showCard(stId,cards,i,done){
 .eq-title{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
 .eq-row{display:flex;align-items:center;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px 0}
 .eq-op{font-size:1.3rem;font-weight:900;color:var(--ink)}
+.eq-par{font-size:1.5rem;font-weight:700;color:var(--muted)}
+.op-slot{width:44px;height:40px;border:2px dashed var(--line);border-radius:10px;background:var(--fig);color:var(--muted);font-family:inherit;font-weight:900;font-size:1.3rem;cursor:pointer}
+.op-slot.picking{border-color:var(--rc);border-style:solid;background:var(--card)}
+.op-slot[data-v]:not([data-v=""]){border-style:solid;border-color:var(--line);color:var(--ink);background:var(--card)}
+.op-slot.ok{border-color:var(--good);background:var(--good-soft);color:var(--ink)}
+.op-slot.err{border-color:var(--bad);color:var(--bad)}
+.op-slot:focus{outline:none;border-color:var(--rc)}
+.op-pad{display:flex;gap:8px;justify-content:center;padding:6px 0 10px}
+.op-key{width:56px;height:48px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);font-family:inherit;font-weight:900;font-size:1.4rem;cursor:pointer;box-shadow:0 3px 0 var(--line)}
+.op-key:active{transform:translateY(2px);box-shadow:none}
 /* answer line */
 .ans-section{margin:0 0 10px}
 .ans-row{display:flex;align-items:center;gap:8px}
@@ -269,16 +279,62 @@ function drawBarModelWP(q){
 /* parts: [{v:'3'},'+',{v:'4'},'=',{v:'7'}] or string from h2 like "3 + 4 = ?"
    fillOps: true → operators become input boxes (L3/L4)
    prefix: unique id prefix for inputs */
+/* Textbook notation in the bank: `·` and `:` (also × ÷ * / x), compact `5·5`, parentheses, several operators in one step.
+   tokenizeExpr("(40 + 50) · 2") → [{p:'('},{v:'40'},'+',{v:'50'},{p:')'},'×',{v:'2'}] */
+const OP_NORM={'+':'+','−':'−','-':'−','–':'−','×':'×','·':'×','*':'×','x':'×','х':'×','X':'×','÷':'÷',':':'÷','/':'÷'};
+function tokenizeExpr(str){
+  const out=[]; const re=/\d+(?:[.,]\d+)?%?|[()]|[+\-−–×·*xхX÷:\/=?]/g; let m;
+  while((m=re.exec(String(str)))){ const t=m[0];
+    if(t==='('||t===')') out.push({p:t});
+    else if(t==='='||t==='?') out.push(t);
+    else if(OP_NORM[t]) out.push(OP_NORM[t]);
+    else out.push({v:t}); }
+  return out;
+}
 function parseEq(q){
   /* Build eq array from q.eq (structured) or q.h2 (string) */
-  if(q.eq&&q.eq.length) return q.eq;
+  if(q.eq&&q.eq.length) return q.eq.map(p=>typeof p==='string'?(OP_NORM[p]||p):p);
   if(!q.h2) return [];
-  /* parse "3 + 4 = ?" or "{a} + {b} = ?" — values already substituted by generate() */
-  const parts=q.h2.split(/\s+/);
-  return parts.map(p=>{
-    if(p==='+'||p==='−'||p==='-'||p==='×'||p==='÷'||p==='=') return p==='-'?'−':p;
-    return {v:p==='?'?String(q.ans):p};
+  return tokenizeExpr(q.h2).map(p=>p==='?'?{v:String(q.ans)}:p);
+}
+function stepEq(s){ return (s.eq&&s.eq.length)?s.eq:(s.toks||tokenizeExpr(s.expr)).concat(['=',{v:String(s.val)}]); }
+/* Some bank steps repeat earlier steps inside the expression — «120 : (5 + 1) · 5» after «5 + 1 = 6» and «120 : 6 = 20».
+   For the boxes a child fills, an earlier step's result stands in for its expression: a parenthesised group equal to an
+   earlier step, or a leading run equal to one when the next operator is + or −, becomes that step's value;
+   a step that becomes identical to an earlier one is dropped. */
+function simplifySteps(steps){
+  const key=t=>t.map(p=>typeof p==='string'?p:(p.p?p.p:'#'+p.v)).join(' ');
+  const done=[]; const out=[];
+  steps.forEach(s=>{
+    let toks=(s.eq&&s.eq.length)?null:tokenizeExpr(s.expr);
+    if(toks){
+      const orig=toks.slice();
+      let changed=true, guard=0;
+      while(changed&&guard++<12){ changed=false;
+        for(const d of done){ for(const dt of [d.orig,d.toks]){ const k=key(dt); const n=dt.length; if(n>=toks.length) continue;
+          for(let i=0;i+n<=toks.length;i++){
+            if(key(toks.slice(i,i+n))!==k) continue;
+            const before=toks[i-1], after=toks[i+n];
+            const isAdd=x=>x==='+'||x==='−';
+            const inParens=before&&before.p==='('&&after&&after.p===')';
+            const mulOnly=!dt.some(isAdd);
+            const openL=before===undefined||(before&&before.p==='(');
+            const edgeR=after===undefined||isAdd(after)||(after&&after.p===')');
+            /* a run of × ÷ is a unit unless it follows a ÷ (a ÷ b·c ≠ a ÷ (b·c)); a run with + − is one only at the start */
+            const safe=inParens||(mulOnly&&before!=='÷')||(!mulOnly&&openL&&edgeR);
+            if(!safe) continue;
+            if(inParens) toks.splice(i-1,n+2,{v:d.val}); else toks.splice(i,n,{v:d.val});
+            changed=true; break;
+          }
+          if(changed) break; }
+          if(changed) break; }
+      }
+      if(done.some(d=>key(d.toks)===key(toks)||key(d.orig)===key(toks))) return;   /* a pure repeat of an earlier step */
+      done.push({toks:toks.slice(),orig,val:String(s.val)});
+    }
+    out.push(Object.assign({},s,toks?{toks}:{}));
   });
+  return out;
 }
 function buildEqRowHTML(parts,prefix,fillOps){
   let html='<div class="eq-row">';
@@ -286,11 +342,13 @@ function buildEqRowHTML(parts,prefix,fillOps){
   parts.forEach(p=>{
     if(typeof p==='string'){
       if(fillOps&&p!=='='){
-        html+=`<input class="box-input" autocomplete="off" type="text" style="width:36px;font-size:1.3rem" id="${prefix}_op${oIdx}" data-ans="${esc(p)}" placeholder="?">`;
+        html+=`<button type="button" class="op-slot" id="${prefix}_op${oIdx}" data-ans="${esc(p)}" data-v="" onclick="pickOp(this)" aria-label="Амал таңда">?</button>`;
         oIdx++;
       } else {
         html+=`<span class="eq-op">${esc(p)}</span>`;
       }
+    } else if(p.p){
+      html+=`<span class="eq-op eq-par">${esc(p.p)}</span>`;
     } else {
       html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}_${bIdx}" data-ans="${esc(p.v)}">`;
       bIdx++;
@@ -299,6 +357,24 @@ function buildEqRowHTML(parts,prefix,fillOps){
   html+='</div>';
   return html;
 }
+/* the operator picker: a slot is tapped → four keys appear under that row; a key fills the slot and moves on */
+function pickOp(btn){
+  if(window._Q&&window._Q.done) return;
+  document.querySelectorAll('.op-pad').forEach(x=>x.remove());
+  const pad=document.createElement('div'); pad.className='op-pad';
+  ['+','−','×','÷'].forEach(op=>{ const k=document.createElement('button'); k.type='button'; k.className='op-key'; k.textContent=op;
+    k.onclick=()=>{ setOp(btn,op); pad.remove(); focusFirstEmpty(); }; pad.appendChild(k); });
+  btn.closest('.eq-row').after(pad);
+  btn.classList.add('picking');
+}
+function setOp(btn,op){ btn.dataset.v=op; btn.textContent=op; btn.classList.remove('picking','err'); btn.style.borderColor=''; }
+document.addEventListener('keydown',e=>{ const t=document.activeElement; if(!t||!t.classList||!t.classList.contains('op-slot')) return;
+  const op=OP_NORM[e.key]; if(op){ e.preventDefault(); setOp(t,op); document.querySelectorAll('.op-pad').forEach(x=>x.remove()); focusFirstEmpty(); } });
+/* value of any answer slot: an input's text or an op-slot's chosen symbol */
+function slotVal(el){ return el.classList.contains('op-slot')?(el.dataset.v||''):(el.value||'').trim(); }
+function slotOk(el){ const exp=el.getAttribute('data-ans'); const v=slotVal(el); if(!v) return false; return el.classList.contains('op-slot')?(OP_NORM[v]||v)===(OP_NORM[exp]||exp):isCorrect({ans:exp},v); }
+function slotClear(el){ if(el.classList.contains('op-slot')){ el.dataset.v=''; el.textContent='?'; } else el.value=''; }
+function slotFill(el,v){ if(el.classList.contains('op-slot')) setOp(el,v); else el.value=v; }
 
 /* ── build қысқаша жазу HTML ── */
 function buildQJHTML(q,prefix){
@@ -390,10 +466,8 @@ function renderL2(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      q.steps.forEach((s,i)=>{
-        const stepEq=s.eq||parseEq({h2:s.expr+' = '+s.val,ans:s.val});
-        eqHTML+=`<div class="step-label">${i+1}-қадам${s.label?': '+esc(s.label):''}</div>`;
-        eqHTML+=buildEqRowHTML(stepEq,'l2s'+i,false);
+      simplifySteps(q.steps).forEach((s,i)=>{
+        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l2s'+i,false);
       });
     } else {
       eqHTML+=buildEqRowHTML(eqParts,'l2eq',false);
@@ -421,10 +495,8 @@ function renderL3(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      q.steps.forEach((s,i)=>{
-        const stepEq=s.eq||parseEq({h2:s.expr+' = '+s.val,ans:s.val});
-        eqHTML+=`<div class="step-label">${i+1}-қадам</div>`;
-        eqHTML+=buildEqRowHTML(stepEq,'l3s'+i,true);
+      simplifySteps(q.steps).forEach((s,i)=>{
+        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l3s'+i,true);
       });
     } else {
       eqHTML+=buildEqRowHTML(eqParts,'l3eq',true);
@@ -451,10 +523,8 @@ function renderL4(q,o){
   if(eqParts.length){
     eqHTML='<div class="eq-section"><div class="eq-title">Шешуі</div>';
     if(q.steps&&q.steps.length){
-      q.steps.forEach((s,i)=>{
-        const stepEq=s.eq||parseEq({h2:s.expr+' = '+s.val,ans:s.val});
-        eqHTML+=`<div class="step-label">${i+1}-қадам</div>`;
-        eqHTML+=buildEqRowHTML(stepEq,'l4s'+i,true);
+      simplifySteps(q.steps).forEach((s,i)=>{
+        eqHTML+=(s.label?`<div class="step-label">${esc(s.label)}</div>`:'')+buildEqRowHTML(stepEq(s),'l4s'+i,true);
       });
     } else {
       eqHTML+=buildEqRowHTML(eqParts,'l4eq',true);
@@ -480,17 +550,12 @@ function checkLevelInputs(){
   const boxes=document.querySelectorAll('[data-ans]');
   let allOk=true, anyEmpty=false;
   boxes.forEach(inp=>{
-    const expected=inp.getAttribute('data-ans');
-    const val=(inp.value||'').trim();
-    if(!val){ anyEmpty=true; return; }
-    if(isCorrect({ans:expected},val)){
-      inp.classList.add('ok'); inp.classList.remove('err');
-    } else {
-      inp.classList.add('err'); inp.classList.remove('ok'); allOk=false;
-    }
+    if(!slotVal(inp)){ anyEmpty=true; return; }
+    if(slotOk(inp)){ inp.classList.add('ok'); inp.classList.remove('err'); }
+    else { inp.classList.add('err'); inp.classList.remove('ok'); allOk=false; }
   });
-  if(anyEmpty&&allOk){ /* some empty boxes remain — highlight them */
-    boxes.forEach(inp=>{ if(!(inp.value||'').trim()) inp.style.borderColor='var(--gold)'; });
+  if(anyEmpty&&allOk){ /* some empty slots remain — highlight them */
+    boxes.forEach(inp=>{ if(!slotVal(inp)) inp.style.borderColor='var(--gold)'; });
     return;
   }
   /* The final answer is what matters for the adaptive engine */
@@ -502,7 +567,7 @@ function checkLevelInputs(){
 function focusFirstEmpty(){
   setTimeout(()=>{
     const boxes=document.querySelectorAll('[data-ans]');
-    for(const b of boxes){ if(!(b.value||'').trim()){ b.focus(); return; } }
+    for(const b of boxes){ if(!slotVal(b)){ b.focus(); return; } }
   },50);
 }
 
@@ -528,7 +593,7 @@ function answerChoice(btn){ if(window._Q.done) return;
   document.querySelectorAll('.choice').forEach(x=>x.classList.remove('pick')); btn.classList.add('pick');
   window._Q.sel=btn.dataset.v; window._Q.selBtn=btn; $('ansBtn').disabled=false; }
 function answerInput(){ if(window._Q.done) return; const ai=$('ans'); const v=ai?ai.value.trim():window._Q.sel; if(!v) return; finishAnswer(v,window._Q.selBtn); }
-function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input').forEach(b=>b.disabled=true); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
+function disableInputs(){ document.querySelectorAll('.choice').forEach(b=>b.disabled=true); document.querySelectorAll('.box-input, .op-slot').forEach(b=>b.disabled=true); const ai=$('ans'); if(ai) ai.disabled=true; const ab=$('ansBtn'); if(ab) ab.disabled=true; }
 function finishAnswer(v,btn,forceOk){
   const {q,o}=window._Q; const ok=forceOk!==undefined?forceOk:isCorrect(q,v);
   if(o.mode==='practice' && !ok && !PR.retried && PR.step<5){ PR.retried=true; log({ev:'attempt',ok:false,id:q.id,stage:PR.stId});
@@ -537,7 +602,7 @@ function finishAnswer(v,btn,forceOk){
     window._Q.sel=null; window._Q.selBtn=null; const ab0=$('ansBtn'); if(ab0) ab0.disabled=true;
     const ai0=$('ans'); if(ai0){ ai0.value=''; ai0.style.borderColor='var(--bad)'; ai0.focus(); }
     /* For level inputs: highlight wrong ones, let pupil retry */
-    document.querySelectorAll('.box-input.err').forEach(b=>{ b.value=''; b.style.borderColor='var(--bad)'; });
+    document.querySelectorAll('.box-input.err, .op-slot.err').forEach(b=>{ slotClear(b); b.style.borderColor='var(--bad)'; });
     const hbox=$('hints')||document.getElementById('hints'); if(hbox) hbox.insertAdjacentHTML('beforeend',`<div class="fb no" id="retryMsg">Қате. Тағы бір рет ойлан немесе «Кеңес» бас.</div>`); return; }
   const rm=$('retryMsg'); if(rm) rm.remove();
   window._Q.done=true; window._Q.given=v;
@@ -546,12 +611,12 @@ function finishAnswer(v,btn,forceOk){
   document.querySelectorAll('.choice').forEach(b=>{ b.classList.remove('pick'); if(isCorrect(q,b.dataset.v)) b.classList.add('ok'); else if(b===btn) b.classList.add('no'); });
   const ai=$('ans'); if(ai){ ai.style.borderColor=ok?'var(--good)':'var(--bad)'; }
   /* Mark all box inputs as ok/err */
+  document.querySelectorAll('.op-pad').forEach(x=>x.remove());
   document.querySelectorAll('[data-ans]').forEach(inp=>{
-    const expected=inp.getAttribute('data-ans');
-    const val=(inp.value||'').trim();
-    if(val&&isCorrect({ans:expected},val)) inp.classList.add('ok');
+    const expected=inp.getAttribute('data-ans'); const val=slotVal(inp);
+    if(val&&slotOk(inp)) inp.classList.add('ok');
     else if(val) inp.classList.add('err');
-    else { inp.value=expected; inp.classList.add('ok'); inp.style.opacity='0.6'; }
+    else { slotFill(inp,expected); inp.classList.add('ok'); inp.style.opacity='0.6'; }
   });
   const qb=$('qbar'); if(qb) qb.style.display='none';
   const showExpl = o.mode==='practice';
