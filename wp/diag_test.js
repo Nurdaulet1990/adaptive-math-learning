@@ -41,7 +41,8 @@ function nextDiag(){
   let mid=DG.cur!=null?DG.cur:DG.lo;
   const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  const _g=wpGrade(); const _lv=gradeLvls(_g); const q=drawItem(st,_lv[_lv.length-1])||drawItem(st,tplLvl(_g,gradeMax(_g))); if(!q){   /* the grade's own top number range, not lvl 3 for everyone */ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
+  /* owner, 2026-10-05: the easiest numbers of the station for every pupil — the diagnostic measures the structure, not the arithmetic */
+  const _lvls=BANK.templates.filter(t=>t.stage===st).map(t=>t.lvl); const _lo=_lvls.length?Math.min(..._lvls):1; const q=drawItem(st,_lo); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length), sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
