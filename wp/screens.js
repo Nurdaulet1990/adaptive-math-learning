@@ -205,87 +205,61 @@ function showCard(stId,cards,i,done){
   document.head.appendChild(s);
 })();
 
-/* ── bar model (DM-style, for Level 2) ── */
+/* ── bar model (DM-style, for Level 2) ──
+   Shape by the problem's structure, not by the operator alone (owner, 2026-10-05 — «12 − 5» was drawn as two parts + total):
+   join (+, whole unknown)         : [ a ][ b ]  with a brace «?» under the whole
+   whole − part (−, a part unknown): one bar = the whole, the known part shaded, «?» on the rest (S1, S9, A7, S7, A5…)
+   compare (family CMP / «артық, кем, айырма…»): two bars; «?» on the difference, on the longer bar or on the shorter bar */
 function drawBarModelWP(q){
-  if(!q.given||!q.given.length) return '';
-  const lines=q.given, ql=q.qline;
-  const W=320, bh=28, gap=6, px=12;
-  const font='font-family="Nunito,system-ui,sans-serif" font-weight="800"';
-  /* detect problem type from equation */
-  const eq=q.eq||[];
-  const op=eq.find(p=>typeof p==='string'&&p!=='=');
-  const vals=lines.map(l=>+l.val).filter(n=>!isNaN(n));
-  const ans=+q.ans;
-  if(vals.length<2) return '';
-  let svg=`<svg viewBox="0 0 ${W} 100" width="${W}" xmlns="http://www.w3.org/2000/svg">`;
-
-  if(op==='−'&&lines.length===2&&!q.steps){
-    /* Subtraction: one bar = total, part shaded + part remaining */
-    const total=vals[0], removed=vals[1], remain=ans;
-    const unit=(W-2*px-40)/total;
-    const wKeep=remain*unit, wGone=removed*unit;
-    const y1=20;
-    svg+=`<rect x="${px}" y="${y1}" width="${total*unit}" height="${bh}" rx="4" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>`;
-    svg+=`<rect x="${px}" y="${y1}" width="${wKeep}" height="${bh}" rx="4" fill="var(--seg2)" opacity="0.4"/>`;
-    svg+=`<text x="${px+wKeep/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="13" ${font} fill="var(--accent)">?</text>`;
-    svg+=`<rect x="${px+wKeep}" y="${y1}" width="${wGone}" height="${bh}" fill="var(--bad)" opacity="0.15"/>`;
-    svg+=`<text x="${px+wKeep+wGone/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="13" ${font} fill="var(--bad)">${removed}</text>`;
-    svg+=`<line x1="${px+wKeep}" y1="${y1}" x2="${px+wKeep}" y2="${y1+bh}" stroke="var(--ink)" stroke-width="1" opacity="0.3"/>`;
-    svg+=`<text x="${px+total*unit/2}" y="${y1-6}" text-anchor="middle" font-size="12" ${font} fill="var(--ink)">${total}</text>`;
-  } else if(lines.length===2&&!q.steps) {
-    /* Addition or comparison: two bars, bracket for total/difference */
+  if(!q.given||q.given.length<2) return '';
+  if(q.steps&&q.steps.length>1) return drawBarMulti(q);
+  const eq=(q.eq||[]).map(p=>typeof p==='string'?(OP_NORM[p]||p):p); const op=eq.find(p=>typeof p==='string'&&p!=='=');
+  if(op!=='+'&&op!=='−') return '';
+  const g=q.given; const vals=g.map(l=>+String(l.val).replace(',','.')); if(vals.some(isNaN)) return '';
+  const ans=+String(q.ans).replace(',','.'); const ql=(q.qline&&q.qline.label)||'';
+  const cmpWord=/артық|кем|айырма|ұзын|қысқа|үлкен|кіші|қымбат|арзан|есе/i;
+  const isCmp=q.fam==='CMP'||cmpWord.test(ql)||g.some(l=>cmpWord.test(l.label||''));
+  const W=320, bh=28, px=12, font='font-family="Nunito,system-ui,sans-serif" font-weight="800"';
+  const rect=(x,y,w,fill,stroke)=>`<rect x="${x}" y="${y}" width="${Math.max(w,2)}" height="${bh}" rx="4" fill="${fill}" opacity="0.4"/><rect x="${x}" y="${y}" width="${Math.max(w,2)}" height="${bh}" rx="4" fill="none" stroke="${stroke}" stroke-width="1.5"/>`;
+  const txt=(x,y,t,fill,size)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${size||14}" ${font} fill="${fill}">${esc(String(t))}</text>`;
+  const brace=(x1,x2,y,label)=>`<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--accent)" stroke-width="2"/><line x1="${x1}" y1="${y-4}" x2="${x1}" y2="${y+4}" stroke="var(--accent)" stroke-width="2"/><line x1="${x2}" y1="${y-4}" x2="${x2}" y2="${y+4}" stroke="var(--accent)" stroke-width="2"/>`+txt((x1+x2)/2,y+16,label,'var(--accent)',13);
+  let inner='', H=100;
+  if(isCmp){
     const a=vals[0], b=vals[1];
-    const maxV=Math.max(a,b,ans);
-    const unit=(W-2*px-40)/maxV;
-    const wA=a*unit, wB=b*unit;
-    const isCompare=op==='−'||(ql&&/артық|кем|айырма/i.test(ql.label||''));
-    if(isCompare){
-      const y1=12, y2=y1+bh+gap;
-      svg+=`<rect x="${px}" y="${y1}" width="${wA}" height="${bh}" rx="4" fill="var(--seg2)" opacity="0.4"/>`;
-      svg+=`<rect x="${px}" y="${y1}" width="${wA}" height="${bh}" rx="4" fill="none" stroke="var(--seg2)" stroke-width="1.5"/>`;
-      svg+=`<text x="${px+wA/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="14" ${font} fill="var(--ink)">${a}</text>`;
-      svg+=`<rect x="${px}" y="${y2}" width="${wB}" height="${bh}" rx="4" fill="var(--good)" opacity="0.3"/>`;
-      svg+=`<rect x="${px}" y="${y2}" width="${wB}" height="${bh}" rx="4" fill="none" stroke="var(--good)" stroke-width="1.5"/>`;
-      svg+=`<text x="${px+wB/2}" y="${y2+bh/2+5}" text-anchor="middle" font-size="14" ${font} fill="var(--ink)">${b}</text>`;
-      const dx1=px+Math.min(wA,wB), dx2=px+Math.max(wA,wB), by=y2+bh+4;
-      svg+=`<line x1="${dx1}" y1="${by}" x2="${dx2}" y2="${by}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<line x1="${dx1}" y1="${by-4}" x2="${dx1}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<line x1="${dx2}" y1="${by-4}" x2="${dx2}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<text x="${(dx1+dx2)/2}" y="${by+16}" text-anchor="middle" font-size="13" ${font} fill="var(--accent)">?</text>`;
-    } else {
-      const y1=20;
-      svg+=`<rect x="${px}" y="${y1}" width="${wA}" height="${bh}" rx="4" fill="var(--seg2)" opacity="0.4"/>`;
-      svg+=`<rect x="${px}" y="${y1}" width="${wA}" height="${bh}" rx="4" fill="none" stroke="var(--seg2)" stroke-width="1.5"/>`;
-      svg+=`<text x="${px+wA/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="14" ${font} fill="var(--ink)">${a}</text>`;
-      svg+=`<rect x="${px+wA}" y="${y1}" width="${wB}" height="${bh}" rx="4" fill="var(--good)" opacity="0.3"/>`;
-      svg+=`<rect x="${px+wA}" y="${y1}" width="${wB}" height="${bh}" rx="4" fill="none" stroke="var(--good)" stroke-width="1.5"/>`;
-      svg+=`<text x="${px+wA+wB/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="14" ${font} fill="var(--ink)">${b}</text>`;
-      const totalW=wA+wB, by=y1+bh+8;
-      svg+=`<line x1="${px}" y1="${by}" x2="${px+totalW}" y2="${by}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<line x1="${px}" y1="${by-4}" x2="${px}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<line x1="${px+totalW}" y1="${by-4}" x2="${px+totalW}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-      svg+=`<text x="${px+totalW/2}" y="${by+16}" text-anchor="middle" font-size="13" ${font} fill="var(--accent)">?</text>`;
-    }
-  } else if(q.steps&&q.steps.length) {
-    /* Multi-step: show segments for each known value */
-    const total=vals.reduce((s,v)=>s+v,0)+ans;
-    const unit=(W-2*px-40)/total;
-    const y1=20; let x=px;
-    vals.forEach((v,i)=>{
-      const w=v*unit;
-      const fills=['var(--seg2)','var(--good)','var(--gold)'];
-      svg+=`<rect x="${x}" y="${y1}" width="${w}" height="${bh}" rx="4" fill="${fills[i%3]}" opacity="0.3"/>`;
-      svg+=`<rect x="${x}" y="${y1}" width="${w}" height="${bh}" rx="4" fill="none" stroke="${fills[i%3]}" stroke-width="1.5"/>`;
-      svg+=`<text x="${x+w/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="13" ${font} fill="var(--ink)">${v}</text>`;
-      x+=w;
-    });
-    const totalW=x-px, by=y1+bh+8;
-    svg+=`<line x1="${px}" y1="${by}" x2="${px+totalW}" y2="${by}" stroke="var(--accent)" stroke-width="2"/>`;
-    svg+=`<line x1="${px}" y1="${by-4}" x2="${px}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-    svg+=`<line x1="${px+totalW}" y1="${by-4}" x2="${px+totalW}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/>`;
-    svg+=`<text x="${px+totalW/2}" y="${by+16}" text-anchor="middle" font-size="13" ${font} fill="var(--accent)">?</text>`;
-  } else { return ''; }
-  svg+=`</svg>`;
+    /* three cases: the difference is asked (bars a and b); the longer bar is asked (a, then a + b); the shorter is asked (a, then a − b) */
+    const kind=/айырма/i.test(ql)||(!cmpWord.test(g[1].label||'')&&!cmpWord.test(g[0].label||''))?'diff':op==='+'?'long':'short';
+    const lab1=(g[0].label||'').slice(0,10), lab2=(kind==='diff'?(g[1].label||''):ql).slice(0,10);
+    const lx=px, bx=px+64; const maxV=kind==='long'?a+b:a; const unit=(W-bx-px-24)/Math.max(maxV,1);
+    const y1=14, y2=y1+bh+10;
+    inner+=`<text x="${lx}" y="${y1+bh/2+5}" font-size="12" ${font} fill="var(--muted)">${esc(lab1)}</text>`+rect(bx,y1,a*unit,'var(--seg2)','var(--seg2)')+txt(bx+a*unit/2,y1+bh/2+5,a,'var(--ink)');
+    inner+=`<text x="${lx}" y="${y2+bh/2+5}" font-size="12" ${font} fill="var(--muted)">${esc(lab2)}</text>`;
+    if(kind==='diff'){ inner+=rect(bx,y2,b*unit,'var(--good)','var(--good)')+txt(bx+b*unit/2,y2+bh/2+5,b,'var(--ink)'); inner+=brace(bx+Math.min(a,b)*unit,bx+Math.max(a,b)*unit,y2+bh+8,'?'); }
+    else if(kind==='long'){ inner+=rect(bx,y2,a*unit,'var(--good)','var(--good)')+rect(bx+a*unit,y2,b*unit,'var(--gold)','var(--gold)')+txt(bx+a*unit+b*unit/2,y2+bh/2+5,b,'var(--ink)'); inner+=brace(bx,bx+(a+b)*unit,y2+bh+8,'?'); }
+    else { inner+=rect(bx,y2,ans*unit,'var(--good)','var(--good)')+txt(bx+ans*unit/2,y2+bh/2+5,'?','var(--accent)'); inner+=brace(bx+ans*unit,bx+a*unit,y2+bh+8,b); }
+    H=y2+bh+30;
+  } else if(op==='+'){
+    const a=vals[0], b=vals[1]; const unit=(W-2*px)/(a+b); const y1=16;
+    inner+=rect(px,y1,a*unit,'var(--seg2)','var(--seg2)')+txt(px+a*unit/2,y1+bh/2+5,a,'var(--ink)');
+    inner+=rect(px+a*unit,y1,b*unit,'var(--good)','var(--good)')+txt(px+a*unit+b*unit/2,y1+bh/2+5,b,'var(--ink)');
+    inner+=brace(px,px+(a+b)*unit,y1+bh+8,'?'); H=y1+bh+30;
+  } else {
+    const whole=Math.max(vals[0],vals[1]), part=Math.min(vals[0],vals[1]), rest=whole-part; const unit=(W-2*px)/whole; const y1=22;
+    inner+=txt(px+whole*unit/2,y1-8,whole,'var(--ink)',12);
+    inner+=rect(px,y1,rest*unit,'var(--seg2)','var(--seg2)')+txt(px+rest*unit/2,y1+bh/2+5,'?','var(--accent)');
+    inner+=`<rect x="${px+rest*unit}" y="${y1}" width="${Math.max(part*unit,2)}" height="${bh}" rx="4" fill="var(--bad)" opacity="0.15"/><rect x="${px+rest*unit}" y="${y1}" width="${Math.max(part*unit,2)}" height="${bh}" rx="4" fill="none" stroke="var(--bad)" stroke-width="1.5"/>`+txt(px+rest*unit+part*unit/2,y1+bh/2+5,part,'var(--bad)');
+    inner+=`<line x1="${px}" y1="${y1-14}" x2="${px+whole*unit}" y2="${y1-14}" stroke="var(--ink)" stroke-width="1" opacity="0.35"/>`; H=y1+bh+16;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+/* several steps: the known values as segments, «?» under the whole (kept from the first version) */
+function drawBarMulti(q){
+  const vals=q.given.map(l=>+l.val).filter(n=>!isNaN(n)); const ans=+q.ans; if(vals.length<2||isNaN(ans)) return '';
+  const W=320, bh=28, px=12, font='font-family="Nunito,system-ui,sans-serif" font-weight="800"';
+  const total=vals.reduce((s,v)=>s+v,0)+ans; const unit=(W-2*px-40)/total; const y1=20; let x=px, svg=`<svg viewBox="0 0 ${W} 100" width="${W}" xmlns="http://www.w3.org/2000/svg">`;
+  vals.forEach((v,i)=>{ const w=v*unit; const fills=['var(--seg2)','var(--good)','var(--gold)'];
+    svg+=`<rect x="${x}" y="${y1}" width="${w}" height="${bh}" rx="4" fill="${fills[i%3]}" opacity="0.3"/><rect x="${x}" y="${y1}" width="${w}" height="${bh}" rx="4" fill="none" stroke="${fills[i%3]}" stroke-width="1.5"/><text x="${x+w/2}" y="${y1+bh/2+5}" text-anchor="middle" font-size="13" ${font} fill="var(--ink)">${v}</text>`; x+=w; });
+  const by=y1+bh+8;
+  svg+=`<line x1="${px}" y1="${by}" x2="${x}" y2="${by}" stroke="var(--accent)" stroke-width="2"/><line x1="${px}" y1="${by-4}" x2="${px}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/><line x1="${x}" y1="${by-4}" x2="${x}" y2="${by+4}" stroke="var(--accent)" stroke-width="2"/><text x="${(px+x)/2}" y="${by+16}" text-anchor="middle" font-size="13" ${font} fill="var(--accent)">?</text></svg>`;
   return svg;
 }
 
