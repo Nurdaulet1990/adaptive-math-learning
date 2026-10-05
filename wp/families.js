@@ -5,9 +5,10 @@
    FAMILIES[stage] = [{id, name, tpls:[template ids]}, …] in teaching order. Template ids are stable (bank.js). */
 'use strict';
 const FAMILIES={
- 'WP-01':[
-  {id:'PW', name:'Бөлік пен бүтін',     tpls:['TP-01-01','TP-01-09','TP-01-03','TP-01-10','TP-01-11','TP-01-12','TP-01-02','TP-01-13','TP-01-14','TP-01-16','TP-01-17','TP-01-23','TP-01-24','TP-01-25']},
-  {id:'CMP',name:'Салыстыру',           tpls:['TP-01-04','TP-01-15','TP-01-05','TP-01-06','TP-01-07','TP-01-08','TP-01-18','TP-01-19','TP-01-20','TP-01-21','TP-01-22']},
+ 'WP-01':[  /* owner, 2026-10-05: join and take-away are learnt apart first; «same bar, other unknown» is met in review and the mixed test */
+  {id:'ADD',name:'Қосу · бөліктерден бүтін', tpls:['TP-01-01','TP-01-09','TP-01-02','TP-01-17','TP-01-23']},
+  {id:'SUB',name:'Азайту · бүтіннен бөлік',  tpls:['TP-01-03','TP-01-10','TP-01-11','TP-01-12','TP-01-13','TP-01-14','TP-01-16','TP-01-24','TP-01-25']},
+  {id:'CMP',name:'Салыстыру',                tpls:['TP-01-04','TP-01-15','TP-01-05','TP-01-06','TP-01-07','TP-01-08','TP-01-18','TP-01-19','TP-01-20','TP-01-21','TP-01-22']},
  ],
  'WP-02':[
   {id:'CHG',  name:'Өзгеріс белгісіз',   tpls:['TP-02-01','TP-02-04','TP-02-07','TP-02-03','TP-02-11']},
