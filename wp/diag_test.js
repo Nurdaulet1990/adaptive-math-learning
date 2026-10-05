@@ -1,4 +1,4 @@
-/* wp/diag_test.js — diagnostic (binary search over stages, lvl-3 items) and the 10-item stage test. Owner: Nurdaulet. */
+/* wp/diag_test.js — diagnostic (a climb from the easiest station, 2 items per station) and the mixed stage test. Owner: Nurdaulet. */
 'use strict';
 let DG=null;
 /* Where the diagnostic starts (owner, 2026-09-29): a grade-2 child's first question used to come from the
@@ -36,10 +36,12 @@ function nextDiag(){
   /* No question cap — the search is what ends it. Same rule and same reason as core/runner.js. */
   if(DG.lo>DG.hi || Date.now()-DG.start>30*60000){ return finishDiag(); }
   /* while a probe is open its second item comes from the same station — see core/runner.js (2026-10-01) */
-  let mid=DG.cur!=null?DG.cur:Math.floor((DG.lo+DG.hi)/2); if(DG.cur==null&&DG.first!=null){ if(DG.first>=DG.lo&&DG.first<=DG.hi) mid=DG.first; DG.first=null; }   // the grade's own station first, once (same as core/runner.js)
+  /* owner, 2026-10-05: every pupil, whatever the grade, climbs from the easiest station — pass (2/2) → next station,
+     first miss → placed there. No binary search, no grade-based first probe (diagFirst is kept for reference only). */
+  let mid=DG.cur!=null?DG.cur:DG.lo;
   const st=DG.ids[mid]; DG.cur=mid;
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
-  const _g=wpGrade(); const q=drawItem(st,tplLvl(_g,gradeMax(_g))); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
+  const _g=wpGrade(); const _lv=gradeLvls(_g); const q=drawItem(st,_lv[_lv.length-1])||drawItem(st,tplLvl(_g,gradeMax(_g))); if(!q){   /* the grade's own top number range, not lvl 3 for everyone */ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
   DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length), sub:st, noHints:true,
     onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
