@@ -40,7 +40,7 @@ function figBar(fp){ // "34;28;?" or "9x3;?" (equal arcs)
 function figBars(fp){ // "1-қатар:24;2-қатар:24,+6;3-қатар:?;Барлығы:?"   segments may be "4x6" (4 groups of 6)
   const rows=fp.split(';').map(r=>{ const i=r.indexOf(':'); return [r.slice(0,i),r.slice(i+1)]; });
   const totalRow=rows.find(r=>/Барлығы|Барлығында/i.test(r[0])); const data=rows.filter(r=>r!==totalRow);
-  const nums=[]; data.forEach(([l,v])=>{ const parts=v.split(','); let base=isNaN(+parts[0])?null:+parts[0]; let groups=null; const gm=parts[0].match(/^(\d+)x(\d+)$/); if(gm){ groups=[+gm[1],+gm[2]]; base=groups[0]*groups[1]; } let delta=0; parts.slice(1).forEach(p=>{ const m=p.match(/^([+\-])(\d+)$/); if(m) delta+=(m[1]==='+'?1:-1)*+m[2]; }); nums.push({label:l,base,delta,groups,raw:v}); });
+  const nums=[]; data.forEach(([l,v])=>{ const parts=v.split(','); let base=isNaN(+parts[0])?null:+parts[0]; let groups=null; const gm=parts[0].match(/^(\d+)x(\d+)$/); if(gm){ groups=[+gm[1],+gm[2]]; base=groups[0]*groups[1]; } let delta=0; const deltas=[]; parts.slice(1).forEach(p=>{ const m=p.match(/^([+\-])(\d+)$/); if(m){ const d=(m[1]==='+'?1:-1)*+m[2]; delta+=d; deltas.push(d); } }); nums.push({label:l,base,delta,deltas,groups,raw:v}); });
   const maxv=Math.max(...nums.map(n=>(n.base||0)+Math.max(0,n.delta)),10);
   /* The total's brace lives to the RIGHT of the bars, so the bars have to stop short of the edge and
      leave it room. They used to run to W−20 while the brace was drawn at W−14 and its label pinned to
@@ -53,8 +53,15 @@ function figBars(fp){ // "1-қатар:24;2-қатар:24,+6;3-қатар:?;Ба
     const bw=n.base*scale;
     if(n.groups){ const [g,k]=n.groups, gw=k*scale; for(let j=0;j<g;j++) inner+=`<rect x="${lx+j*gw}" y="${y}" width="${gw}" height="28" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/><text x="${lx+j*gw+gw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">${k}</text>`; }
     else inner+=`<rect x="${lx}" y="${y}" width="${bw}" height="28" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/><text x="${lx+bw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)">${n.base}</text>`;
-    if(n.delta>0){ const dw=n.delta*scale; inner+=`<rect x="${lx+bw}" y="${y}" width="${dw}" height="28" fill="none" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${lx+bw+dw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">+${n.delta}</text>`; }
-    if(n.delta<0){ const dw=-n.delta*scale; inner+=`<rect x="${lx+bw-dw}" y="${y}" width="${dw}" height="28" fill="var(--fig)" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${lx+bw-dw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">−${-n.delta}</text>`; }
+    /* each step in order (owner, 2026-10-06: «26,+4,-3» was drawn as one «+1» — the bar must show the chain:
+       the +4 added on, then the −3 cut off its end). A «+» is a dashed piece appended at the current end; a «−»
+       is a dashed, lighter piece cut from the current end. */
+    let end=lx+bw; const ds=n.deltas||[];
+    ds.forEach((d,k)=>{ const dw=Math.abs(d)*scale;
+      if(d>0){ const cutNext=ds[k+1]<0; inner+=`<rect x="${end}" y="${y}" width="${dw}" height="28" fill="none" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+        /* the label goes above the piece when the next step cuts into it (or the piece is narrow), so the two never overlap */
+        inner+=(cutNext||dw<24)?`<text x="${end+dw/2}" y="${y-2}" text-anchor="middle" fill="var(--ink)" font-size="12">+${d}</text>`:`<text x="${end+dw/2}" y="${y+20}" text-anchor="middle" fill="var(--ink)" font-size="13">+${d}</text>`; end+=dw; }
+      else { inner+=`<rect x="${end-dw}" y="${y}" width="${dw}" height="28" fill="var(--fig)" stroke="var(--stroke)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="${end-dw/2}" y="${y+40}" text-anchor="middle" fill="var(--ink)" font-size="12">−${-d}</text>`; end-=dw; } });
   });
   if(totalRow){ const y=8+data.length*rowH-14, bx=W-RG+10;
     inner+=`<path d="M${bx},8 q8,0 8,8 L${bx+8},${y/2} q0,6 6,6 q-6,0 -6,6 L${bx+8},${y} q0,8 -8,8" fill="none" stroke="var(--stroke)" stroke-width="1.5"/><text x="${bx+20}" y="${y/2+14}" text-anchor="start" fill="var(--ink)" font-size="13">${esc(totalRow[1])}</text>`; }
