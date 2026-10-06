@@ -16,6 +16,14 @@ function startDiag(again){
   DG={ids, lo:0, hi:ids.length-1, n:0, results:{}, q:null, per:{}, start:Date.now(), again:!!again, cur:null, first:diagFirst(ids)};
   nextDiag();
 }
+/* owner, 2026-10-06: a pupil may start without the diagnostic — from the first station, like a pupil the climb
+   placed on WP-01. The re-diagnostic (askRediag) stays available and can only move them forward. */
+function skipDiag(){
+  if(R.diag) return showHome();
+  const all=STAGES.map(s=>s[0]); all.forEach((id,i)=>{ R.stages[id].status=i===0?'current':'locked'; });
+  R.diag={t:Date.now(),placed:all[0],results:{},n:0,skipped:true};
+  log({ev:'diag',placed:all[0],results:{},skipped:true}); persist(); showHome();
+}
 /* A pupil who rushed the first diagnostic is parked below what they can do. The re-diagnostic is
    the way out, and it can only move them FORWARD (see finishDiag) — a second bad run must not cost
    a child stages they really passed. Same rule in core/runner.js; PV guards finishPlacement. */

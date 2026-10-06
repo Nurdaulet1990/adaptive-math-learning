@@ -19,7 +19,8 @@ function showHome(){
   const cur=currentStage();
   let html=topbar();
   if(!R.diag){
-    html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Ең оңай кезеңнен басталады: екі есебін де тапсаң — келесі кезең, қателессең — сол кезеңнен бастайсың. Есеп саны алдын ала белгісіз — көбіне 4–16. Сурет жоқ, тек мәтін. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" onclick="startDiag()">Диагностиканы бастау</button></div>`;
+    html+=`<div class="card"><h2>Алдымен — диагностика</h2><p>Қысқа тест. Ең оңай кезеңнен басталады: екі есебін де тапсаң — келесі кезең, қателессең — сол кезеңнен бастайсың. Есеп саны алдын ала белгісіз — көбіне 4–16. Сурет жоқ, тек мәтін. Білмесең — «Білмеймін» деп бас.</p><button class="btn wide" onclick="startDiag()">Диагностиканы бастау</button>
+    <button class="btn plain wide" onclick="skipDiag()" style="margin-top:8px">Диагностикасыз бастау</button><p class="note">Диагностикасыз бастасаң — ең бірінші кезеңнен (WP‑01) бастайсың. Диагностиканы кейін де өтуге болады.</p></div>`;
   } else {
     const st=R.stages[cur]; const done=STAGES.filter(s=>R.stages[s[0]].status==='passed').length;
     const totStars=STAGES.reduce((a,s)=>a+Core.mapStars(R.stages[s[0]]),0);
