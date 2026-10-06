@@ -87,7 +87,18 @@ function figBarEqual(fp){ // "18;6;?"  or "18;?;3"
   inner+=brace(x0,W-20,52,total);
   return SVG(W,92,inner);
 }
-function figBarCompare(fp){ const [a,n]=fp.split(';'); return figUnitBar(`Кішісі:1;Үлкені:${n};Барлығы:`).replace('Барлығы:','') + '<div class="note center">1 бөлік = '+esc(a)+'</div>'; }
+function figBarCompare(fp){ // "a;n" (the small bar is a, the big one n parts → ?)  or  "?;n;b" (the big bar is b, the small one → ?)
+  /* no brace over both bars: these problems ask for ONE of the bars, not the sum (owner, 2026-10-06) */
+  const [a,n,b]=fp.split(';'); const N=Math.max(1,+n||2); const W=340,lx=100,uw=Math.min(60,(W-lx-40)/N),rowH=42; let inner='';
+  const row=(label,units,text,i)=>{ const y=8+i*rowH; inner+=`<text x="${lx-8}" y="${y+20}" text-anchor="end" fill="var(--ink)" font-size="14">${esc(label)}</text>`;
+    for(let k=0;k<units;k++) inner+=`<rect x="${lx+k*uw}" y="${y}" width="${uw}" height="28" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/>`;
+    if(units===1) inner+=`<text x="${lx+uw/2}" y="${y+19}" text-anchor="middle" fill="${text==='?'?'var(--accent)':'var(--ink)'}" font-size="14" font-weight="800">${esc(text)}</text>`;
+    else { /* the long bar's value sits under a brace, clear of the part lines */ const x2=lx+units*uw;
+      inner+=`<path d="M${lx},${y+32} q0,6 6,6 L${(lx+x2)/2-5},${y+38} q5,0 5,5 q0,-5 5,-5 L${x2-6},${y+38} q6,0 6,-6" fill="none" stroke="var(--stroke)" stroke-width="1.5"/><text x="${(lx+x2)/2}" y="${y+56}" text-anchor="middle" fill="${text==='?'?'var(--accent)':'var(--ink)'}" font-size="14" font-weight="800">${esc(text)}</text>`; } };
+  const smallKnown=!isNaN(+a);
+  row('Кішісі',1,smallKnown?a:'?',0); row('Үлкені',N,smallKnown?'?':(b!==undefined&&b!==''?b:'?'),1);
+  return SVG(W,8+2*rowH+20,inner)+(smallKnown?'<div class="note center">1 бөлік = '+esc(a)+'</div>':'');
+}
 function figDist(fp){ const [v,t,s]=fp.split(';'); const W=340; let inner=`<line x1="30" y1="46" x2="310" y2="46" stroke="var(--stroke)" stroke-width="2"/><polygon points="310,46 300,40 300,52" fill="var(--stroke)"/><text x="170" y="24" text-anchor="middle" fill="var(--accent)">${esc(v)}</text><text x="40" y="70" fill="var(--muted)" font-size="13">${esc(t)}</text><text x="300" y="70" text-anchor="end" fill="var(--ink)">${esc(s)}</text>`; return SVG(W,80,inner); }
 function figTable3(fp){ const rows=fp.split(';').map(r=>{ const i=r.indexOf(':'); return [r.slice(0,i),r.slice(i+1)]; }); return '<table class="t3"><tr>'+rows.map(r=>'<th>'+esc(r[0])+'</th>').join('')+'</tr><tr>'+rows.map(r=>'<td>'+esc(r[1])+'</td>').join('')+'</tr></table>'; }
 function figShortNote(fp){ return '<div class="short">'+fp.split(';').map(esc).join('\n')+'</div>'; }
