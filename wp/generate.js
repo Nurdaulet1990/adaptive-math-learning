@@ -160,8 +160,12 @@ function generate(tpl){
       choices=[...ds].slice(0,3).concat([ans]).sort(()=>Math.random()-.5).map(fmtNum);
     }
     /* structured data for level renderers (қысқаша жазу, bar model, equation) */
-    const given=tpl.given?(tpl.given).map(g=>({label:fill(g.label,env),val:fmtNum(evalExpr(g.val,env)),unit:fill(g.unit||'',env)})):undefined;
-    const qline=tpl.qline?{label:fill(tpl.qline.label,env),unit:fill(tpl.qline.unit||'',env)}:undefined;
+    /* knowns: the bank row's own `given`, else the hand-authored table in given.js (owner, 2026-10-06: every level-3 item starts with the knowns) */
+    const gsrc=(typeof GIVEN!=='undefined'&&GIVEN[tpl.id])||{};
+    const givenT=tpl.given||gsrc.given, qlineT=tpl.qline||gsrc.qline;
+    const capL=x=>x?x[0].toUpperCase()+x.slice(1):x;
+    const given=givenT?givenT.map(g=>({label:capL(fill(g.label,env)),val:fmtNum(evalExpr(g.val,env)),unit:fill(g.unit||'',env)})):undefined;
+    const qline=qlineT?{label:fill(qlineT.label,env),unit:fill(qlineT.unit||'',env)}:undefined;
     const eqArr=tpl.eq?(tpl.eq).map(p=>typeof p==='string'?p:{v:fmtNum(evalExpr(p.v,env))}):undefined;
     const unit=tpl.unit?fill(tpl.unit,env):undefined;
     return {id:tpl.id+'#'+Date.now().toString(36)+rnd(0,999),tpl:tpl.id,stage:tpl.stage,lvl:tpl.lvl,diff:tpl.diff,kind:'练习题',qtype:choices?'选择':'填数',

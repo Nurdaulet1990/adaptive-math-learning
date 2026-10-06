@@ -212,6 +212,9 @@ function showCard(stId,cards,i,done){
    compare (family CMP / «артық, кем, айырма…»): two bars; «?» on the difference, on the longer bar or on the shorter bar */
 function drawBarModelWP(q){
   if(!q.given||q.given.length<2) return '';
+  /* only for rows with an authored equation (WP-01, grade-1 templates): the knowns of the other stages hold relations
+     («3 есе кем», «5 артық»), not parts of a whole — those stages draw their own hfig instead */
+  if(!(q.eq&&q.eq.length)) return '';
   if(q.steps&&q.steps.length>1) return drawBarMulti(q);
   const eq=(q.eq||[]).map(p=>typeof p==='string'?(OP_NORM[p]||p):p); const op=eq.find(p=>typeof p==='string'&&p!=='=');
   if(op!=='+'&&op!=='−') return '';
