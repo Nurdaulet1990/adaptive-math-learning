@@ -59,7 +59,7 @@ function figBars(fp){ // "1-қатар:24;2-қатар:24,+6;3-қатар:?;Ба
 function figUnitBar(fp){ // "Дана:1;Әсем:3;Барлығы:8"
   const rows=fp.split(';').map(r=>{ const i=r.indexOf(':'); return [r.slice(0,i),r.slice(i+1)]; });
   const tot=rows.find(r=>/Барлығы/i.test(r[0])); const data=rows.filter(r=>r!==tot);
-  const maxu=Math.max(...data.map(r=>+r[1])); const W=340,lx=100,uw=Math.min(60,(W-lx-30)/maxu),rowH=42; let inner='';
+  const maxu=Math.max(...data.map(r=>+r[1])); const W=340,lx=100,uw=Math.min(60,(W-lx-72)/maxu),rowH=42;   /* 72: room for the brace and its total on the right */ let inner='';
   data.forEach(([l,u],i)=>{ const y=8+i*rowH; inner+=`<text x="${lx-8}" y="${y+20}" text-anchor="end" fill="var(--ink)" font-size="14">${esc(l)}</text>`; for(let k=0;k<+u;k++) inner+=`<rect x="${lx+k*uw}" y="${y}" width="${uw}" height="28" fill="${i%2?'var(--seg2)':'var(--seg1)'}" stroke="var(--stroke)" stroke-width="1.5"/>`; });
   const H=8+data.length*rowH+(tot?8:0); if(tot){ const y=data.length*rowH; inner+=`<path d="M${lx+maxu*uw+6},8 q8,0 8,8 L${lx+maxu*uw+14},${y/2} q0,6 6,6 q-6,0 -6,6 L${lx+maxu*uw+14},${y} q0,8 -8,8" fill="none" stroke="var(--stroke)" stroke-width="1.5"/><text x="${lx+maxu*uw+26}" y="${y/2+14}" fill="var(--ink)" font-size="13">${esc(tot[1])}</text>`; }
   return SVG(W,H,inner);
@@ -82,7 +82,7 @@ function figBarEqual(fp){ // "18;6;?"  or "18;?;3"
        "4" sat among the choices as a decoy the picture voted for. Now: two cells, a dashed gap of unknown length, a last cell. */
     const w=56; inner+=cell(x0,w,0)+cell(x0+w,w,1)+cell(W-20-w,w,0)
       +`<rect x="${x0+2*w}" y="20" width="${W-40-3*w}" height="30" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-dasharray="5 4"/><text x="${W/2}" y="41" text-anchor="middle" fill="var(--muted)" font-size="16">…</text>`
-      +`<text x="${W/2}" y="14" text-anchor="middle" fill="var(--muted)" font-size="13">? қорап</text>`;
+      +`<text x="${W/2}" y="14" text-anchor="middle" fill="var(--muted)" font-size="13">?</text>`;
   } else { const N=+n, w=(W-40)/N; for(let i=0;i<N;i++) inner+=cell(x0+i*w,w,i); }
   inner+=brace(x0,W-20,52,total);
   return SVG(W,92,inner);
