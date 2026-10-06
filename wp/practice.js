@@ -25,6 +25,12 @@ function nextPractice(){
   }
   if(!q){ /* no family content for this stage: fall back to the old pool */ fam=null; q=drawItem(stId,st.level,{mode:'practice',tplLvl:tplLvl(g,st.level)}); }
   if(!q){ app().innerHTML=topbar()+`<div class="card"><h2>Бұл кезеңде әзірге есеп жоқ</h2><p class="note">Есептер дайындалып жатыр.</p><button class="btn wide" onclick="showHome()">Артқа</button></div>`; return; }
+  showPracticeQ(q,fam,!!twin);
+}
+/* put one practice question on screen (also used to restore it after a refresh — see resumeWP in state.js) */
+function showPracticeQ(q,fam,twin){
+  const stId=PR.stId; const st=R.stages[stId]; const fid=curFam(stId,st);
+  saveResume('practice',{stId,q,fam,twinOf:twin?PR.twinOf:null});
   const f=fam?st.fam[fam]:null; const scaff=f?f.level:st.level; const need=FAM_NEED[scaff]||5;
   PR.q=q; PR.fam=fam; PR.review=!!(fam&&(!fid||fam!==fid)); PR.scaff=scaff;
   PR.hints=0; PR.step=0; PR.stepIdx=0; PR.retried=false; PR.t0=Date.now(); PR.isTwin=!!twin;
@@ -35,6 +41,7 @@ function nextPractice(){
     onAnswer:(ok)=>onPracticeAnswer(ok),ladder:true});
 }
 function onPracticeAnswer(ok){
+  clearResume();
   const stId=PR.stId; const st=R.stages[stId]; const q=PR.q; const counted = ok && PR.hints<3; const g=wpGrade();
   const f=PR.fam?st.fam[PR.fam]:null;
   log({ev:'answer',mode:'practice',stage:stId,lvl:PR.scaff,fam:PR.fam||undefined,review:PR.review||undefined,ok,hints:PR.hints,twin:PR.isTwin||undefined,ms:Date.now()-PR.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)});

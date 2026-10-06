@@ -21,7 +21,7 @@
 <!-- platform -->
 <script src="../core/pets.js?v=1"></script>
 <script src="../core/core.js?v=26"></script>
-<script src="../core/figs.js?v=10"></script>
+<script src="../core/figs.js?v=11"></script>
 <script src="../core/map.js?v=14"></script>
 <!-- route WP (see MAP.md) -->
 <script src="stages.js?v=7"></script>
@@ -30,12 +30,12 @@
 <script src="given.js?v=1"></script>
 <script src="generate.js?v=9"></script>
 <script src="families.js?v=3"></script>
-<script src="state.js?v=9"></script>
-<script src="screens.js?v=20"></script>
-<script src="practice.js?v=13"></script>
-<script src="diag_test.js?v=17"></script>
+<script src="state.js?v=10"></script>
+<script src="screens.js?v=21"></script>
+<script src="practice.js?v=14"></script>
+<script src="diag_test.js?v=18"></script>
 <script>
-(async function(){ initState(await Core.start('WP')); showHome(); })();
+(async function(){ initState(await Core.start('WP')); if(!resumeWP()) showHome(); })();
 </script>
 </body>
 </html>

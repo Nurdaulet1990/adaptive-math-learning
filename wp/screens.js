@@ -14,6 +14,7 @@ function stemHTML(stem,hl){
 function showHome(){
   { const qp=new URLSearchParams(location.search), tk=qp.get('task');
     if(tk&&STAGES.some(s=>s[0]===tk)){ history.replaceState(null,'',location.pathname+location.hash); return qp.get('test')?startTest(tk,true):startPractice(tk); } }
+  clearResume();   /* the pupil chose the map: a refresh now stays on the map */
   if(Core.reviewGate&&R.diag&&Core.reviewGate(app(),topbar())) return;
   const cur=currentStage();
   let html=topbar();

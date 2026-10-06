@@ -5,7 +5,11 @@
 (function(){
 'use strict';
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+/* some fixed bank rows name the picture in words («book;Әсем:5;…») — the word was printed five times (2026-10-06) */
+const ICON_WORDS={apple:'🍎',balloon:'🎈',book:'📘',candy:'🍬',flower:'🌸',pencil:'✏️',fish:'🐟',notebook:'📓',pear:'🍐',star:'⭐',ball:'⚽',car:'🚗',bird:'🐦',cat:'🐱',dog:'🐶',cup:'🥤',egg:'🥚',tree:'🌳',box:'📦',coin:'🪙'};
+function iconOf(icon){ const k=String(icon||'').trim(); return ICON_WORDS[k.toLowerCase()]||k; }
 function emojiRow(label, spec, icon){
+  icon=iconOf(icon);
   // spec: "4" | "4+2" | "6-3" | "?"
   let html='<div class="emoji-row">'+(label?'<span class="lbl">'+esc(label)+'</span>':'');
   if(spec==='?'){ html+='<span class="q">?</span>'; return html+'</div>'; }

@@ -43,12 +43,17 @@ function nextDiag(){
   if(!DG.per[st]) DG.per[st]={asked:0,ok:0};
   /* owner, 2026-10-05: the easiest numbers of the station for every pupil — the diagnostic measures the structure, not the arithmetic */
   const _lvls=BANK.templates.filter(t=>t.stage===st).map(t=>t.lvl); const _lo=_lvls.length?Math.min(..._lvls):1; const q=drawItem(st,_lo); if(!q){ DG.results[st]='pass'; DG.lo=mid+1; DG.cur=null; return nextDiag(); }
-  DG.q=q; DG.st=st; DG.n++; const t0=Date.now();
+  DG.q=q; DG.st=st; DG.n++; showDiagQ();
+}
+/* the open diagnostic item on screen (also after a refresh — resumeWP in state.js) */
+function showDiagQ(){
+  const q=DG.q, st=DG.st; const t0=Date.now(); saveResume('diag',DG);
   renderQuestion(q,{mode:'diag',title:'Диагностика',meta:`${DG.n}-сұрақ`,prog:1-((DG.hi-DG.lo+1)/DG.ids.length), sub:st, noHints:true,
-    onAnswer:(ok)=>{ DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
-    onSkip:()=>{ DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:'tpl',stem:String(q.stem).slice(0,200),ans:q.ans}); nextDiag(); }});
+    onAnswer:(ok)=>{ clearResume(); DG.per[st].asked++; if(ok) DG.per[st].ok++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok,ms:Date.now()-t0,id:q.id,type:'tpl',...qinfo(q)}); setTimeout(nextDiag,ok?700:1400); },
+    onSkip:()=>{ clearResume(); DG.per[st].asked++; log({ev:'answer',mode:'diag',stage:st,lvl:3,ok:false,skip:true,id:q.id,type:'tpl',stem:String(q.stem).slice(0,200),ans:q.ans}); nextDiag(); }});
 }
 function finishDiag(){
+  clearResume();
   const ids=DG.ids; let place=Math.min(DG.lo, ids.length-1);
   let placed=ids[place]||ids[ids.length-1];
   const all=STAGES.map(s=>s[0]); const was=DG.again?all.indexOf(currentStage()):-1; let pi=all.indexOf(placed);
@@ -86,10 +91,11 @@ function startTest(stId,force){
 }
 function nextTest(){
   if(TS.i>=TS.qs.length) return finishTest();
-  const q=TS.qs[TS.i]; TS.t0=Date.now();
-  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ if(ok) TS.ok++; else if(q.fam) TS.miss[q.fam]=(TS.miss[q.fam]||0)+1; log({ev:'answer',mode:'test',stage:TS.stId,lvl:gradeMax(wpGrade()),fam:q.fam||undefined,ok,ms:Date.now()-TS.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
+  const q=TS.qs[TS.i]; TS.t0=Date.now(); saveResume('test',TS);
+  renderQuestion(q,{mode:'test',title:'Кезең тесті',meta:`${TS.i+1}/${TS.qs.length}`,prog:TS.i/TS.qs.length,sub:TS.stId,noHints:true,onAnswer:(ok)=>{ clearResume(); if(ok) TS.ok++; else if(q.fam) TS.miss[q.fam]=(TS.miss[q.fam]||0)+1; log({ev:'answer',mode:'test',stage:TS.stId,lvl:gradeMax(wpGrade()),fam:q.fam||undefined,ok,ms:Date.now()-TS.t0,id:q.id,tpl:q.tpl||null,type:'tpl',...qinfo(q)}); TS.i++; setTimeout(nextTest,ok?600:1300); }});
 }
 function finishTest(){
+  clearResume();
   const stId=TS.stId; const st=R.stages[stId]; const need=Math.ceil(TS.qs.length*0.8); const pass=TS.ok>=need; const g=wpGrade();
   st.tests.push({t:Date.now(),ok:TS.ok,n:TS.qs.length,pass,miss:TS.miss}); log({ev:'test',stage:stId,ok:TS.ok,n:TS.qs.length,pass,miss:TS.miss});
   const won=TS.ok>=TS.qs.length?3:TS.ok/TS.qs.length>=0.9?2:TS.ok/TS.qs.length>=0.8?1:0;   // the same rule as Core.mapStars

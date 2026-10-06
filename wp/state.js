@@ -69,6 +69,26 @@ function testerUnlock(stId){
   R.diag=R.diag||{t:Date.now(),placed:at,results:{},n:0,tester:true};
 }
 function persist(){ if(R) Core.save(R); }
+/* ── resume after a refresh (owner, 2026-10-06: «刷新后留在原题») ──
+   The open question (practice, diagnostic or stage test) is kept in localStorage; a reload shows the same question
+   instead of the map. It is per pupil (session id), expires after two hours, and is cleared when the question is
+   answered, the run finishes, or the pupil leaves to the map. */
+const RESUME_KEY='esep_wp_resume', RESUME_TTL=2*3600e3;
+function resumeUid(){ try{ const s=Core._session&&Core._session(); return s&&s.id||''; }catch(e){ return ''; } }
+function saveResume(mode,data){ try{ localStorage.setItem(RESUME_KEY,JSON.stringify({mode,data,uid:resumeUid(),t:Date.now()})); }catch(e){} }
+function clearResume(){ try{ localStorage.removeItem(RESUME_KEY); }catch(e){} }
+function loadResume(){ try{ const r=JSON.parse(localStorage.getItem(RESUME_KEY)||'null'); if(!r||r.uid!==resumeUid()||Date.now()-r.t>RESUME_TTL) return null; return r; }catch(e){ return null; } }
+/* called once at boot, before the map: true when the open question was put back on screen */
+function resumeWP(){
+  const r=loadResume(); if(!r||!R) return false;
+  try{
+    if(r.mode==='practice'){ const d=r.data; const st=R.stages[d.stId]; if(!st||st.status==='locked'||!d.q) return false;
+      PR={stId:d.stId,q:null,hints:0,step:0,twinOf:d.twinOf||null}; syncFam(d.stId,st); showPracticeQ(d.q,d.fam,!!d.twinOf); return true; }
+    if(r.mode==='diag'){ const d=r.data; if(R.diag&&!d.again) return false; if(!d.q||!d.ids) return false; DG=d; showDiagQ(); return true; }
+    if(r.mode==='test'){ const d=r.data; if(!d.qs||!R.stages[d.stId]||d.i>=d.qs.length) return false; TS=d; PR={stId:d.stId,mode:'test'}; nextTest(); return true; }
+  }catch(e){ console.warn('resume failed',e); }
+  return false;
+}
 function log(ev){ if(!R) return; if(ev.ev==='answer'){ const a=Object.assign({},ev); delete a.ev; Core.answer(a); } else Core.event(ev); }
 function qinfo(q){ return {stem:String(q.stem||'').slice(0,200),ans:q.ans,given:(window._Q&&window._Q.given!==undefined)?String(window._Q.given).slice(0,30):undefined}; }
 const isCorrect=(q,v)=>Core.isCorrect(q,v);
