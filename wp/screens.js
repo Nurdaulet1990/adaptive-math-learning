@@ -121,6 +121,8 @@ function showCard(stId,cards,i,done){
 .qj-val span{font-size:.9rem;font-weight:700;color:var(--ink)}
 .qj-line.question{background:var(--accent-soft);border-radius:8px}
 .qj-line.question .qj-label{color:var(--rc)}
+.qj-q{display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--rc);border-style:dashed;background:transparent}
+.qj-val span.qj-q{font-size:1.1rem;color:var(--rc)}
 /* box input */
 .box-input{width:52px;height:40px;text-align:center;border:2px solid var(--line);border-radius:10px;background:var(--fig);color:var(--ink);font-family:inherit;font-weight:800;font-size:1.1rem;outline:none}
 .box-input:focus{border-color:var(--rc);background:var(--card)}
@@ -429,7 +431,8 @@ function buildQJHTML(q,prefix){
   });
   if(q.qline){
     html+=`<div class="qj-line question"><span class="qj-label">${esc(q.qline.label)}</span><span class="qj-dash">—</span><div class="qj-val">`;
-    html+=`<input class="box-input" autocomplete="off" type="text" inputmode="decimal" id="${prefix}q" data-ans="${esc(String(q.ans))}" placeholder="?">`;
+    /* the question line only shows «?» — nothing is typed here (owner, 2026-10-06); the answer goes in its own box */
+    html+=`<span class="box-input qj-q" aria-hidden="true">?</span>`;
     if(q.qline.unit) html+=`<span>${esc(q.qline.unit)}</span>`;
     html+=`</div></div>`;
   }
