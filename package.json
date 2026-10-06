@@ -1,0 +1,14 @@
+{
+  "name": "adaptive-math-learning",
+  "private": true,
+  "description": "Static site; these dev dependencies only run the scripts in tests/.",
+  "scripts": {
+    "test:items": "node tests/items.js",
+    "test:figs": "node tests/figsheet.js && node tests/figleak.js",
+    "test:regress": "node tests/regress.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0",
+    "playwright": "^1.50.0"
+  }
+}

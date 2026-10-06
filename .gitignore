@@ -1,2 +1,6 @@
 # screenshots written by the browser tests
 supabase/test/*.png
+
+# test dependencies (npm install)
+node_modules/
+package-lock.json

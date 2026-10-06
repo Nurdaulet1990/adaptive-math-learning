@@ -20,7 +20,7 @@ const ONLY = (process.argv[2] || '').toUpperCase();
 const N = +(process.env.N || 120);                     // draws per stage per level
 
 const ROUTES = {
-  WP: ['wp/stages.js', 'wp/icons.js', 'wp/bank.js', 'wp/generate.js', 'wp/families.js', 'wp/state.js'],  // WP draws from templates, in state.js
+  WP: ['wp/stages.js', 'wp/icons.js', 'wp/bank.js', 'wp/given.js', 'wp/generate.js', 'wp/families.js', 'wp/state.js'],  // WP draws from templates, in state.js
   FR: ['fr/stages.js', 'fr/figs.js', 'fr/icons.js', 'fr/bank.js', 'fr/util.js', 'fr/generate.js', 'fr/generate2.js'],
   AR: ['ar/stages.js', 'ar/figs.js', 'ar/figs2.js', 'ar/icons.js', 'ar/bank.js', 'ar/generate.js', 'ar/generate2.js'],
   TE: ['te/stages.js', 'te/figs.js', 'te/icons.js', 'te/bank.js', 'te/generate.js'],

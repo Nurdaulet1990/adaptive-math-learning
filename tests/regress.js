@@ -140,8 +140,9 @@ const stages = (pre, n, cur, lvl = 1) => { const o = {}; for (let i = 1; i <= n;
   T('AR, class «БАРЫС» (no grade): the climb starts at AR-01, as before', await firstProbe('ar/', 'БАРЫС', '#b_diag') === 'AR-01');
   T('FR, class «БАРЫС» (no grade): the middle of the route, as before', await firstProbe('fr/', 'БАРЫС', '#b_diag') === 'FR-25');
   T('FR, class «4 QYRAN»: the first grade-4 station', /^FR-/.test(await firstProbe('fr/', '4 QYRAN', '#b_diag')) && (await firstProbe('fr/', '4 QYRAN', '#b_diag')) !== 'FR-25');
-  T('WP, class «2 SAMURYQ»: WP-03, the first grade-2 station', await firstProbe('wp/', '2 SAMURYQ', 'button[onclick="startDiag()"]') === 'WP-03');
-  T('WP, class «5 QYRAN» (no station starts at grade 5): the first station whose range reaches grade 5 (WP-06)', await firstProbe('wp/', '5 QYRAN', 'button[onclick="startDiag()"]') === 'WP-06');
+  /* owner, 2026-10-05: WP is a climb from the easiest station for every pupil, whatever the grade (it used to open on the grade's first station) */
+  T('WP, class «2 SAMURYQ»: the climb starts at WP-01 (it used to be WP-03, the first grade-2 station)', await firstProbe('wp/', '2 SAMURYQ', 'button[onclick="startDiag()"]') === 'WP-01');
+  T('WP, class «5 QYRAN»: WP-01 too (it used to be WP-06, the first station whose range reaches grade 5)', await firstProbe('wp/', '5 QYRAN', 'button[onclick="startDiag()"]') === 'WP-01');
   T('TE, class «3А»: a climb, so TE-01', await firstProbe('te/', '3А', '#b_diag') === 'TE-01');
   /* the grade's probe is two items of the same station: the second one used to come from wherever the search would
      otherwise have started, so the grade's station was asked once and never decided (2026-10-01) */
