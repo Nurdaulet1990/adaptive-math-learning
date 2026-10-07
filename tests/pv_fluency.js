@@ -86,6 +86,23 @@ const out = []; const T = (n, ok, x) => { out.push(ok); console.log(ok ? 'PASS' 
     T('placement questions for f1/fs2/f20n/fsr/f87 are their facts, not the fallback', qs.every(q => /^\d+ [+−] \d+ = \?$/.test(q.q) && Number.isInteger(q.answer)) && qs.every(q => q.sub === 'Fluency'), qs);
     T('no page errors', errs.length === 0, errs); await ctx.close(); }
 
+  // ── 5 · a miss in the picture phase is corrected on the spot (owner, 2026-10-07): think again → see it and type it ──
+  { const { page, ctx, errs, posted } = await open({ PV: { completed: { c1: true }, started: true, unlockedUpTo: 1, stages: {} } });
+    await page.evaluate(() => selectLevel('d1', 'f1')); await page.waitForSelector('.equation-row');
+    await learnAnswer(page, true); await learnAnswer(page, true);   // a run of 2 first
+    const a = await fact(page); const st = () => page.evaluate(() => ({ streak: state.streak, next: document.querySelectorAll('.next-btn').length, dis: document.getElementById('ans').disabled, val: document.getElementById('ans').value, fb: document.getElementById('fb').textContent }));
+    await page.fill('#ans', String(a + 1)); await page.click('.equation-row .check-btn'); await page.waitForTimeout(150); let s = await st();
+    T('first miss: no «Келесі», the box is empty and open again, «think again, look at the picture»', s.next === 0 && !s.dis && s.val === '' && /Тағы бір ойлан/.test(s.fb), s);
+    await page.fill('#ans', String(a + 2)); await page.click('.equation-row .check-btn'); await page.waitForTimeout(150); s = await st();
+    T('second miss: the whole fact is shown, still no «Келесі» — she types it herself', s.next === 0 && !s.dis && new RegExp('= ' + a + '[^0-9]').test(s.fb + ' ') && /өзің жаз/.test(s.fb), s);
+    await page.fill('#ans', String(a)); await page.click('.equation-row .check-btn'); await page.waitForSelector('.next-btn'); s = await st();
+    T('typed right: «Келесі» appears, but the question counts as missed — the run is back to 0', s.next === 1 && s.dis && s.streak === 0 && /қатар басынан/.test(s.fb), s);
+    await page.click('.next-btn'); await page.waitForTimeout(80); await learnAnswer(page, true);
+    T('a first-try answer after that counts again (run 1)', (await page.evaluate(() => state.streak)) === 1);
+    await page.waitForTimeout(2600); const ev = events(posted).filter(e => e.ev === 'answer' && e.mode === 'practice' && e.stage === 'PV-77');
+    T('the log: one answer per question — 2 right, 1 wrong (the corrected one), 1 right; tries are not logged as answers', ev.length === 4 && ev.map(e => e.ok ? 1 : 0).join('') === '1101', ev.map(e => e.ok));
+    T('no page errors', errs.length === 0, errs); await ctx.close(); }
+
   await browser.close(); srv.close();
   const bad = out.filter(x => !x).length; console.log(bad ? `${bad} FAILED of ${out.length}` : `ALL ${out.length} PASS`); process.exit(bad ? 1 : 0);
 })().catch(e => { console.error('ERROR', e.stack || e.message); process.exit(2); });

@@ -75,15 +75,41 @@ const css = document.createElement('style'); css.textContent = `
 @media (prefers-reduced-motion:reduce){.flu-bar i{transition:none}}`;
 document.head.appendChild(css);
 
-/* ── phase: learn (and fix) — a picture question through the legacy check/feedback path ── */
+/* ── phase: learn (and fix) — a picture question, verdict through the legacy feedback path ── */
 function renderPictureQ(ws, f, card) {
+  state.fluQ = { f, tries: 0 };   // not on state.flu: selectLevel (below) resets that after the first question is drawn
   ws.innerHTML = `${card ? `<div class="flu-card"><b>Әдіс</b>${esc(card)}</div>` : ''}
     <div class="equation-row"><span>${f.a}</span><span>${f.op}</span><span>${f.b}</span><span>=</span>
       <input type="number" class="eq-input" id="ans" placeholder="?" autofocus>
-      <button class="check-btn" style="font-size:18px;padding:8px 20px" onclick="checkAnswer(${f.ans})">Тексеру</button></div>
+      <button class="check-btn" style="font-size:18px;padding:8px 20px" id="fluCheck">Тексеру</button></div>
     <div class="block-display pop-in" style="display:flex;justify-content:center;overflow-x:auto;padding:12px 0">${FLU.picture(f)}</div>
     <div class="feedback" id="fb"></div>`;
-  const inp = document.getElementById('ans'); inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkAnswer(f.ans); }); inp.focus();
+  const inp = document.getElementById('ans'); inp.addEventListener('keydown', e => { if (e.key === 'Enter') fluCheck(); }); inp.focus();
+  document.getElementById('fluCheck').onclick = fluCheck;
+}
+/* A miss is corrected on the spot (owner, 2026-10-07: «做错了就只能按下一个键»). The legacy check showed
+   «✗ Қайта ойланыңыз» and then only «Келесі» — think again, with no way to. Now: first miss → the box is
+   cleared, «think again, look at the picture», one more go; second miss → the whole fact is shown and the pupil
+   types the answer herself before she moves on. A question missed once counts as missed (the run restarts, the
+   log says wrong) however it ends; only a first-try answer counts as right. The ⚡ round is not touched: it
+   corrects nothing while it runs, by design. */
+function fluCheck() {
+  const Q = state.fluQ, inp = document.getElementById('ans'), fb = document.getElementById('fb');
+  if (!Q || !inp || !fb || state.fbShown || inp.disabled) return;
+  const v = parseInt(inp.value); if (isNaN(v)) return;
+  const f = Q.f;
+  if (v === f.ans) {
+    inp.classList.remove('wrong'); inp.classList.add('correct'); inp.disabled = true;
+    if (!Q.tries) return showFeedback(true);
+    showFeedback(false, `Дұрыс жауап: ${f.ans}`);   // logged as a miss; the run starts again
+    fb.className = 'feedback show wrong';
+    fb.innerHTML = `✓ ${factText(f)} = ${f.ans} — енді дұрыс. Бірақ алғашқы жауап қате болды, қатар басынан басталады.`;
+    return;
+  }
+  Q.tries++;
+  inp.classList.remove('wrong'); void inp.offsetWidth; inp.classList.add('wrong'); inp.value = ''; inp.focus();
+  fb.className = 'feedback show wrong'; void fb.offsetWidth; fb.classList.add('shake');
+  fb.innerHTML = Q.tries === 1 ? '✗ Тағы бір ойлан — суретке қара.' : `Дұрысы: <b>${factText(f)} = ${f.ans}</b>. Енді өзің жаз.`;
 }
 window.genFluency = function(ws) {
   const S = state.flu; const lv = state.level;
