@@ -48,6 +48,10 @@
   box-shadow:0 7px 0 var(--rc-d),0 12px 20px -10px rgba(10,25,40,.55)}
 .stn.cur .dot svg{width:44px;height:44px}
 .stn.cur .dot:active{box-shadow:0 0 0 var(--rc-d)}
+.stn.redo .dot{background:var(--gold);color:#4a3200;box-shadow:0 8px 0 var(--gold-d,#b88a00),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -6px 0 rgba(0,0,0,.12)}
+.stn.redo .dot:active{box-shadow:0 1px 0 var(--gold-d,#b88a00),inset 0 3px 0 rgba(255,255,255,.35)}
+.stn .rd{position:absolute;left:14px;top:-40px;width:28px;height:28px;border-radius:50%;background:var(--card);color:var(--rc);display:grid;place-items:center;box-shadow:0 2px 0 var(--line)}
+.stn .rd svg{width:16px;height:16px}
 .stn.locked{opacity:.75}
 .stn.locked .dot{background:var(--fig);color:var(--muted);box-shadow:0 6px 0 var(--line)}
 .stn .stars{position:absolute;left:50%;transform:translateX(-50%);top:38px;font-size:.78rem;letter-spacing:1px;color:var(--gold);white-space:nowrap;text-shadow:0 1px 2px rgba(255,255,255,.6)}
@@ -124,6 +128,10 @@
 .v5 .stn .lk{position:static;width:auto;height:auto;background:none;box-shadow:none;color:inherit;display:grid;place-items:center}
 .v5 .stn .lk svg{width:18px;height:18px;fill:currentColor}
 .v5 .stn.locked{opacity:1}
+/* a station to come back to (a module test reopened it): amber, numbered, with a ↻ badge — see 'redo' in map.js */
+.v5 .stn.redo .dot{background-color:#F2B263;color:#5A3600;box-shadow:0 12px 0 #C48A3A,inset 0 -3px 0 rgba(0,0,0,.08),inset 0 2px 0 rgba(255,255,255,.5)}
+.v5 .stn.redo .dot:active{box-shadow:0 2px 0 #C48A3A}
+.v5 .stn .rd{left:auto;right:-30px;top:-30px;width:26px;height:26px;background:var(--card);color:#B5651D;box-shadow:0 2px 0 var(--line)}
 .v5 .stn .stars{top:-50px;left:0;transform:translateX(-50%)}
 .v5 .stn .fox{left:-32px;top:-86px}
 .v5 .stn .bub{bottom:36px}

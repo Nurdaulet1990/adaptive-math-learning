@@ -124,7 +124,7 @@ const _fp=finishPlacement; finishPlacement=function(){ const hist=(state.placeme
    PV keeps its own question screens (48 levels of tested code), but the way in is the same as every
    other route: the road with one station per level, grouped by the app's own five modules. This is
    also the only navigation on a phone — pv's own stylesheet hides its sidebar under 768px. */
-const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=13'; document.head.appendChild(mapCSS);
+const mapCSS=document.createElement('link'); mapCSS.rel='stylesheet'; mapCSS.href='../core/map.css?v=14'; document.head.appendChild(mapCSS);
 const mapWrap=document.createElement('style'); mapWrap.textContent=
  /* width:100% matters: #main is a flex container, so without it the map shrinks to its content
      (~340px) and sits in a narrow column instead of filling the 560px reading measure. */
@@ -172,10 +172,14 @@ function showMap(){
   const main=document.getElementById('main'); if(!main) return;
   const cur=Math.min(state.unlockedUpTo,LEVEL_ORDER.length-1);
   const done=LEVEL_ORDER.filter(e=>state.completed[e.levelId]).length;
+  /* a level a module test reopened sits on the walked road (a later level is done): drawn as «қайта өту», open to tap,
+     not as a lock between two passed stations (owner, 2026-10-09) */
+  const lastDone=LEVEL_ORDER.reduce((m,e,i)=>state.completed[e.levelId]?i:m,-1);
   const stages=LEVEL_ORDER.map((e,i)=>{ const mod=MODULES.find(m=>m.id===e.moduleId); const lvl=mod.levels.find(l=>l.id===e.levelId);
+    const done=!!state.completed[e.levelId]; const redo=!done&&i!==cur&&i>cur&&i<lastDone;
     return {id:stageId(e.levelId), name:lvl.name, unit:`${mod.icon} ${mod.name}`, icon:pvIcon(e.levelId), stars:null,
-      status:state.completed[e.levelId]?'passed':(i===cur?'current':(i<cur?'passed':'locked')),
-      sub:state.completed[e.levelId]?'Өтілді':(i===cur?'Осы жерден жалғастыр':mod.name)}; });
+      status:done?'passed':(i===cur?'current':(i<cur?'passed':redo?'redo':'locked')),
+      sub:done?'Өтілді':(i===cur?'Осы жерден жалғастыр':redo?'Қайта өту керек':mod.name)}; });
   const fresh=done===0&&cur===0;
   /* ★ on this strip is the PLATFORM's number, the one the portal and the class board use: earned from
      level results (Core.mapStars over the mirrored stages), nothing else. The legacy app keeps its own
@@ -208,7 +212,7 @@ const _rm=renderMain; renderMain=function(){ if(R&&!state.level){ showMap(); ret
 /* boot: pull in the map component (pv/index.html only loads core.js), then login → load → re-render */
 const loadScript=src=>new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
 host.style.display='block';
-loadScript('../core/map.js?v=14').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
+loadScript('../core/map.js?v=15').then(()=>Core.start('PV')).then(rs=>{ R=rs; if(!R.completed) R.completed={}; pull(); mirror(); Core.save(R); host.innerHTML=''; host.style.display='none';
   const back=document.createElement('button'); back.id='pvback'; back.textContent='← Карта'; back.style.display='none';
   back.onclick=()=>{ state.module=null; state.level=null; state.diagnostic=false; state.placement=null; showBack(false); renderSidebar(); showMap(); };
   document.body.appendChild(back);

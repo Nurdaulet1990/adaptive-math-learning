@@ -75,6 +75,7 @@ function map(o){
     else if(r<0.8) deco+=`<g transform="translate(${x},${yy})"><path d="M0,0 v-9" stroke="var(--hill2)" stroke-width="1.6"/><circle cy="-11" r="3.4" fill="${['#E86F9A','#F4B942','#9B7FD4'][Math.floor(rnd()*3)]}"/><circle cy="-11" r="1.3" fill="#FFE08A"/></g>`; } }
 
   const STAR='<path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/>';
+  const REDO='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const LOCK='<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" stroke-width="2.8"/></svg>';
 
   /* ── celebration: the station that was current the last time THIS map was drawn on this device is now passed,
@@ -83,12 +84,14 @@ function map(o){
   const celFrom=(()=>{ const c=st.findIndex(s=>s.status==='current'); let pv=null; try{ pv=localStorage.getItem('esep_mapcur:'+(o.label||'map')); }catch(e){}
     const f=pv&&c>=0&&pv!==st[c].id?st.findIndex(s=>s.id===pv):-1; return f>=0&&f===c-1&&st[f].status==='passed'?f:-1; })();
   const nodes=st.map((s,i)=>{
-    const p=pts[i], cur=s.status==='current', passed=s.status==='passed', locked=!cur&&!passed;
-    const cls=`stn ${cur?'cur':passed?'passed':'locked'}${celFrom>=0&&i===celFrom?' justdone':''}${celFrom>=0&&cur?' unlocking':''}`;
+    /* 'redo' (owner, 2026-10-09): a station on the walked part of the road that a module test reopened — drawn as a
+       station to come back to (a ↻ badge, tappable), not as a lock between two passed ones */
+    const p=pts[i], cur=s.status==='current', passed=s.status==='passed', redo=s.status==='redo', locked=!cur&&!passed&&!redo;
+    const cls=`stn ${cur?'cur':passed?'passed':redo?'redo':'locked'}${celFrom>=0&&i===celFrom?' justdone':''}${celFrom>=0&&cur?' unlocking':''}`;
     // stars:null means "this route keeps no star score" (PV) — draw nothing rather than three empty stars
     const stars=(passed&&s.stars!=null)?`<span class="stars" aria-label="${s.stars} жұлдыз">${[0,1,2].map(k=>`<svg viewBox="0 0 24 24" class="${k<s.stars?'on':''}" aria-hidden="true">${STAR}</svg>`).join('')}</span>`:'';
-    const face=locked?`<span class="lk">${LOCK}</span>`:(s.icon&&!passed&&!cur?`<svg viewBox="-24 -24 48 48" aria-hidden="true">${s.icon}</svg>`:`<span class="num">${i+1}</span>`);
-    const tap=cur||passed;
+    const face=locked?`<span class="lk">${LOCK}</span>`:redo?`<span class="num">${i+1}</span><span class="rd" aria-hidden="true">${REDO}</span>`:(s.icon&&!passed&&!cur?`<svg viewBox="-24 -24 48 48" aria-hidden="true">${s.icon}</svg>`:`<span class="num">${i+1}</span>`);
+    const tap=cur||passed||redo;
     const d=Math.max(0,Math.min(18,i-Math.max(0,doneIdx-6)))*45;   // stations pop in from the pupil's part of the road upward
     return `<div class="${cls}" style="left:${(p.x/W*100).toFixed(2)}%;top:${(p.y/H*100).toFixed(3)}%;--d:${d}ms"${tap?` data-stn="${esc(s.id)}"`:''}>
       ${cur?`<span class="fox">${window.Pets?window.Pets.svg(ava,{size:64}):ava}</span>`:''}

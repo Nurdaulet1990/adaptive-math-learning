@@ -880,7 +880,9 @@ const PLACE_ORDER = LEVEL_ORDER.filter(e => !NOFIG.has(e.levelId));
 function isLevelUnlocked(levelId) {
   const idx = getLevelGlobalIndex(levelId);
   if(idx < 0) return false;   // retired (not in LEVEL_ORDER)
-  return idx <= state.unlockedUpTo;
+  if(idx <= state.unlockedUpTo) return true;
+  /* a level a module test reopened, below a level already done, stays open — the pupil may redo it in any order (2026-10-09) */
+  return !state.completed[levelId] && LEVEL_ORDER.some((e,k)=>k>idx && state.completed[e.levelId]);
 }
 
 // Level-type dispatch sets
@@ -2997,6 +2999,6 @@ renderMain();
 <script src="facts.js?v=1"></script>
 <script src="fluency.js?v=2"></script>
 <script src="modtest.js?v=1"></script>
-<script src="bridge.js?v=26"></script>
+<script src="bridge.js?v=27"></script>
 </body>
 </html>
