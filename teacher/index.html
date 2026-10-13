@@ -87,7 +87,7 @@ table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width
 .cal i{aspect-ratio:1;border-radius:7px;background:var(--fig);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.7rem;font-weight:800;color:var(--ink)}
 .cal i.l1{background:#BFE0EC} .cal i.l2{background:#6DB8D3} .cal i.l3{background:#1491B5;color:#fff} .cal i.pad{background:none}
 .spath{display:flex;flex-wrap:wrap;gap:10px 4px;margin-top:10px}
-.spath .mh{flex-basis:100%;display:flex;align-items:baseline;gap:8px;margin:8px 0 -2px;padding-top:8px;border-top:1px solid var(--line);font-size:.9rem} .spath .mh:first-child{border-top:0;padding-top:0;margin-top:0} .spath .mh span{font-size:.78rem;font-weight:800;color:var(--muted)}
+.spath .mh{flex-basis:100%;display:flex;align-items:baseline;gap:8px;margin:8px 0 -2px;padding-top:8px;border-top:1px solid var(--line);font-size:.9rem} .spath .mh:first-child{border-top:0;padding-top:0;margin-top:0} .spath .mh span{font-size:.78rem;font-weight:800;color:var(--muted)} .spath .mh em{font-style:normal;font-size:.72rem;font-weight:900;padding:2px 8px;border-radius:999px;background:var(--rc);color:#fff}
 .spath .st{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
 .spath .st .co{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:.95rem;background:var(--fig);color:var(--muted);box-shadow:0 4px 0 var(--line)}
 .spath .st.p .co{background:var(--rc);color:#fff;box-shadow:0 4px 0 var(--rc-d)}
@@ -539,7 +539,8 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const modOf=sid=>route==='PV'?String(nmOf(route,sid)||'').split(' · ')[0]:'';
   const path=pathSt.map((h,i)=>{ const m=modOf(ids[i]); if(!m||(i&&modOf(ids[i-1])===m)) return h;
     const of=ids.filter(k=>modOf(k)===m), pn=of.filter(k=>stages[k]&&stages[k].status==='passed').length;
-    return `<div class="mh"><b>${esc(m)}</b><span>${pn}/${of.length}</span></div>`+h; }).join('');
+    const g=(stInfo(route,ids[i])||{}).grade;
+    return `<div class="mh"><b>${esc(m)}</b>${g?`<em>${esc(g)}-сынып</em>`:''}<span>${pn}/${of.length}</span></div>`+h; }).join('');
   /* calendar: this month, a day darker the longer it was worked */
   const now=new Date(), first=new Date(now.getFullYear(),now.getMonth(),1), dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(), lead=(first.getDay()+6)%7;
   let cal='<div class="cal">'+['Дс','Сс','Ср','Бс','Жм','Сн','Жк'].map(d=>`<span>${d}</span>`).join('')+'<i class="pad"></i>'.repeat(lead);
