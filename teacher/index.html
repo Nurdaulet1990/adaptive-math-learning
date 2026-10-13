@@ -87,6 +87,7 @@ table.prt td:first-child{white-space:nowrap} table.prt td:nth-child(4){min-width
 .cal i{aspect-ratio:1;border-radius:7px;background:var(--fig);display:flex;align-items:center;justify-content:center;font-style:normal;font-size:.7rem;font-weight:800;color:var(--ink)}
 .cal i.l1{background:#BFE0EC} .cal i.l2{background:#6DB8D3} .cal i.l3{background:#1491B5;color:#fff} .cal i.pad{background:none}
 .spath{display:flex;flex-wrap:wrap;gap:10px 4px;margin-top:10px}
+.spath .mh{flex-basis:100%;display:flex;align-items:baseline;gap:8px;margin:8px 0 -2px;padding-top:8px;border-top:1px solid var(--line);font-size:.9rem} .spath .mh:first-child{border-top:0;padding-top:0;margin-top:0} .spath .mh span{font-size:.78rem;font-weight:800;color:var(--muted)} .spath .mh em{font-style:normal;font-size:.72rem;font-weight:900;padding:2px 8px;border-radius:999px;background:var(--rc);color:#fff}
 .spath .st{width:58px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
 .spath .st .co{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:600;font-size:.95rem;background:var(--fig);color:var(--muted);box-shadow:0 4px 0 var(--line)}
 .spath .st.p .co{background:var(--rc);color:#fff;box-shadow:0 4px 0 var(--rc-d)}
@@ -132,7 +133,7 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 <script src="../core/pets.js?v=1"></script>
 <script src="../core/core.js?v=26"></script>
 <script src="../core/figs.js?v=12"></script>
-<script src="../room/routes.js?v=7"></script>
+<script src="../room/routes.js?v=8"></script>
 <script>
 /* Teacher dashboard across routes. Everything goes through the esep_t_* functions (supabase/01_additive.sql):
    the secret is checked ON THE SERVER and answers with a 12-hour token; without it the functions return nothing.
@@ -528,10 +529,18 @@ async function showStudent(id,sub){ clearTimeout(T.rpoll); T.view=(T.view||0)+1;
   const names=RNM[route]||{}; const ids=liveIds(names).length?liveIds(names):Object.keys(stages).sort();
   const curD=daysAgo(progressT(r,route));
   const col=`var(--${route.toLowerCase()},var(--accent))`, colD=`var(--${route.toLowerCase()}-d,var(--accent-d))`;
-  const path=ids.map((sid,i)=>{ const x=stages[sid]; const tests=(x&&Array.isArray(x.tests)?x.tests:[]).map(t=>(t.pass||num(t.n)&&num(t.ok)/num(t.n)>=0.8)?'✓':'✗').join('');
+  const pathSt=ids.map((sid,i)=>{ const x=stages[sid]; const tests=(x&&Array.isArray(x.tests)?x.tests:[]).map(t=>(t.pass||num(t.n)&&num(t.ok)/num(t.n)>=0.8)?'✓':'✗').join('');
     if(x&&x.status==='passed'){ const d=passT(x), st=stStars(x); return `<div class="st p" title="${esc(sid)} · ${esc(nmOf(route,sid))}"><div class="stars">${'★'.repeat(st)}${'☆'.repeat(3-st)}</div><div class="co">${i+1}</div><div class="d">${d?ymd(new Date(d)).slice(8)+'.'+ymd(new Date(d)).slice(5,7):'✓'}</div>${tests.length>1?`<div class="t">${tests.split('').join(' ')}</div>`:''}</div>`; }
     if(x&&x.status==='current'){ const stuck=curD!=null&&curD>=3; return `<div class="st ${stuck?'s':'c'}" title="${esc(sid)} · ${esc(nmOf(route,sid))}"><div class="stars" style="color:var(--bad)">${curD!=null?curD+' күн':''}</div><div class="co">${i+1}</div><div class="d" style="color:var(--bad)">қазір</div>${tests?`<div class="t">${tests.split('').join(' ')}</div>`:''}</div>`; }
-    return `<div class="st"><div class="stars"></div><div class="co">${i+1}</div><div class="d muted">—</div></div>`; }).join('');
+    return `<div class="st"><div class="stars"></div><div class="co">${i+1}</div><div class="d muted">—</div></div>`; });
+  /* PV: a heading over each module («10 ішінде», «20 ішінде» …) with how many of its stations are passed, so a parent
+     reads the path as steps of growth rather than one long row of circles. The module is the part of the station's
+     name before « · » (pv/stages_gen.js writes «module · level»). */
+  const modOf=sid=>route==='PV'?String(nmOf(route,sid)||'').split(' · ')[0]:'';
+  const path=pathSt.map((h,i)=>{ const m=modOf(ids[i]); if(!m||(i&&modOf(ids[i-1])===m)) return h;
+    const of=ids.filter(k=>modOf(k)===m), pn=of.filter(k=>stages[k]&&stages[k].status==='passed').length;
+    const g=(stInfo(route,ids[i])||{}).grade;
+    return `<div class="mh"><b>${esc(m)}</b>${g?`<em>${esc(g)}-сынып</em>`:''}<span>${pn}/${of.length}</span></div>`+h; }).join('');
   /* calendar: this month, a day darker the longer it was worked */
   const now=new Date(), first=new Date(now.getFullYear(),now.getMonth(),1), dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate(), lead=(first.getDay()+6)%7;
   let cal='<div class="cal">'+['Дс','Сс','Ср','Бс','Жм','Сн','Жк'].map(d=>`<span>${d}</span>`).join('')+'<i class="pad"></i>'.repeat(lead);
