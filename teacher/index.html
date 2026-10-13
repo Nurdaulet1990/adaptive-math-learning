@@ -126,6 +126,19 @@ details.more>summary{cursor:pointer;font-weight:900;color:var(--accent);min-heig
 .tkck input{width:18px;height:18px;flex:none}
 .tkc.closed{opacity:.6}
 .rk-bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden} .rk-bar i{display:block;height:100%;border-radius:999px}
+/* «Мектеп»: a class per row, the chosen day as a bar, the seven days as cells tinted by the share of the class */
+.sc-bar{display:flex;align-items:center;gap:8px;min-width:170px} .sc-bar .rk-bar{flex:1;min-width:60px} .sc-bar span{white-space:nowrap}
+table.sc td.sc-d{background:color-mix(in srgb,var(--good) calc(var(--p,0)*.55%),transparent);font-weight:800}
+table.sc th.sel,table.sc td.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+table.sc tr.tot td{font-weight:900;border-top:2px solid var(--line)} table.sc td.sc-d,table.sc th.sc-w{width:46px;min-width:40px}
+.sc-list{display:none} .sc-item{padding:10px 0;border-top:1px solid var(--line)} .sc-item:first-child{border-top:0}
+.sc-item .sc-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px} .sc-item.tot .sc-h b{font-weight:900}
+.sc-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px} .sc-wk div{text-align:center;border-radius:8px;padding:3px 0;font-weight:800;background:color-mix(in srgb,var(--good) calc(var(--p,0)*.55%),var(--fig))}
+.sc-wk div small{display:block;font-size:.66rem;font-weight:700;color:var(--muted)} .sc-wk div.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+@media (max-width:640px){.sc-wide{display:none}.sc-list{display:block}}
+@media print{table.sc td.sc-d,.sc-wk div,.rk-bar,.rk-bar i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+table.sc th[scope=row]{font-weight:900;background:none;color:var(--ink);text-transform:none;letter-spacing:0}
+.sc-g{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -195,6 +208,7 @@ const vcell=(n,acc,h)=>{ const [t,c]=verdict(n,acc,h); return `<td style="color:
 const VLEGEND='Қорытынды: <b>Меңгерді</b> — дұрыс ≥80%, кеңес &lt;1 · <b>Кеңеспен</b> — дұрыс, бірақ кеңес ≥2 · <b>Болжайды</b> — дұрыс &lt;50%, кеңесті қолданбайды · <b>Қиналады</b> — дұрыс &lt;60%, кеңес ≥2 · <b>Үйреніп жатыр</b> — аралық · «—» 5 есептен аз.';
 const TABS=[['bugin','Бүгін','<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],['oqu','Оқушылар','<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><path d="M16 5.5a3 3 0 0 1 0 5.6M17.5 14.2c1.8.6 3 2.2 3.4 4.8"/>'],
   ['task','Тапсырма','<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l2 2 4-4M8.5 16h7"/>'],
+  ['mek','Мектеп','<path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M10 21v-5h4v5M12 5V2.5"/>'],
   ['jarys','Жарыс','<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v4M8 20h8"/>'],['baq','Бақылау','<path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/><circle cx="12" cy="12" r="2.6"/>'],['bap','Баптау','<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>']];
 /* v3 header: brand, the four tabs, the class chips and «шығу». Tabs live in location.hash (#bugin #oqu #jarys #bap,
    a pupil is #s=<id>), so the browser's back button walks back through them. Before login: brand only. */
@@ -202,7 +216,7 @@ function tbar(sub){ const logged=T&&T.tok;
   const classes=logged?[...new Set((T.rows||[]).map(r=>r.klass||'—'))].sort():[];
   return `<div class="ttop"><div class="brand">Есеп жолы<small>Мұғалім беті${sub?' · '+esc(sub):''}</small></div>`
    +(logged?`<nav class="ttabs" aria-label="Мұғалім беті">${TABS.map(([k,l,ic])=>`<a href="#${k}" ${T.tab===k?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ic}</svg>${l}${k==='bugin'&&T.alertN?`<span class="cnt">${T.alertN}</span>`:''}</a>`).join('')}</nav>
-     <div class="tright">${classes.length>1?[['','Барлығы'],...classes.map(c=>[c,c])].map(([v,l])=>`<button type="button" class="tchip" data-klass="${esc(v)}" aria-pressed="${(T.klass||'')===v}" onclick="T.klass='${esc(v)}';render()">${esc(l)}</button>`).join(''):''}
+     <div class="tright">${classes.length>1&&T.tab!=='mek'?[['','Барлығы'],...classes.map(c=>[c,c])].map(([v,l])=>`<button type="button" class="tchip" data-klass="${esc(v)}" aria-pressed="${(T.klass||'')===v}" onclick="T.klass='${esc(v)}';render()">${esc(l)}</button>`).join(''):''}
        <a href="../" class="muted" style="margin-left:8px">портал</a> · <a href="#" class="muted" onclick="tlogout();return false">шығу</a></div>`
     :`<span style="margin-left:auto"><a href="../" class="muted">портал</a></span>`)+`</div>`; }
 async function tlogout(){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const t=T.tok; T.tok=''; sessionStorage.removeItem('esep_tt'); try{ await rpc('esep_t_logout',{p_token:t}); }catch(e){} login(); }
@@ -766,10 +780,83 @@ async function showObs(msg){ clearTimeout(T.rpoll); T.view=(T.view||0)+1; const 
 }
 async function obsDel(id){ try{ await trpc('esep_t_obs_delete',{p_id:id}); const el=$('obs'+id); if(el) el.remove(); }catch(e){} }
 
+/* ── the whole school, class by class (supabase/20_activity.sql) ───────────────────────────────────────────────
+   For the principal (2026-10-13): on a chosen day, how many pupils of each class answered at least N questions,
+   and the six days before it. The server sends only numbers — each working pupil's answer count, per class and
+   day, the same count as the pupil's daily ring — never a name. Class sizes come from the pupil list, read again
+   with every new day (tester left out, as the server does). N is picked here: 1 · 5 · 10 · 20, and switching it
+   redraws from what is already loaded. Days are Kazakhstan days whatever the device's clock zone.
+   The header's class chips do not filter this view: it is the school. */
+const SC_N=[1,5,10,20], WD=['Жс','Дс','Сс','Ср','Бс','Жм','Сб'];
+const kKey=k=>String(k??'').replace(/^ +| +$/g,'').toUpperCase();     // = upper(btrim(klass)) on the server: spaces only
+const isTester=r=>/^\s*tester\s*$/i.test(String(r&&r.name||''));
+const kzToday=()=>new Date(Date.now()+5*3600e3).toISOString().slice(0,10);
+const addDay=(s,n)=>{ const d=new Date(s+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+const wdOf=d=>WD[new Date(d+'T00:00:00Z').getUTCDay()], dmOf=d=>`${d.slice(8)}.${d.slice(5,7)}`;
+async function showSchool(){ clearTimeout(T.rpoll); clearTimeout(T.sdeb); T.view=(T.view||0)+1; if(!T.tok) return login(); T.tab='mek';
+  if(location.hash!=='#mek') history.replaceState(null,'','#mek');
+  const today=kzToday(); if(!/^\d{4}-\d\d-\d\d$/.test(T.sday||'')||T.sday>today) T.sday=today; if(!SC_N.includes(T.sN)) T.sN=10;
+  T.app.innerHTML=tbar('мектеп')+`<div class="card noprint"><div class="row" style="align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="sc-g"><label for="sday" class="muted">Күн</label><input type="date" id="sday" value="${esc(T.sday)}" max="${esc(today)}" class="big" style="font-size:1rem;padding:8px;width:auto">
+      <button type="button" class="tchip" id="scToday" onclick="T.sday=kzToday();scLoad()">Бүгін</button>
+      <button type="button" class="tchip" id="scYest" onclick="T.sday=addDay(kzToday(),-1);scLoad()">Кеше</button></span>
+      <span class="sc-g" style="margin-left:auto;flex-wrap:nowrap"><span class="muted" id="scNl">кемінде</span><div class="seg" id="scN" role="group" aria-labelledby="scNl">${SC_N.map(n=>`<button type="button" data-n="${n}" aria-pressed="${T.sN===n}" onclick="T.sN=${n};scDraw()">${n}</button>`).join('')}</div><span class="muted">есеп</span></span>
+      <button type="button" class="tchip" onclick="window.print()">Басып шығару</button></div></div>
+    <div id="scData"><div class="card"><p>Жүктелуде…</p></div></div>`;
+  /* a typed date fires «change» at every digit of the year: wait until it stops, and never rebuild the input itself */
+  const sd=$('sday'); sd.oninput=sd.onchange=()=>{ clearTimeout(T.sdeb); T.sdeb=setTimeout(()=>{ const v=sd.value;
+    if(/^\d{4}-\d\d-\d\d$/.test(v)&&v>='2025-01-01'&&v<=kzToday()&&v!==T.sday){ T.sday=v; scLoad(); } },700); };
+  return scLoad(); }
+async function scLoad(){ const gen=T.view, box=$('scData'); if(!box||T.tab!=='mek') return;
+  const sd=$('sday'); if(sd&&sd.value!==T.sday&&document.activeElement!==sd) sd.value=T.sday;
+  box.innerHTML=`<div class="card"><p>Жүктелуде…</p></div>`;
+  const days=[...Array(7)].map((_,i)=>addDay(T.sday,i-6));
+  let res=null, err=null;
+  try{ const [rows,cls,act]=await Promise.all([trpc('esep_t_students'),T.classes?Promise.resolve(T.classes):trpc('esep_t_classes').catch(()=>[]),trpc('esep_t_activity',{p_from:days[0],p_to:days[6]})]);
+    T.rows=(rows||[]).filter(r=>r&&/^[0-9a-f-]{1,40}$/i.test(String(r.id))).map(r=>Object.assign(r,{name:String(r.name??''),klass:String(r.klass??'')})); T.classes=Array.isArray(cls)?cls:[]; res=act; }
+  catch(e){ if(!T.tok) return; err=e; }
+  if(gen!==T.view||!$('scData')) return;
+  if(err||!res||!Array.isArray(res.days)){
+    const missing=err&&(err.status===404||/esep_t_activity|could not find the function/i.test(String(err.message)));
+    $('scData').innerHTML=missing?`<div class="card"><h2>Мектеп</h2><p class="note">Бұл мүмкіндік әлі орнатылмаған: Supabase SQL editor-да <b>supabase/20_activity.sql</b> файлын бір рет іске қосыңыз.</p></div>`
+      :`<div class="card"><p>Базаға қосылу мүмкін болмады.</p>${err?`<p class="note muted">${esc(String(err.message||err).slice(0,200))}</p>`:''}<button type="button" class="btn" onclick="scLoad()">Қайталау</button></div>`;
+    return; }
+  T.sres={days,act:res.days}; scDraw(); }
+function scDraw(){ const box=$('scData'), R=T.sres; if(!box||!R||T.tab!=='mek') return;
+  document.querySelectorAll('#scN button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.n===T.sN)));
+  const today=kzToday(); [['scToday',today],['scYest',addDay(today,-1)]].forEach(([i,d])=>{ const b=$(i); if(b) b.setAttribute('aria-pressed',String(T.sday===d)); });
+  const days=R.days, N=T.sN;
+  const size={}; (T.rows||[]).forEach(r=>{ if(isTester(r)) return; const k=kKey(r.klass); size[k]=(size[k]||0)+1; });
+  const act={}; R.act.forEach(x=>{ if(!x||!Array.isArray(x.n)) return; const k=kKey(x.klass); const a=act[k]=act[k]||{}; a[String(x.day)]=(a[String(x.day)]||[]).concat(x.n.map(num)); });
+  const cnt=(k,d)=>((act[k]||{})[d]||[]).filter(v=>v>=N).length, pct=(a,b)=>b?Math.round(100*a/b):0;
+  const gradeOf=k=>{ const c=(T.classes||[]).find(x=>x&&kKey(x.name)===k); if(c&&c.grade!=null&&Number.isFinite(+c.grade)) return +c.grade; const m=/^\d+/.exec(k); return m?+m[0]:99; };
+  const ks=[...new Set([...Object.keys(size),...Object.keys(act)])].sort((a,b)=>(a==='')-(b==='')||gradeOf(a)-gradeOf(b)||a.localeCompare(b,'kk'));
+  const nm=k=>k===''?'Сыныбы жоқ':k, all=ks.reduce((s,k)=>s+(size[k]||0),0), tot=days.map(d=>ks.reduce((s,k)=>s+cnt(k,d),0));
+  const idle=ks.filter(k=>(size[k]||0)>0&&!cnt(k,days[6])), avg=Math.round(tot.reduce((a,b)=>a+b,0)/7), D=days[6];
+  const bar=(n,s)=>`<div class="sc-bar"><div class="rk-bar"><i style="width:${Math.min(100,pct(n,s))}%;background:var(--good)"></i></div><span><b>${n}</b> / ${s} · ${pct(n,s)}%</span></div>`;
+  const tip=(k,d,n,s)=>`${nm(k)} · ${wdOf(d)} ${dmOf(d)} · ${n} / ${s}`;
+  const cell=(k,d,i)=>{ const n=cnt(k,d), s=size[k]||0; return `<td class="sc-d${i===6?' sel':''}" style="--p:${Math.min(100,pct(n,s))}" title="${esc(tip(k,d,n,s))}" aria-label="${esc(tip(k,d,n,s))}">${n||'·'}</td>`; };
+  box.innerHTML=`<div class="kpis" id="scK"><div class="kpi"><b>${tot[6]} / ${all}</b><span>оқушы жұмыс істеді</span><small>${wdOf(D)} ${dmOf(D)} · ${pct(tot[6],all)}% · кемінде ${N} есеп</small></div>
+      <div class="kpi"><b>${tot[5]}</b><span>алдыңғы күні</span><small>${wdOf(days[5])} ${dmOf(days[5])}</small></div>
+      <div class="kpi"><b>${avg}</b><span>7 күн, орта есеппен</span><small>${dmOf(days[0])} – ${dmOf(D)}</small></div>
+      <div class="kpi${idle.length?' alarm':''}"><b>${idle.length}</b><span>ешкім жұмыс істемеген сынып</span><small>${idle.length?esc(idle.map(nm).join(', ')):'&nbsp;'}</small></div></div>
+    <div class="card"><h2>Сыныптар бойынша · ${wdOf(D)} ${dmOf(D)}</h2>
+    <div class="sc-wide" style="overflow-x:auto"><table class="t3 sc" id="scT"><tr><th scope="col" style="text-align:left">Сынып</th><th scope="col">Оқушы</th><th scope="col">${dmOf(D)} · кемінде ${N} есеп</th>${days.map((d,i)=>`<th scope="col" class="sc-w${i===6?' sel':''}">${wdOf(d)}<br><small>${dmOf(d)}</small></th>`).join('')}</tr>
+    ${ks.map(k=>`<tr data-k="${esc(k)}"><th scope="row" style="text-align:left;max-width:180px;overflow-wrap:anywhere">${esc(nm(k))}</th><td>${size[k]||0}</td><td>${bar(cnt(k,D),size[k]||0)}</td>${days.map((d,i)=>cell(k,d,i)).join('')}</tr>`).join('')}
+    <tr class="tot"><th scope="row" style="text-align:left">Барлығы</th><td>${all}</td><td>${bar(tot[6],all)}</td>${tot.map((n,i)=>`<td class="${i===6?'sel':''}">${n}</td>`).join('')}</tr>
+    ${ks.length?'':'<tr><td colspan="10">Әлі оқушы жоқ</td></tr>'}</table></div>
+    <div class="sc-list" id="scL">${[...ks.map(k=>[k,nm(k),size[k]||0,d=>cnt(k,d),'']),['*','Барлығы',all,d=>tot[days.indexOf(d)],' tot']].map(([k,l,s,f,c])=>`<div class="sc-item${c}" data-k="${esc(k)}">
+      <div class="sc-h"><b>${esc(l)}</b><span><b>${f(D)}</b> / ${s} · ${pct(f(D),s)}%</span></div>
+      <div class="rk-bar"><i style="width:${Math.min(100,pct(f(D),s))}%;background:var(--good)"></i></div>
+      <div class="sc-wk">${days.map((d,i)=>`<div class="${i===6?'sel':''}" style="--p:${Math.min(100,pct(f(d),s))}" aria-label="${esc(l)} · ${wdOf(d)} ${dmOf(d)} · ${f(d)} / ${s}"><small>${wdOf(d)}</small>${f(d)||'·'}</div>`).join('')}</div></div>`).join('')}</div>
+    <p class="note" style="margin-top:8px">Санға кіреді: сол күні кемінде ${N} есепке жауап берген оқушы — сабақта, кезең тестінде, диагностикада; «Білмеймін» есептелмейді (порталдағы күндік шеңбермен бірдей). «Оқушы» — сыныптағы тіркелген оқушылар. Күн — Қазақстан уақытымен. Оқушылардың аты бұл бетте көрсетілмейді.</p></div>`;
+}
+
 /* ── v3 router: the hash picks the view ── */
 function render(){ const h=(location.hash||'').slice(1);
   if(h.startsWith('s=')){ const [id,rt]=h.slice(2).split('&r='); return showStudent(decodeURIComponent(id),rt||undefined); }
-  T.tab=['bugin','oqu','task','jarys','baq','bap'].includes(h)?h:'bugin';
+  T.tab=['bugin','oqu','task','mek','jarys','baq','bap'].includes(h)?h:'bugin';
+  if(T.tab==='mek') return showSchool();
   if(T.tab==='jarys') return showRooms();
   if(T.tab==='task') return showTasks();
   if(T.tab==='baq') return showObs();
